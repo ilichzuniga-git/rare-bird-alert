@@ -1,6 +1,6 @@
 # Rare Bird Alert (RBA)
 
-A mobile app that shows rare bird sightings for LA & Orange County, powered by eBird data, with push notifications and an interactive map.
+A mobile app that shows rare bird sightings for LA & Orange County, powered by eBird and iNaturalist data, with push notifications and an interactive map.
 
 ## Project structure
 
@@ -40,13 +40,23 @@ Create `backend/.env` (never commit this file):
 
 ```
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/rba_dev
+
+# eBird
 EBIRD_API_KEY=YOUR_EBIRD_KEY
 EBIRD_ENABLED=true
+
+# iNaturalist (no API key required)
+INAT_ENABLED=true
+INAT_RARITY_THRESHOLD=20
+INAT_LOOKBACK_DAYS=30
+
 JWT_SECRET=change_me_to_a_long_random_string
 PORT=3000
 ```
 
 Get a free eBird API key at: https://ebird.org/api/keygen
+
+iNaturalist requires no API key for read-only access.
 
 ### 3. Install backend dependencies and run migrations
 
@@ -114,6 +124,8 @@ Port 8081 = Metro bundler · Port 3000 = API server
 | "Network request failed" on phone | Re-run both `adb reverse` commands, then tap Retry in the app |
 | White screen / "No apps connected" | Re-run `adb reverse`, open Expo Go, scan the QR code again |
 | Metro port already in use | `npx kill-port 8081` |
+| iNaturalist showing 0 sightings | Run `node src/scripts/testInat.js` to diagnose; check `inat_place_id` is set correctly |
+| iNaturalist showing wrong-region results | Run `node src/scripts/fixInatPlaceIds.js`, then `npm run db:migrate` to apply the fix |
 
 The **most common issue** is the adb tunnel dropping silently after `npm install` or a Metro restart. When in doubt, re-run both `adb reverse` commands.
 
@@ -125,8 +137,14 @@ The **most common issue** is the adb tunnel dropping silently after `npm install
 # Apply any unapplied DB migrations (safe to re-run)
 npm run db:migrate
 
-# Manually trigger a one-shot eBird poll
+# Manually trigger a one-shot poll (all enabled sources)
 npm run poll:once
+
+# Test iNaturalist fetch pipeline and print diagnostic output
+node src/scripts/testInat.js
+
+# Verify and auto-fix iNaturalist place IDs in the DB
+node src/scripts/fixInatPlaceIds.js
 
 # Start server with auto-reload on file changes
 npm run dev
@@ -170,7 +188,21 @@ The `.gitignore` handles this automatically, but avoid:
 
 ## How it works
 
-- The **poller** runs every 10 minutes, fetches notable sightings from eBird for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres
+- The **poller** runs every 10 minutes, fetches sightings from all enabled sources for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres
 - The **API** serves sightings to the mobile app via `GET /api/sightings`
 - **Push notifications** fire via Expo's push service whenever new sightings arrive
 - The **map** uses OpenStreetMap + Leaflet (free, no API key) rendered inside a WebView
+
+### Data sources
+
+**eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key.
+
+**iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. No API key required. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
+
+### iNaturalist rarity tuning
+
+Adjust `INAT_RARITY_THRESHOLD` in `backend/.env` to control how strict "rare" is:
+- Lower (e.g. `5`) = only very rarely seen species
+- Higher (e.g. `50`) = includes less common but more regularly seen species
+
+Default is `20`.
