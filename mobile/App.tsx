@@ -737,9 +737,9 @@ const styles = StyleSheet.create({
   modalSub: { fontSize: 13, color: '#b7e4c7', marginTop: 2 },
   closeBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   closeBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  modalMapContainer: { height: 280 },
+  modalMapContainer: { flex: 2 },
   // Comments panel
-  commentsPanel: { flex: 1, backgroundColor: '#fff' },
+  commentsPanel: { flex: 1, backgroundColor: '#fff', minHeight: 0 },
   commentsCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
   commentsHint: { fontSize: 14, color: '#888', textAlign: 'center' },
   commentsHeading: { fontSize: 13, fontWeight: '700', color: '#4a7c59', textTransform: 'uppercase', letterSpacing: 0.5 },
