@@ -55,10 +55,18 @@ function buildHtml(pins: MapPin[], center?: { lat: number; lng: number }, zoom?:
     maxZoom: 19
   }).addTo(map);
 
+  var birdIcon = L.divIcon({
+    className: '',
+    html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 50" width="36" height="30"><ellipse cx="24" cy="32" rx="14" ry="10" fill="#1d4ed8" transform="rotate(-10 24 32)"/><circle cx="40" cy="22" r="9" fill="#1d4ed8"/><polygon points="48,20 58,22 48,24" fill="#f59e0b"/><polygon points="10,28 0,20 10,38" fill="#1d4ed8"/></svg>',
+    iconSize: [36, 30],
+    iconAnchor: [18, 30],
+    popupAnchor: [0, -30]
+  });
+
   var bounds = [];
   pins.forEach(function(pin) {
     var popup = '<b>' + pin.label + '</b>' + (pin.sciName ? '<br><i>' + pin.sciName + '</i>' : '');
-    var marker = L.marker([pin.lat, pin.lng]).addTo(map).bindPopup(popup);
+    var marker = L.marker([pin.lat, pin.lng], { icon: birdIcon }).addTo(map).bindPopup(popup);
     if (pins.length === 1) marker.openPopup();
     bounds.push([pin.lat, pin.lng]);
   });

@@ -81,6 +81,16 @@ async function pollAll() {
     }
   }
 
+  // Purge sightings older than 28 days (keep 4 weeks of history)
+  try {
+    const { rowCount } = await db.query(
+      "DELETE FROM sightings WHERE observed_at < NOW() - INTERVAL '28 days'"
+    );
+    if (rowCount > 0) console.log(`[poller] Purged ${rowCount} sightings older than 28 days.`);
+  } catch (err) {
+    console.error('[poller] Purge error:', err.message);
+  }
+
   return totalNew;
 }
 

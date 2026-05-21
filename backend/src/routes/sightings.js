@@ -9,7 +9,7 @@ const db = require('../db');
 //   since  - ISO 8601 timestamp; only return sightings observed after this
 router.get('/', async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 500, 500);
     const conditions = [];
     const params = [];
 

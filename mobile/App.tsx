@@ -1,11 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   SafeAreaView,
+  SectionList,
+  StatusBar as RNStatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -29,6 +31,13 @@ interface Sighting {
   lng: number | null;
 }
 
+interface WeekSection {
+  weekKey: string;
+  title: string;
+  count: number;
+  data: Sighting[];
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleString(undefined, {
@@ -44,9 +53,44 @@ function toPin(s: Sighting): MapPin | null {
   return { lat: s.lat, lng: s.lng, label: s.common_name, sciName: s.scientific_name };
 }
 
+// Returns the ISO date string of the Sunday that starts the week containing `date`
+function getWeekKey(date: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d.toISOString().split('T')[0];
+}
+
+function getWeekLabel(weekKey: string, isCurrentWeek: boolean): string {
+  if (isCurrentWeek) return 'This week';
+  const sunday = new Date(weekKey + 'T12:00:00');
+  const saturday = new Date(sunday);
+  saturday.setDate(saturday.getDate() + 6);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return fmt(sunday) + ' - ' + fmt(saturday);
+}
+
+function groupByWeek(sightings: Sighting[], currentWeekKey: string): WeekSection[] {
+  const map = new Map<string, Sighting[]>();
+  for (const s of sightings) {
+    const key = getWeekKey(new Date(s.observed_at));
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(s);
+  }
+  return [...map.keys()]
+    .sort((a, b) => b.localeCompare(a))
+    .map(key => ({
+      weekKey: key,
+      title: getWeekLabel(key, key === currentWeekKey),
+      count: map.get(key)!.length,
+      data: map.get(key)!,
+    }));
+}
+
 // ---- Sighting card ----
 function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => void }) {
-  const count = item.how_many != null ? `${item.how_many}x ` : '';
+  const count = item.how_many != null ? item.how_many + 'x ' : '';
   const hasCoords = item.lat != null && item.lng != null;
   return (
     <View style={styles.card}>
@@ -57,7 +101,7 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
       {item.scientific_name ? <Text style={styles.sciName}>{item.scientific_name}</Text> : null}
       <View style={styles.cardFooter}>
         <Text style={styles.location} numberOfLines={1}>
-          {'📍'} {item.location_name ?? item.region_name}
+          {'pin'} {item.location_name ?? item.region_name}
         </Text>
         {hasCoords && (
           <TouchableOpacity style={styles.mapBtn} onPress={onMapPress}>
@@ -66,6 +110,29 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
         )}
       </View>
     </View>
+  );
+}
+
+// ---- Week section header ----
+function WeekHeader({
+  section,
+  expanded,
+  onPress,
+}: {
+  section: WeekSection;
+  expanded: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.weekHeader} onPress={onPress} activeOpacity={0.7}>
+      <Text style={styles.weekTitle}>{section.title}</Text>
+      <View style={styles.weekHeaderRight}>
+        <View style={styles.weekBadge}>
+          <Text style={styles.weekBadgeText}>{section.count}</Text>
+        </View>
+        <Text style={styles.weekChevron}>{expanded ? 'v' : '>'}</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -78,9 +145,14 @@ export default function App() {
   const [tab, setTab] = useState<'list' | 'map'>('list');
   const [modalSighting, setModalSighting] = useState<Sighting | null>(null);
 
+  const currentWeekKey = useMemo(() => getWeekKey(new Date()), []);
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(
+    () => new Set([currentWeekKey])
+  );
+
   const fetchSightings = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/sightings?limit=100`);
+      const res = await fetch(`${API_BASE}/api/sightings?limit=500`);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
       setSightings(data.sightings);
@@ -102,19 +174,45 @@ export default function App() {
     setRefreshing(false);
   }, [fetchSightings]);
 
+  const toggleWeek = useCallback((weekKey: string) => {
+    setExpandedWeeks(prev => {
+      const next = new Set(prev);
+      if (next.has(weekKey)) next.delete(weekKey);
+      else next.add(weekKey);
+      return next;
+    });
+  }, []);
+
+  const rawSections = useMemo(
+    () => groupByWeek(sightings, currentWeekKey),
+    [sightings, currentWeekKey]
+  );
+
+  // SectionList sections: collapsed sections get empty data array
+  const sections = useMemo(
+    () =>
+      rawSections.map(s => ({
+        ...s,
+        data: expandedWeeks.has(s.weekKey) ? s.data : [],
+      })),
+    [rawSections, expandedWeeks]
+  );
+
   const allPins: MapPin[] = sightings.flatMap(s => {
     const p = toPin(s);
     return p ? [p] : [];
   });
+
+  const statusBarHeight = Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0;
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="light" />
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{'🐦'} Rare Bird Alert</Text>
-        <Text style={styles.headerSub}>LA &amp; Orange County</Text>
+      <View style={[styles.header, { paddingTop: statusBarHeight + 12 }]}>
+        <Text style={styles.headerTitle}>Rare Bird Alert</Text>
+        <Text style={styles.headerSub}>LA & Orange County</Text>
       </View>
 
       {/* Tabs */}
@@ -130,7 +228,7 @@ export default function App() {
           onPress={() => setTab('map')}
         >
           <Text style={[styles.tabText, tab === 'map' && styles.tabTextActive]}>
-            Map {allPins.length > 0 ? `(${allPins.length})` : ''}
+            {allPins.length > 0 ? 'Map (' + allPins.length + ')' : 'Map'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -148,19 +246,27 @@ export default function App() {
           </Pressable>
         </View>
       ) : tab === 'list' ? (
-        <FlatList
-          data={sightings}
+        <SectionList
+          sections={sections}
           keyExtractor={item => String(item.id)}
           renderItem={({ item }) => (
             <SightingCard item={item} onMapPress={() => setModalSighting(item)} />
           )}
+          renderSectionHeader={({ section }) => (
+            <WeekHeader
+              section={section as WeekSection}
+              expanded={expandedWeeks.has((section as WeekSection).weekKey)}
+              onPress={() => toggleWeek((section as WeekSection).weekKey)}
+            />
+          )}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Text style={styles.emptyText}>No sightings yet — check back soon!</Text>
+              <Text style={styles.emptyText}>No sightings yet -- check back soon!</Text>
             </View>
           }
           contentContainerStyle={sightings.length === 0 ? styles.emptyContainer : styles.listContent}
+          stickySectionHeadersEnabled={true}
         />
       ) : (
         <View style={{ flex: 1 }}>
@@ -211,7 +317,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f0f4f0' },
-  header: { backgroundColor: '#2d6a4f', paddingVertical: 16, paddingHorizontal: 20 },
+  header: { backgroundColor: '#2d6a4f', paddingBottom: 14, paddingHorizontal: 20 },
   headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff' },
   headerSub: { fontSize: 13, color: '#b7e4c7', marginTop: 2 },
 
@@ -223,10 +329,32 @@ const styles = StyleSheet.create({
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyContainer: { flexGrow: 1 },
-  listContent: { paddingVertical: 8, paddingHorizontal: 12 },
+  listContent: { paddingBottom: 16 },
+
+  weekHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#e8f0eb',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d0ddd4',
+  },
+  weekTitle: { fontSize: 14, fontWeight: '700', color: '#1a3a2a' },
+  weekHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  weekBadge: {
+    backgroundColor: '#2d6a4f',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  weekBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
+  weekChevron: { fontSize: 12, color: '#2d6a4f', fontWeight: '700' },
 
   card: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 14, marginBottom: 10,
+    backgroundColor: '#fff', borderRadius: 10, padding: 14,
+    marginTop: 8, marginHorizontal: 12,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
