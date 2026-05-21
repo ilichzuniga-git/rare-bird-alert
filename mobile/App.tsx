@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -21,46 +22,106 @@ import LeafletMap, { MapPin } from './src/LeafletMap';
 
 const INAT_BASE = 'https://api.inaturalist.org/v1';
 
-// Per-session cache: scientific_name → photo URL (or '' if not found)
-const photoCache = new Map<string, string>();
+// Per-session cache: scientific_name → { url, attribution } (or empty if not found)
+type PhotoInfo = { url: string; attribution: string };
+const photoCache = new Map<string, PhotoInfo>();
 
-async function fetchPhotoForSpecies(scientificName: string): Promise<string> {
+// CC licenses that are commercially usable (no NC)
+const COMMERCIAL_LICENSES = new Set(['cc0', 'cc-by', 'cc-by-sa', 'cc-by-nd']);
+
+async function fetchPhotoForSpecies(scientificName: string): Promise<PhotoInfo> {
   if (photoCache.has(scientificName)) return photoCache.get(scientificName)!;
   try {
     const res = await fetch(
       `${INAT_BASE}/taxa?q=${encodeURIComponent(scientificName)}&rank=species&per_page=1`
     );
     const data = await res.json();
-    const url = data?.results?.[0]?.default_photo?.square_url ?? '';
-    photoCache.set(scientificName, url);
-    return url;
+    const taxon = data?.results?.[0];
+    const photo = taxon?.default_photo;
+    const license = (photo?.license_code || '').toLowerCase();
+    if (photo?.square_url && COMMERCIAL_LICENSES.has(license)) {
+      const info: PhotoInfo = { url: photo.square_url, attribution: photo.attribution ?? '' };
+      photoCache.set(scientificName, info);
+      return info;
+    }
+    const empty: PhotoInfo = { url: '', attribution: '' };
+    photoCache.set(scientificName, empty);
+    return empty;
   } catch {
-    photoCache.set(scientificName, '');
-    return '';
+    const empty: PhotoInfo = { url: '', attribution: '' };
+    photoCache.set(scientificName, empty);
+    return empty;
   }
 }
 
-function BirdPhoto({ photoUrl, scientificName }: { photoUrl: string | null; scientificName: string | null }) {
+/** Opens the All About Birds species page for a given common name. */
+function openAllAboutBirds(commonName: string) {
+  const slug = commonName.trim().replace(/ /g, '_');
+  Linking.openURL(`https://www.allaboutbirds.org/guide/${encodeURIComponent(slug)}`);
+}
+
+function BirdPhoto({
+  photoUrl,
+  photoAttribution,
+  scientificName,
+  commonName,
+}: {
+  photoUrl: string | null;
+  photoAttribution: string | null;
+  scientificName: string | null;
+  commonName: string;
+}) {
   const [url, setUrl] = useState<string>(photoUrl ?? '');
+  const [attribution, setAttribution] = useState<string>(photoAttribution ?? '');
   const mounted = useRef(true);
 
   useEffect(() => {
     mounted.current = true;
+    // If no pre-stored photo (e.g. eBird sightings), try lazy fetch from iNat taxa API
     if (!photoUrl && scientificName) {
-      fetchPhotoForSpecies(scientificName).then(u => {
-        if (mounted.current) setUrl(u);
+      fetchPhotoForSpecies(scientificName).then(info => {
+        if (mounted.current) {
+          setUrl(info.url);
+          setAttribution(info.attribution);
+        }
       });
     }
     return () => { mounted.current = false; };
   }, [photoUrl, scientificName]);
 
-  if (!url) return <View style={styles.photoPlaceholder} />;
+  if (!url) {
+    // Placeholder: tappable link to All About Birds
+    return (
+      <TouchableOpacity
+        style={styles.photoPlaceholder}
+        onPress={() => openAllAboutBirds(commonName)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.photoPlaceholderIcon}>🐦</Text>
+        <Text style={styles.photoPlaceholderLink}>Info</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  // Clean up iNaturalist attribution: strip license suffix, keep photographer name
+  // e.g. "(c) Jane Smith, some rights reserved (CC BY)" → "© Jane Smith"
+  const credit = attribution
+    ? attribution.replace(/\(c\)/i, '©').replace(/,?\s*some rights reserved.*$/i, '').replace(/,?\s*no rights reserved.*$/i, '').trim()
+    : '';
+
   return (
-    <Image
-      source={{ uri: url }}
-      style={styles.photo}
-      resizeMode="cover"
-    />
+    <TouchableOpacity
+      style={styles.photoWrapper}
+      onPress={() => openAllAboutBirds(commonName)}
+      activeOpacity={0.85}
+    >
+      <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
+      {credit ? (
+        <View style={styles.photoCredit}>
+          <Text style={styles.photoCreditText} numberOfLines={1}>{credit}</Text>
+        </View>
+      ) : null}
+    </TouchableOpacity>
   );
 }
 
@@ -79,6 +140,7 @@ interface Sighting {
   source: string | null;
   rarity_count: number | null;
   photo_url: string | null;
+  photo_attribution: string | null;
 }
 
 type RarityTier = { label: string; bg: string; text: string };
@@ -171,7 +233,7 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
           </View>
           {item.scientific_name ? <Text style={styles.sciName}>{item.scientific_name}</Text> : null}
         </View>
-        <BirdPhoto photoUrl={item.photo_url} scientificName={item.scientific_name} />
+        <BirdPhoto photoUrl={item.photo_url} photoAttribution={item.photo_attribution} scientificName={item.scientific_name} commonName={item.common_name} />
       </View>
       <View style={styles.cardFooter}>
         <Text style={styles.location} numberOfLines={1}>
@@ -478,8 +540,28 @@ const styles = StyleSheet.create({
   },
   cardBody: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   cardContent: { flex: 1 },
-  photo: { width: 64, height: 64, borderRadius: 8, flexShrink: 0 },
-  photoPlaceholder: { width: 64, height: 64, borderRadius: 8, backgroundColor: '#f0f4f0', flexShrink: 0 },
+  photoWrapper: { width: 64, flexShrink: 0 },
+  photo: { width: 64, height: 64, borderRadius: 8 },
+  photoCredit: {
+    backgroundColor: 'rgba(0,0,0,0.52)',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    marginTop: -14,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  photoCreditText: { fontSize: 8, color: '#fff', lineHeight: 10 },
+  photoPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: '#ecf4ed',
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPlaceholderIcon: { fontSize: 26 },
+  photoPlaceholderLink: { fontSize: 9, color: '#4a7c59', fontWeight: '600', marginTop: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
   cardHeaderLeft: { flex: 1, flexDirection: 'column', gap: 4 },
   commonName: { fontSize: 16, fontWeight: '600', color: '#1a3a2a' },

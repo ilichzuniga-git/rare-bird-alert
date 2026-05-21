@@ -47,7 +47,7 @@ EBIRD_ENABLED=true
 
 # iNaturalist (no API key required)
 INAT_ENABLED=true
-INAT_RARITY_THRESHOLD=20
+INAT_RARITY_THRESHOLD=50
 INAT_LOOKBACK_DAYS=30
 
 JWT_SECRET=change_me_to_a_long_random_string
@@ -205,4 +205,25 @@ Adjust `INAT_RARITY_THRESHOLD` in `backend/.env` to control how strict "rare" is
 - Lower (e.g. `5`) = only very rarely seen species
 - Higher (e.g. `50`) = includes less common but more regularly seen species
 
-Default is `20`.
+Default is `50`.
+
+### iNaturalist photo licensing
+
+iNaturalist photos carry a variety of Creative Commons licenses. The app **only displays photos with commercially usable licenses**: `CC0`, `CC BY`, `CC BY-SA`, and `CC BY-ND`. Photos licensed as **NC (non-commercial)** — `CC BY-NC`, `CC BY-NC-SA`, `CC BY-NC-ND` — and **all-rights-reserved** photos are never fetched or stored.
+
+In practice, roughly 90% of rare-species taxon photos on iNaturalist are NC or all-rights-reserved, so most sightings will show a generic 🐦 placeholder instead of a photo. When a photo is available, it is displayed with a photographer credit overlay pulled from iNaturalist's pre-formatted attribution string (e.g. "© Jane Smith").
+
+This filter is applied in two places:
+- `INaturalistSource.js` — at poll time, before storing `photo_url` and `photo_attribution` to the DB
+- `App.tsx` (`fetchPhotoForSpecies`) — for eBird sightings where photos are fetched lazily at display time
+
+### Rarity badges
+
+Each sighting card displays a color-coded rarity badge based on the species' all-time observation count in the region (iNaturalist) or eBird notable status:
+
+| Badge | Threshold | Color |
+|---|---|---|
+| Exceptional | ≤ 3 all-time records | Red |
+| Very Rare | 4–9 all-time records | Orange |
+| Rare | 10–49 all-time records | Amber |
+| Notable | eBird notable / no count | Gray |

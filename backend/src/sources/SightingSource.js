@@ -34,8 +34,10 @@ class SightingSource {
  * @property {string}  [location_name]
  * @property {Date}    observed_at
  * @property {number}  [how_many]
- * @property {number}  [rarity_count]  All-time local record count (iNaturalist).
- *                                     NULL = source does its own rarity filtering (eBird notable).
+ * @property {number}  [rarity_count]       All-time local record count (iNaturalist).
+ *                                          NULL = source does its own rarity filtering (eBird notable).
+ * @property {string}  [photo_url]          Thumbnail URL (commercially licensed only).
+ * @property {string}  [photo_attribution]  Pre-formatted photographer credit string from iNaturalist.
  */
 
 module.exports = SightingSource;

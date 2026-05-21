@@ -143,6 +143,12 @@ class INaturalistSource extends SightingSource {
   }
 
   /**
+   * Licenses that are safe for commercial/public use.
+   * Excludes NC (non-commercial) variants and all-rights-reserved.
+   */
+  static COMMERCIAL_LICENSES = new Set(['cc0', 'cc-by', 'cc-by-sa', 'cc-by-nd']);
+
+  /**
    * Normalize an iNaturalist observation into the shared NormalizedSighting shape.
    * @param {object} obs         Raw iNaturalist observation
    * @param {string} regionCode
@@ -152,20 +158,26 @@ class INaturalistSource extends SightingSource {
     const taxon = obs.taxon || {};
     const coords = obs.location ? obs.location.split(',').map(Number) : [null, null];
 
+    // Only use photo if it carries a commercially usable license
+    const defaultPhoto = taxon.default_photo;
+    const license = (defaultPhoto?.license_code || '').toLowerCase();
+    const photoUsable = INaturalistSource.COMMERCIAL_LICENSES.has(license);
+
     return {
-      source:          this.name,
-      source_id:       String(obs.id),
-      region_code:     regionCode,
-      common_name:     taxon.preferred_common_name || taxon.name || 'Unknown',
-      scientific_name: taxon.name || null,
-      species_code:    null,   // iNaturalist has no eBird species code
-      lat:             coords[0] || null,
-      lng:             coords[1] || null,
-      location_name:   obs.place_guess || null,
-      observed_at:     new Date(obs.time_observed_at || obs.observed_on),
-      how_many:        null,   // iNaturalist records presence, not count
-      rarity_count:    allTimeMap?.get(taxon.id) ?? null,
-      photo_url:       taxon.default_photo?.square_url ?? null,
+      source:            this.name,
+      source_id:         String(obs.id),
+      region_code:       regionCode,
+      common_name:       taxon.preferred_common_name || taxon.name || 'Unknown',
+      scientific_name:   taxon.name || null,
+      species_code:      null,   // iNaturalist has no eBird species code
+      lat:               coords[0] || null,
+      lng:               coords[1] || null,
+      location_name:     obs.place_guess || null,
+      observed_at:       new Date(obs.time_observed_at || obs.observed_on),
+      how_many:          null,   // iNaturalist records presence, not count
+      rarity_count:      allTimeMap?.get(taxon.id) ?? null,
+      photo_url:         photoUsable ? (defaultPhoto?.square_url ?? null) : null,
+      photo_attribution: photoUsable ? (defaultPhoto?.attribution ?? null) : null,
     };
   }
 
