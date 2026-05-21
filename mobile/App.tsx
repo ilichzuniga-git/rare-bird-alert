@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyContainer: { flexGrow: 1 },
-  listContent: { paddingBottom: 16 },
+  listContent: { paddingBottom: 100 },
 
   weekHeader: {
     flexDirection: 'row',
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   weekBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
-  weekChevron: { fontSize: 12, color: '#2d6a4f', fontWeight: '700' },
+  weekChevron: { fontSize: 22, color: '#2d6a4f', fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4 },
 
   card: {
     backgroundColor: '#fff', borderRadius: 10, padding: 14,
