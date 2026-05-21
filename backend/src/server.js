@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const config = require('./config');
 const sightingsRouter = require('./routes/sightings');
-const devicesRouter = require('./routes/devices');
+const devicesRouter  = require('./routes/devices');
+const clustersRouter = require('./routes/clusters');
 const { startPoller } = require('./poller');
 
 const app = express();
@@ -15,7 +16,8 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/sightings', sightingsRouter);
-app.use('/api/devices', devicesRouter);
+app.use('/api/devices',  devicesRouter);
+app.use('/api/clusters', clustersRouter);
 
 app.listen(config.port, () => {
   console.log(`RBA backend listening on port ${config.port}`);

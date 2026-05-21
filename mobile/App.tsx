@@ -17,8 +17,25 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Audio } from 'expo-av';
 import { registerForPushNotificationsAsync } from './src/notifications';
-import LeafletMap, { MapPin } from './src/LeafletMap';
+import LeafletMap, { MapPin, ClusterCircle } from './src/LeafletMap';
+
+/** Play the bundled bird chirp sound. */
+async function playChirp() {
+  try {
+    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+    const { sound } = await Audio.Sound.createAsync(
+      require('./assets/chirp.wav')
+    );
+    await sound.playAsync();
+    sound.setOnPlaybackStatusUpdate(status => {
+      if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+    });
+  } catch (e) {
+    // Sound is best-effort — never block the UI
+  }
+}
 
 const INAT_BASE = 'https://api.inaturalist.org/v1';
 
@@ -144,6 +161,7 @@ interface Sighting {
   photo_attribution: string | null;
   location_id: string | null;
   notes: string | null;
+  cluster_id: number | null;
 }
 
 type RarityTier = { label: string; bg: string; text: string };
@@ -216,6 +234,25 @@ function groupByWeek(sightings: Sighting[], currentWeekKey: string): WeekSection
     }));
 }
 
+// ---- Cluster types ----
+interface ClusterPin { lat: number; lng: number; observed_at: string; source: string; }
+interface ClusterData {
+  id: number;
+  center_lat: number;
+  center_lng: number;
+  radius_m: number;
+  first_seen: string;
+  last_seen: string;
+  sighting_count: number;
+  checklist_count: number;
+  refound_count: number;
+  dip_count: number;
+  last_refound_at: string | null;
+  last_dipped_at: string | null;
+  sighting_pins: ClusterPin[] | null;
+  status: { label: string; level: 'green' | 'amber' | 'red' | 'gray' };
+}
+
 // ---- Map modal with lazy-loaded comments ----
 interface CommentEntry { author: string; text: string; created_at: string | null; }
 interface CommentsPayload {
@@ -224,22 +261,81 @@ interface CommentsPayload {
   comments: CommentEntry[];
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  green: '#2d6a4f', amber: '#b45309', red: '#b91c1c', gray: '#64748b',
+};
+
 function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: () => void }) {
   const [commentsState, setCommentsState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [payload, setPayload] = useState<CommentsPayload | null>(null);
+  const [cluster, setCluster] = useState<ClusterData | null>(null);
+  // confirm: null=hidden, 'refound'|'dipped'=waiting for user confirmation
+  const [confirm, setConfirm] = useState<'refound' | 'dipped' | null>(null);
+  const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
-    if (!sighting) { setCommentsState('idle'); setPayload(null); return; }
-    setCommentsState('loading');
-    setPayload(null);
+    if (!sighting) {
+      setCommentsState('idle'); setPayload(null); setCluster(null); setConfirm(null);
+      return;
+    }
+    // Fetch comments
+    setCommentsState('loading'); setPayload(null);
     fetch(`${API_BASE}/api/sightings/${sighting.id}/comments`)
       .then(r => r.json())
       .then(data => { setPayload(data); setCommentsState('done'); })
       .catch(() => setCommentsState('error'));
+
+    // Fetch cluster if this sighting belongs to one
+    if (sighting.cluster_id) {
+      fetch(`${API_BASE}/api/clusters/${sighting.cluster_id}`)
+        .then(r => r.json())
+        .then(data => setCluster(data.cluster ?? null))
+        .catch(() => {});
+    } else {
+      setCluster(null);
+    }
   }, [sighting?.id]);
+
+  const submitReport = async (type: 'refound' | 'dipped') => {
+    if (!sighting?.cluster_id) return;
+    setReporting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/clusters/${sighting.cluster_id}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      });
+      const data = await res.json();
+      if (data.ok && cluster) {
+        setCluster(prev => prev ? { ...prev, status: data.status } : prev);
+      }
+      if (type === 'refound') await playChirp();
+    } catch (_) {}
+    setReporting(false);
+    setConfirm(null);
+  };
 
   const comments = payload?.comments ?? [];
   const hasContent = payload && (payload.observer_note || comments.length > 0);
+
+  // Build map pins: trail dots for older cluster sightings, main pin for this one
+  const mapPins: MapPin[] = [];
+  if (cluster?.sighting_pins) {
+    for (const p of cluster.sighting_pins) {
+      if (p.lat && p.lng) {
+        mapPins.push({ lat: p.lat, lng: p.lng, label: sighting?.common_name ?? '', isTrail: true });
+      }
+    }
+  }
+  if (sighting?.lat != null && sighting?.lng != null) {
+    mapPins.push(toPin(sighting)!);
+  }
+
+  const clusterCircle: ClusterCircle | null = cluster
+    ? { lat: cluster.center_lat, lng: cluster.center_lng, radiusM: cluster.radius_m }
+    : null;
+
+  const statusColor = cluster ? STATUS_COLORS[cluster.status.level] ?? '#64748b' : null;
 
   return (
     <Modal visible={sighting !== null} animationType="slide" onRequestClose={onClose}>
@@ -251,24 +347,50 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
             {sighting?.location_name ? (
               <Text style={styles.modalSub} numberOfLines={1}>{sighting.location_name}</Text>
             ) : null}
+            {cluster && (
+              <Text style={[styles.modalStatus, { color: statusColor ?? '#b7e4c7' }]} numberOfLines={1}>
+                {cluster.status.label}
+              </Text>
+            )}
           </View>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeBtnText}>Done</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Map — fixed height */}
-        {sighting && sighting.lat != null && sighting.lng != null ? (
+        {/* Map */}
+        {sighting ? (
           <View style={styles.modalMapContainer}>
             <LeafletMap
-              pins={[toPin(sighting)!]}
-              center={{ lat: sighting.lat, lng: sighting.lng }}
+              pins={mapPins.length > 0 ? mapPins : [toPin(sighting)!].filter(Boolean) as MapPin[]}
+              center={sighting.lat != null ? { lat: sighting.lat, lng: sighting.lng } : undefined}
               zoom={15}
+              clusterCircle={clusterCircle}
             />
           </View>
         ) : (
           <View style={[styles.modalMapContainer, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#1a3a2a' }]}>
             <Text style={{ color: '#aaa', fontSize: 14 }}>No location data</Text>
+          </View>
+        )}
+
+        {/* Refound / Dipped buttons */}
+        {sighting?.cluster_id && (
+          <View style={styles.reportBar}>
+            <TouchableOpacity
+              style={[styles.reportBtn, styles.refoundBtn]}
+              onPress={() => setConfirm('refound')}
+              disabled={reporting}
+            >
+              <Text style={styles.reportBtnText}>✓ Refound</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.reportBtn, styles.dippedBtn]}
+              onPress={() => setConfirm('dipped')}
+              disabled={reporting}
+            >
+              <Text style={styles.reportBtnText}>✗ Dipped</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -292,15 +414,12 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
           )}
           {commentsState === 'done' && hasContent && (
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }}>
-              {/* Observer note */}
               {payload?.observer_note ? (
                 <View style={styles.commentNote}>
                   <Text style={styles.commentNoteLabel}>Observer note</Text>
                   <Text style={styles.commentNoteText}>{payload.observer_note}</Text>
                 </View>
               ) : null}
-
-              {/* Community comments */}
               {comments.length > 0 ? (
                 <>
                   <Text style={styles.commentsHeading}>
@@ -328,12 +447,43 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
           )}
         </View>
       </SafeAreaView>
+
+      {/* Confirmation sheet */}
+      <Modal visible={confirm !== null} transparent animationType="fade" onRequestClose={() => setConfirm(null)}>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmSheet}>
+            <Text style={styles.confirmTitle}>
+              {confirm === 'refound' ? '🐦 You found it!' : '😔 You dipped'}
+            </Text>
+            <Text style={styles.confirmBody}>
+              {confirm === 'refound'
+                ? 'Confirm you personally observed this bird right now at this location?'
+                : 'Confirm you searched and could not find this bird?'}
+            </Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity style={styles.confirmCancel} onPress={() => setConfirm(null)}>
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmOk, confirm === 'refound' ? styles.confirmOkGreen : styles.confirmOkRed]}
+                onPress={() => confirm && submitReport(confirm)}
+                disabled={reporting}
+              >
+                {reporting
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.confirmOkText}>Yes, I'm sure</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
 
 // ---- Sighting card ----
-function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => void }) {
+function SightingCard({ item, cluster, onMapPress }: { item: Sighting; cluster: ClusterData | null; onMapPress: () => void }) {
   const count = item.how_many != null ? item.how_many + 'x ' : '';
   const hasCoords = item.lat != null && item.lng != null;
   const tier = getRarityTier(item.rarity_count);
@@ -362,6 +512,11 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
             <Text style={styles.date} numberOfLines={1}>{formatDate(item.observed_at)}</Text>
           </View>
           {item.scientific_name ? <Text style={styles.sciName}>{item.scientific_name}</Text> : null}
+          {cluster ? (
+            <Text style={[styles.clusterStatus, { color: STATUS_COLORS[cluster.status.level] ?? '#64748b' }]} numberOfLines={1}>
+              {cluster.status.label}
+            </Text>
+          ) : null}
         </View>
         <BirdPhoto photoUrl={item.photo_url} photoAttribution={item.photo_attribution} scientificName={item.scientific_name} commonName={item.common_name} />
       </View>
@@ -435,6 +590,7 @@ function WeekHeader({
 // ---- Main app ----
 export default function App() {
   const [sightings, setSightings] = useState<Sighting[]>([]);
+  const [clusters, setClusters] = useState<Map<number, ClusterData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -449,10 +605,19 @@ export default function App() {
 
   const fetchSightings = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/sightings?limit=500`);
-      if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      const data = await res.json();
-      setSightings(data.sightings);
+      const [sRes, cRes] = await Promise.all([
+        fetch(`${API_BASE}/api/sightings?limit=500`),
+        fetch(`${API_BASE}/api/clusters`),
+      ]);
+      if (!sRes.ok) throw new Error(`Server returned ${sRes.status}`);
+      const sData = await sRes.json();
+      setSightings(sData.sightings);
+      if (cRes.ok) {
+        const cData = await cRes.json();
+        const map = new Map<number, ClusterData>();
+        for (const c of (cData.clusters ?? [])) map.set(c.id, c);
+        setClusters(map);
+      }
       setError(null);
     } catch (e: any) {
       setError(e.message ?? 'Failed to load sightings');
@@ -584,7 +749,7 @@ export default function App() {
           sections={sections}
           keyExtractor={item => String(item.id)}
           renderItem={({ item }) => (
-            <SightingCard item={item} onMapPress={() => setModalSighting(item)} />
+            <SightingCard item={item} cluster={item.cluster_id ? clusters.get(item.cluster_id) ?? null : null} onMapPress={() => setModalSighting(item)} />
           )}
           renderSectionHeader={({ section }) => (
             <WeekHeader
@@ -695,6 +860,7 @@ const styles = StyleSheet.create({
   rarityBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
   date: { fontSize: 12, color: '#888', marginTop: 2, minWidth: 52, flexShrink: 0, textAlign: 'right' },
   sciName: { fontSize: 13, fontStyle: 'italic', color: '#555', marginTop: 3 },
+  clusterStatus: { fontSize: 11, fontWeight: '700', marginTop: 4 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8, flexWrap: 'wrap' },
   cardFooterRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
   location: { fontSize: 13, color: '#2d6a4f', flex: 1 },
@@ -735,6 +901,25 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
   modalSub: { fontSize: 13, color: '#b7e4c7', marginTop: 2 },
+  modalStatus: { fontSize: 12, fontWeight: '600', marginTop: 3 },
+  // Refound / Dipped bar
+  reportBar: { flexDirection: 'row', backgroundColor: '#1a3a2a', paddingHorizontal: 16, paddingVertical: 10, gap: 12 },
+  reportBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
+  refoundBtn: { backgroundColor: '#2d6a4f' },
+  dippedBtn:  { backgroundColor: '#7f1d1d' },
+  reportBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  // Confirmation sheet
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'flex-end' },
+  confirmSheet: { width: '100%', backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 12 },
+  confirmTitle: { fontSize: 20, fontWeight: '700', color: '#1a3a2a', textAlign: 'center' },
+  confirmBody:  { fontSize: 15, color: '#374151', textAlign: 'center', lineHeight: 22 },
+  confirmButtons: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  confirmCancel: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#f1f5f9', alignItems: 'center' },
+  confirmCancelText: { fontSize: 15, fontWeight: '600', color: '#64748b' },
+  confirmOk: { flex: 2, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  confirmOkGreen: { backgroundColor: '#2d6a4f' },
+  confirmOkRed:   { backgroundColor: '#b91c1c' },
+  confirmOkText: { fontSize: 15, fontWeight: '700', color: '#fff' },
   closeBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   closeBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   modalMapContainer: { flex: 2 },

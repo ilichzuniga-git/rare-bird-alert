@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const db = require('../db');
 const { getSources } = require('../sources');
+const { clusterSightings } = require('../clustering');
 
 /**
  * Upsert a single normalized sighting into the DB.
@@ -95,6 +96,13 @@ async function pollAll() {
     if (rowCount > 0) console.log(`[poller] Purged ${rowCount} sightings older than 28 days.`);
   } catch (err) {
     console.error('[poller] Purge error:', err.message);
+  }
+
+  // Cluster new sightings into continuing-bird groups
+  try {
+    await clusterSightings();
+  } catch (err) {
+    console.error('[poller] Clustering error:', err.message);
   }
 
   return totalNew;
