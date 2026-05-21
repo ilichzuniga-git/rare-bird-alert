@@ -33,11 +33,14 @@ class EbirdSource extends SightingSource {
       species_code:    obs.speciesCode || null,
       lat:             obs.lat != null ? parseFloat(obs.lat) : null,
       lng:             obs.lng != null ? parseFloat(obs.lng) : null,
-      location_name:   obs.locName || null,
-      observed_at:     new Date(obs.obsDt.replace(' ', 'T')),
-      how_many:        obs.howMany != null ? parseInt(obs.howMany, 10) : null,
-      rarity_count:    null, // eBird already filters to notable — no numeric count needed
-      photo_url:       null, // lazy-loaded in the mobile app via iNaturalist taxa API
+      location_name:     obs.locName || null,
+      location_id:       obs.locId  || null, // e.g. 'L123456' — used for hotspot link
+      observed_at:       new Date(obs.obsDt.replace(' ', 'T')),
+      how_many:          obs.howMany != null ? parseInt(obs.howMany, 10) : null,
+      rarity_count:      null,   // eBird already filters to notable — no numeric count needed
+      photo_url:         null,   // lazy-loaded in the mobile app via iNaturalist taxa API
+      photo_attribution: null,
+      notes:             null,   // eBird notable endpoint does not return observer comments
     };
   }
 

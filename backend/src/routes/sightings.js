@@ -36,8 +36,9 @@ router.get('/', async (req, res) => {
         s.id, s.region_code, r.name AS region_name,
         s.source, s.source_id,
         s.common_name, s.scientific_name, s.species_code,
-        s.lat, s.lng, s.location_name,
-        s.observed_at, s.how_many, s.rarity_count, s.photo_url, s.photo_attribution, s.created_at
+        s.lat, s.lng, s.location_name, s.location_id,
+        s.observed_at, s.how_many, s.rarity_count, s.photo_url, s.photo_attribution,
+        s.notes, s.created_at
       FROM sightings s
       JOIN regions r ON r.code = s.region_code
       ${where}

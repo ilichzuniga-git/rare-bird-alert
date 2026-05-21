@@ -141,6 +141,8 @@ interface Sighting {
   rarity_count: number | null;
   photo_url: string | null;
   photo_attribution: string | null;
+  location_id: string | null;
+  notes: string | null;
 }
 
 type RarityTier = { label: string; bg: string; text: string };
@@ -218,6 +220,14 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
   const count = item.how_many != null ? item.how_many + 'x ' : '';
   const hasCoords = item.lat != null && item.lng != null;
   const tier = getRarityTier(item.rarity_count);
+  const [notesExpanded, setNotesExpanded] = useState(false);
+
+  const hotspotUrl = item.source === 'ebird' && item.location_id
+    ? `https://ebird.org/hotspot/${item.location_id}`
+    : null;
+
+  const locationDisplay = item.location_name ?? item.region_name;
+
   return (
     <View style={styles.card}>
       <View style={styles.cardBody}>
@@ -235,21 +245,46 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
         </View>
         <BirdPhoto photoUrl={item.photo_url} photoAttribution={item.photo_attribution} scientificName={item.scientific_name} commonName={item.common_name} />
       </View>
+
       <View style={styles.cardFooter}>
-        <Text style={styles.location} numberOfLines={1}>
-          {'📍'} {item.location_name ?? item.region_name}
-        </Text>
-        {item.source && (
-          <View style={item.source === 'inaturalist' ? styles.sourceTagInat : styles.sourceTag}>
-            <Text style={item.source === 'inaturalist' ? styles.sourceTagTextInat : styles.sourceTagText}>{formatSource(item.source)}</Text>
-          </View>
-        )}
-        {hasCoords && (
-          <TouchableOpacity style={styles.mapBtn} onPress={onMapPress}>
-            <Text style={styles.mapBtnText}>Map</Text>
+        {/* Location — tappable hotspot link for eBird, plain text otherwise */}
+        {hotspotUrl ? (
+          <TouchableOpacity onPress={() => Linking.openURL(hotspotUrl)} style={styles.hotspotBtn}>
+            <Text style={styles.hotspotText} numberOfLines={1}>{'📍'} {locationDisplay}</Text>
+            <Text style={styles.hotspotChevron}>›</Text>
           </TouchableOpacity>
+        ) : (
+          <Text style={styles.location} numberOfLines={1}>{'📍'} {locationDisplay}</Text>
         )}
+
+        <View style={styles.cardFooterRight}>
+          {item.source && (
+            <View style={item.source === 'inaturalist' ? styles.sourceTagInat : styles.sourceTag}>
+              <Text style={item.source === 'inaturalist' ? styles.sourceTagTextInat : styles.sourceTagText}>{formatSource(item.source)}</Text>
+            </View>
+          )}
+          {hasCoords && (
+            <TouchableOpacity style={styles.mapBtn} onPress={onMapPress}>
+              <Text style={styles.mapBtnText}>Map</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
+
+      {/* Expandable observer notes */}
+      {item.notes ? (
+        <>
+          <TouchableOpacity style={styles.notesToggle} onPress={() => setNotesExpanded(e => !e)} activeOpacity={0.7}>
+            <Text style={styles.notesToggleText}>Observer notes</Text>
+            <Text style={styles.notesChevron}>{notesExpanded ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {notesExpanded && (
+            <View style={styles.notesBody}>
+              <Text style={styles.notesText}>{item.notes}</Text>
+            </View>
+          )}
+        </>
+      ) : null}
     </View>
   );
 }
@@ -569,10 +604,21 @@ const styles = StyleSheet.create({
   rarityBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
   date: { fontSize: 12, color: '#888', marginTop: 2, minWidth: 52, flexShrink: 0, textAlign: 'right' },
   sciName: { fontSize: 13, fontStyle: 'italic', color: '#555', marginTop: 3 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8, flexWrap: 'wrap' },
+  cardFooterRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
   location: { fontSize: 13, color: '#2d6a4f', flex: 1 },
+  // Tappable hotspot row (eBird only)
+  hotspotBtn: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 2 },
+  hotspotText: { fontSize: 13, color: '#2d6a4f', flex: 1, textDecorationLine: 'underline' },
+  hotspotChevron: { fontSize: 16, color: '#2d6a4f', fontWeight: '700' },
   mapBtn: { backgroundColor: '#e8f5ee', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   mapBtnText: { fontSize: 12, color: '#2d6a4f', fontWeight: '600' },
+  // Observer notes
+  notesToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e8f0eb', marginTop: 6 },
+  notesToggleText: { fontSize: 12, color: '#4a7c59', fontWeight: '600' },
+  notesChevron: { fontSize: 10, color: '#4a7c59' },
+  notesBody: { paddingTop: 6, paddingBottom: 2 },
+  notesText: { fontSize: 13, color: '#374151', lineHeight: 19 },
   sourceTag: { backgroundColor: '#e8f0ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   sourceTagText: { fontSize: 12, color: '#3b5bdb', fontWeight: '600' },
   sourceTagInat: { backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },

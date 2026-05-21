@@ -49,16 +49,20 @@ async function pollAll() {
           const result = await db.query(
             `INSERT INTO sightings
                (region_code, source, source_id, species_code, common_name, scientific_name,
-                lat, lng, location_name, observed_at, how_many, rarity_count, photo_url,
-                photo_attribution)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-             ON CONFLICT (source, source_id) DO NOTHING`,
+                lat, lng, location_name, location_id, observed_at, how_many, rarity_count,
+                photo_url, photo_attribution, notes)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+             ON CONFLICT (source, source_id) DO UPDATE SET
+               location_id       = COALESCE(sightings.location_id, EXCLUDED.location_id),
+               photo_url         = COALESCE(sightings.photo_url, EXCLUDED.photo_url),
+               photo_attribution = COALESCE(sightings.photo_attribution, EXCLUDED.photo_attribution),
+               notes             = COALESCE(sightings.notes, EXCLUDED.notes)`,
             [
               s.region_code, s.source, s.source_id, s.species_code,
               s.common_name, s.scientific_name,
-              s.lat, s.lng, s.location_name,
-              s.observed_at, s.how_many, s.rarity_count ?? null, s.photo_url ?? null,
-              s.photo_attribution ?? null,
+              s.lat, s.lng, s.location_name, s.location_id ?? null,
+              s.observed_at, s.how_many, s.rarity_count ?? null,
+              s.photo_url ?? null, s.photo_attribution ?? null, s.notes ?? null,
             ]
           );
           if (result.rowCount > 0) newCount++;

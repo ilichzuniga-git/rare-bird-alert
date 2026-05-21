@@ -173,11 +173,13 @@ class INaturalistSource extends SightingSource {
       lat:               coords[0] || null,
       lng:               coords[1] || null,
       location_name:     obs.place_guess || null,
+      location_id:       null,   // iNaturalist has no hotspot concept
       observed_at:       new Date(obs.time_observed_at || obs.observed_on),
       how_many:          null,   // iNaturalist records presence, not count
       rarity_count:      allTimeMap?.get(taxon.id) ?? null,
       photo_url:         photoUsable ? (defaultPhoto?.square_url ?? null) : null,
       photo_attribution: photoUsable ? (defaultPhoto?.attribution ?? null) : null,
+      notes:             obs.description || null,
     };
   }
 
