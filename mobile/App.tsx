@@ -109,7 +109,7 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
       {item.scientific_name ? <Text style={styles.sciName}>{item.scientific_name}</Text> : null}
       <View style={styles.cardFooter}>
         <Text style={styles.location} numberOfLines={1}>
-          {'pin'} {item.location_name ?? item.region_name}
+          {'📍'} {item.location_name ?? item.region_name}
         </Text>
         {item.source && (
           <View style={styles.sourceTag}>
