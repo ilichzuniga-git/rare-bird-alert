@@ -6,6 +6,7 @@ import {
   Pressable,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   SectionList,
   StatusBar as RNStatusBar,
   StyleSheet,
@@ -29,6 +30,7 @@ interface Sighting {
   how_many: number | null;
   lat: number | null;
   lng: number | null;
+  source: string | null;
 }
 
 interface WeekSection {
@@ -36,6 +38,12 @@ interface WeekSection {
   title: string;
   count: number;
   data: Sighting[];
+}
+
+function formatSource(source: string | null): string {
+  if (!source) return 'Unknown';
+  if (source.toLowerCase() === 'ebird') return 'eBird';
+  return source.charAt(0).toUpperCase() + source.slice(1);
 }
 
 function formatDate(iso: string): string {
@@ -103,6 +111,11 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
         <Text style={styles.location} numberOfLines={1}>
           {'pin'} {item.location_name ?? item.region_name}
         </Text>
+        {item.source && (
+          <View style={styles.sourceTag}>
+            <Text style={styles.sourceTagText}>{formatSource(item.source)}</Text>
+          </View>
+        )}
         {hasCoords && (
           <TouchableOpacity style={styles.mapBtn} onPress={onMapPress}>
             <Text style={styles.mapBtnText}>Map</Text>
@@ -144,6 +157,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'list' | 'map'>('list');
   const [modalSighting, setModalSighting] = useState<Sighting | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
 
   const currentWeekKey = useMemo(() => getWeekKey(new Date()), []);
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(
@@ -183,9 +197,19 @@ export default function App() {
     });
   }, []);
 
+  const sources = useMemo(
+    () => [...new Set(sightings.map(s => s.source).filter(Boolean))] as string[],
+    [sightings]
+  );
+
+  const filteredSightings = useMemo(
+    () => sourceFilter ? sightings.filter(s => s.source === sourceFilter) : sightings,
+    [sightings, sourceFilter]
+  );
+
   const rawSections = useMemo(
-    () => groupByWeek(sightings, currentWeekKey),
-    [sightings, currentWeekKey]
+    () => groupByWeek(filteredSightings, currentWeekKey),
+    [filteredSightings, currentWeekKey]
   );
 
   // SectionList sections: collapsed sections get empty data array
@@ -198,7 +222,7 @@ export default function App() {
     [rawSections, expandedWeeks]
   );
 
-  const allPins: MapPin[] = sightings.flatMap(s => {
+  const allPins: MapPin[] = filteredSightings.flatMap(s => {
     const p = toPin(s);
     return p ? [p] : [];
   });
@@ -246,7 +270,34 @@ export default function App() {
           </Pressable>
         </View>
       ) : tab === 'list' ? (
-        <SectionList
+        <View style={{ flex: 1 }}>
+          {sources.length > 1 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterBar}
+              contentContainerStyle={styles.filterBarContent}
+            >
+              <TouchableOpacity
+                style={[styles.filterChip, sourceFilter === null && styles.filterChipActive]}
+                onPress={() => setSourceFilter(null)}
+              >
+                <Text style={[styles.filterChipText, sourceFilter === null && styles.filterChipTextActive]}>All</Text>
+              </TouchableOpacity>
+              {sources.map(src => (
+                <TouchableOpacity
+                  key={src}
+                  style={[styles.filterChip, sourceFilter === src && styles.filterChipActive]}
+                  onPress={() => setSourceFilter(sourceFilter === src ? null : src)}
+                >
+                  <Text style={[styles.filterChipText, sourceFilter === src && styles.filterChipTextActive]}>
+                    {formatSource(src)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+          <SectionList
           sections={sections}
           keyExtractor={item => String(item.id)}
           renderItem={({ item }) => (
@@ -265,9 +316,10 @@ export default function App() {
               <Text style={styles.emptyText}>No sightings yet -- check back soon!</Text>
             </View>
           }
-          contentContainerStyle={sightings.length === 0 ? styles.emptyContainer : styles.listContent}
+          contentContainerStyle={filteredSightings.length === 0 ? styles.emptyContainer : styles.listContent}
           stickySectionHeadersEnabled={true}
         />
+        </View>
       ) : (
         <View style={{ flex: 1 }}>
           {allPins.length === 0 ? (
@@ -366,6 +418,15 @@ const styles = StyleSheet.create({
   location: { fontSize: 13, color: '#2d6a4f', flex: 1 },
   mapBtn: { backgroundColor: '#e8f5ee', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   mapBtnText: { fontSize: 12, color: '#2d6a4f', fontWeight: '600' },
+  sourceTag: { backgroundColor: '#e8f0ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  sourceTagText: { fontSize: 12, color: '#3b5bdb', fontWeight: '600' },
+
+  filterBar: { backgroundColor: '#f0f4f0', maxHeight: 44 },
+  filterBarContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 3, borderRadius: 14, borderWidth: 1, borderColor: '#2d6a4f' },
+  filterChipActive: { backgroundColor: '#2d6a4f' },
+  filterChipText: { fontSize: 12, color: '#2d6a4f', fontWeight: '600' },
+  filterChipTextActive: { color: '#fff' },
 
   errorText: { color: '#c0392b', fontSize: 15, textAlign: 'center', marginBottom: 16 },
   retryButton: { backgroundColor: '#2d6a4f', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
