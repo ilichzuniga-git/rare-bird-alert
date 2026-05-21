@@ -46,14 +46,12 @@ function formatSource(source: string | null): string {
   return source.charAt(0).toUpperCase() + source.slice(1);
 }
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function formatDate(iso: string): string {
+  if (!iso) return '';
   const d = new Date(iso);
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (isNaN(d.getTime())) return iso.slice(0, 10);
+  return MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate().toString();
 }
 
 function toPin(s: Sighting): MapPin | null {
@@ -104,7 +102,7 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.commonName}>{count}{item.common_name}</Text>
-        <Text style={styles.date}>{formatDate(item.observed_at)}</Text>
+        <Text style={styles.date} numberOfLines={1}>{formatDate(item.observed_at)}</Text>
       </View>
       {item.scientific_name ? <Text style={styles.sciName}>{item.scientific_name}</Text> : null}
       <View style={styles.cardFooter}>
@@ -112,8 +110,8 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
           {'📍'} {item.location_name ?? item.region_name}
         </Text>
         {item.source && (
-          <View style={styles.sourceTag}>
-            <Text style={styles.sourceTagText}>{formatSource(item.source)}</Text>
+          <View style={item.source === 'inaturalist' ? styles.sourceTagInat : styles.sourceTag}>
+            <Text style={item.source === 'inaturalist' ? styles.sourceTagTextInat : styles.sourceTagText}>{formatSource(item.source)}</Text>
           </View>
         )}
         {hasCoords && (
@@ -287,10 +285,10 @@ export default function App() {
               {sources.map(src => (
                 <TouchableOpacity
                   key={src}
-                  style={[styles.filterChip, sourceFilter === src && styles.filterChipActive]}
+                  style={[styles.filterChip, sourceFilter === src && (src === 'inaturalist' ? styles.filterChipActiveInat : styles.filterChipActive)]}
                   onPress={() => setSourceFilter(sourceFilter === src ? null : src)}
                 >
-                  <Text style={[styles.filterChipText, sourceFilter === src && styles.filterChipTextActive]}>
+                  <Text style={[styles.filterChipText, sourceFilter === src && (src === 'inaturalist' ? styles.filterChipTextActiveInat : styles.filterChipTextActive)]}>
                     {formatSource(src)}
                   </Text>
                 </TouchableOpacity>
@@ -412,7 +410,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
   commonName: { fontSize: 16, fontWeight: '600', color: '#1a3a2a', flex: 1 },
-  date: { fontSize: 12, color: '#888', marginTop: 2 },
+  date: { fontSize: 12, color: '#888', marginTop: 2, minWidth: 52, flexShrink: 0, textAlign: 'right' },
   sciName: { fontSize: 13, fontStyle: 'italic', color: '#555', marginTop: 3 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 },
   location: { fontSize: 13, color: '#2d6a4f', flex: 1 },
@@ -420,13 +418,17 @@ const styles = StyleSheet.create({
   mapBtnText: { fontSize: 12, color: '#2d6a4f', fontWeight: '600' },
   sourceTag: { backgroundColor: '#e8f0ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   sourceTagText: { fontSize: 12, color: '#3b5bdb', fontWeight: '600' },
+  sourceTagInat: { backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  sourceTagTextInat: { fontSize: 12, color: '#92400e', fontWeight: '600' },
 
   filterBar: { backgroundColor: '#f0f4f0', maxHeight: 44 },
   filterBarContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   filterChip: { paddingHorizontal: 12, paddingVertical: 3, borderRadius: 14, borderWidth: 1, borderColor: '#2d6a4f' },
   filterChipActive: { backgroundColor: '#2d6a4f' },
+  filterChipActiveInat: { backgroundColor: '#f59e0b', borderColor: '#f59e0b' },
   filterChipText: { fontSize: 12, color: '#2d6a4f', fontWeight: '600' },
   filterChipTextActive: { color: '#fff' },
+  filterChipTextActiveInat: { color: '#fff' },
 
   errorText: { color: '#c0392b', fontSize: 15, textAlign: 'center', marginBottom: 16 },
   retryButton: { backgroundColor: '#2d6a4f', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
