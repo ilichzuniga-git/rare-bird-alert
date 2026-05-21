@@ -11,15 +11,15 @@ async function upsertSighting(s) {
   const sql = `
     INSERT INTO sightings
       (region_code, source, source_id, species_code, common_name, scientific_name,
-       lat, lng, location_name, observed_at, how_many)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       lat, lng, location_name, observed_at, how_many, rarity_count, photo_url)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
     ON CONFLICT (source, source_id) DO NOTHING
   `;
   await db.query(sql, [
     s.region_code, s.source, s.source_id, s.species_code,
     s.common_name, s.scientific_name,
     s.lat, s.lng, s.location_name,
-    s.observed_at, s.how_many,
+    s.observed_at, s.how_many, s.rarity_count ?? null, s.photo_url ?? null,
   ]);
 }
 
@@ -49,14 +49,14 @@ async function pollAll() {
           const result = await db.query(
             `INSERT INTO sightings
                (region_code, source, source_id, species_code, common_name, scientific_name,
-                lat, lng, location_name, observed_at, how_many)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                lat, lng, location_name, observed_at, how_many, rarity_count, photo_url)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
              ON CONFLICT (source, source_id) DO NOTHING`,
             [
               s.region_code, s.source, s.source_id, s.species_code,
               s.common_name, s.scientific_name,
               s.lat, s.lng, s.location_name,
-              s.observed_at, s.how_many,
+              s.observed_at, s.how_many, s.rarity_count ?? null, s.photo_url ?? null,
             ]
           );
           if (result.rowCount > 0) newCount++;

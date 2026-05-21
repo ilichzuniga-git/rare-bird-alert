@@ -75,7 +75,7 @@ class INaturalistSource extends SightingSource {
     // Step 4: fetch actual observations of those specific rare species
     const observations = await this._getObservationsForTaxa(placeId, rareRecentIds, d1Str);
 
-    return observations.map(obs => this._normalize(obs, regionCode));
+    return observations.map(obs => this._normalize(obs, regionCode, allTimeMap));
   }
 
   /** Returns a Map<taxon_id, all_time_count> for all bird species in the place. */
@@ -144,8 +144,11 @@ class INaturalistSource extends SightingSource {
 
   /**
    * Normalize an iNaturalist observation into the shared NormalizedSighting shape.
+   * @param {object} obs         Raw iNaturalist observation
+   * @param {string} regionCode
+   * @param {Map}    allTimeMap  Map<taxon_id, all_time_count> from _getAllTimeSpeciesCounts
    */
-  _normalize(obs, regionCode) {
+  _normalize(obs, regionCode, allTimeMap) {
     const taxon = obs.taxon || {};
     const coords = obs.location ? obs.location.split(',').map(Number) : [null, null];
 
@@ -161,6 +164,8 @@ class INaturalistSource extends SightingSource {
       location_name:   obs.place_guess || null,
       observed_at:     new Date(obs.time_observed_at || obs.observed_on),
       how_many:        null,   // iNaturalist records presence, not count
+      rarity_count:    allTimeMap?.get(taxon.id) ?? null,
+      photo_url:       taxon.default_photo?.square_url ?? null,
     };
   }
 

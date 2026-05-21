@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -18,6 +19,51 @@ import { StatusBar } from 'expo-status-bar';
 import { registerForPushNotificationsAsync } from './src/notifications';
 import LeafletMap, { MapPin } from './src/LeafletMap';
 
+const INAT_BASE = 'https://api.inaturalist.org/v1';
+
+// Per-session cache: scientific_name → photo URL (or '' if not found)
+const photoCache = new Map<string, string>();
+
+async function fetchPhotoForSpecies(scientificName: string): Promise<string> {
+  if (photoCache.has(scientificName)) return photoCache.get(scientificName)!;
+  try {
+    const res = await fetch(
+      `${INAT_BASE}/taxa?q=${encodeURIComponent(scientificName)}&rank=species&per_page=1`
+    );
+    const data = await res.json();
+    const url = data?.results?.[0]?.default_photo?.square_url ?? '';
+    photoCache.set(scientificName, url);
+    return url;
+  } catch {
+    photoCache.set(scientificName, '');
+    return '';
+  }
+}
+
+function BirdPhoto({ photoUrl, scientificName }: { photoUrl: string | null; scientificName: string | null }) {
+  const [url, setUrl] = useState<string>(photoUrl ?? '');
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    if (!photoUrl && scientificName) {
+      fetchPhotoForSpecies(scientificName).then(u => {
+        if (mounted.current) setUrl(u);
+      });
+    }
+    return () => { mounted.current = false; };
+  }, [photoUrl, scientificName]);
+
+  if (!url) return <View style={styles.photoPlaceholder} />;
+  return (
+    <Image
+      source={{ uri: url }}
+      style={styles.photo}
+      resizeMode="cover"
+    />
+  );
+}
+
 const API_BASE = 'http://localhost:3000';
 
 interface Sighting {
@@ -31,6 +77,17 @@ interface Sighting {
   lat: number | null;
   lng: number | null;
   source: string | null;
+  rarity_count: number | null;
+  photo_url: string | null;
+}
+
+type RarityTier = { label: string; bg: string; text: string };
+
+function getRarityTier(rarity_count: number | null): RarityTier {
+  if (rarity_count === null) return { label: 'Notable',    bg: '#f1f5f9', text: '#475569' };
+  if (rarity_count <= 3)     return { label: 'Exceptional', bg: '#fef2f2', text: '#dc2626' };
+  if (rarity_count <= 9)     return { label: 'Very Rare',   bg: '#fff7ed', text: '#ea580c' };
+  return                            { label: 'Rare',        bg: '#fffbeb', text: '#d97706' };
 }
 
 interface WeekSection {
@@ -98,13 +155,24 @@ function groupByWeek(sightings: Sighting[], currentWeekKey: string): WeekSection
 function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => void }) {
   const count = item.how_many != null ? item.how_many + 'x ' : '';
   const hasCoords = item.lat != null && item.lng != null;
+  const tier = getRarityTier(item.rarity_count);
   return (
     <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.commonName}>{count}{item.common_name}</Text>
-        <Text style={styles.date} numberOfLines={1}>{formatDate(item.observed_at)}</Text>
+      <View style={styles.cardBody}>
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <Text style={styles.commonName}>{count}{item.common_name}</Text>
+              <View style={[styles.rarityBadge, { backgroundColor: tier.bg }]}>
+                <Text style={[styles.rarityBadgeText, { color: tier.text }]}>{tier.label}</Text>
+              </View>
+            </View>
+            <Text style={styles.date} numberOfLines={1}>{formatDate(item.observed_at)}</Text>
+          </View>
+          {item.scientific_name ? <Text style={styles.sciName}>{item.scientific_name}</Text> : null}
+        </View>
+        <BirdPhoto photoUrl={item.photo_url} scientificName={item.scientific_name} />
       </View>
-      {item.scientific_name ? <Text style={styles.sciName}>{item.scientific_name}</Text> : null}
       <View style={styles.cardFooter}>
         <Text style={styles.location} numberOfLines={1}>
           {'📍'} {item.location_name ?? item.region_name}
@@ -408,11 +476,18 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
+  cardBody: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  cardContent: { flex: 1 },
+  photo: { width: 64, height: 64, borderRadius: 8, flexShrink: 0 },
+  photoPlaceholder: { width: 64, height: 64, borderRadius: 8, backgroundColor: '#f0f4f0', flexShrink: 0 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-  commonName: { fontSize: 16, fontWeight: '600', color: '#1a3a2a', flex: 1 },
+  cardHeaderLeft: { flex: 1, flexDirection: 'column', gap: 4 },
+  commonName: { fontSize: 16, fontWeight: '600', color: '#1a3a2a' },
+  rarityBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  rarityBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
   date: { fontSize: 12, color: '#888', marginTop: 2, minWidth: 52, flexShrink: 0, textAlign: 'right' },
   sciName: { fontSize: 13, fontStyle: 'italic', color: '#555', marginTop: 3 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 },
   location: { fontSize: 13, color: '#2d6a4f', flex: 1 },
   mapBtn: { backgroundColor: '#e8f5ee', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   mapBtnText: { fontSize: 12, color: '#2d6a4f', fontWeight: '600' },

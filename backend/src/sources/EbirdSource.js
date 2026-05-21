@@ -36,6 +36,8 @@ class EbirdSource extends SightingSource {
       location_name:   obs.locName || null,
       observed_at:     new Date(obs.obsDt.replace(' ', 'T')),
       how_many:        obs.howMany != null ? parseInt(obs.howMany, 10) : null,
+      rarity_count:    null, // eBird already filters to notable — no numeric count needed
+      photo_url:       null, // lazy-loaded in the mobile app via iNaturalist taxa API
     };
   }
 

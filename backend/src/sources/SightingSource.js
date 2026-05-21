@@ -34,6 +34,8 @@ class SightingSource {
  * @property {string}  [location_name]
  * @property {Date}    observed_at
  * @property {number}  [how_many]
+ * @property {number}  [rarity_count]  All-time local record count (iNaturalist).
+ *                                     NULL = source does its own rarity filtering (eBird notable).
  */
 
 module.exports = SightingSource;
