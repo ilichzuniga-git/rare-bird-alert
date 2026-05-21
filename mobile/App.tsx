@@ -138,6 +138,7 @@ interface Sighting {
   lat: number | null;
   lng: number | null;
   source: string | null;
+  source_id: string | null;
   rarity_count: number | null;
   photo_url: string | null;
   photo_attribution: string | null;
@@ -215,6 +216,122 @@ function groupByWeek(sightings: Sighting[], currentWeekKey: string): WeekSection
     }));
 }
 
+// ---- Map modal with lazy-loaded comments ----
+interface CommentEntry { author: string; text: string; created_at: string | null; }
+interface CommentsPayload {
+  source: string;
+  observer_note: string | null;
+  comments: CommentEntry[];
+}
+
+function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: () => void }) {
+  const [commentsState, setCommentsState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [payload, setPayload] = useState<CommentsPayload | null>(null);
+
+  useEffect(() => {
+    if (!sighting) { setCommentsState('idle'); setPayload(null); return; }
+    setCommentsState('loading');
+    setPayload(null);
+    fetch(`${API_BASE}/api/sightings/${sighting.id}/comments`)
+      .then(r => r.json())
+      .then(data => { setPayload(data); setCommentsState('done'); })
+      .catch(() => setCommentsState('error'));
+  }, [sighting?.id]);
+
+  const comments = payload?.comments ?? [];
+  const hasContent = payload && (payload.observer_note || comments.length > 0);
+
+  return (
+    <Modal visible={sighting !== null} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#2d6a4f' }}>
+        {/* Header */}
+        <View style={styles.modalHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.modalTitle} numberOfLines={1}>{sighting?.common_name}</Text>
+            {sighting?.location_name ? (
+              <Text style={styles.modalSub} numberOfLines={1}>{sighting.location_name}</Text>
+            ) : null}
+          </View>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Text style={styles.closeBtnText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Map — fixed height */}
+        {sighting && sighting.lat != null && sighting.lng != null ? (
+          <View style={styles.modalMapContainer}>
+            <LeafletMap
+              pins={[toPin(sighting)!]}
+              center={{ lat: sighting.lat, lng: sighting.lng }}
+              zoom={15}
+            />
+          </View>
+        ) : (
+          <View style={[styles.modalMapContainer, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#1a3a2a' }]}>
+            <Text style={{ color: '#aaa', fontSize: 14 }}>No location data</Text>
+          </View>
+        )}
+
+        {/* Comments panel */}
+        <View style={styles.commentsPanel}>
+          {commentsState === 'loading' && (
+            <View style={styles.commentsCenter}>
+              <ActivityIndicator color="#2d6a4f" />
+              <Text style={styles.commentsHint}>Loading notes…</Text>
+            </View>
+          )}
+          {commentsState === 'error' && (
+            <View style={styles.commentsCenter}>
+              <Text style={styles.commentsHint}>Could not load comments</Text>
+            </View>
+          )}
+          {commentsState === 'done' && !hasContent && (
+            <View style={styles.commentsCenter}>
+              <Text style={styles.commentsHint}>No observer notes or comments for this sighting</Text>
+            </View>
+          )}
+          {commentsState === 'done' && hasContent && (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }}>
+              {/* Observer note */}
+              {payload?.observer_note ? (
+                <View style={styles.commentNote}>
+                  <Text style={styles.commentNoteLabel}>Observer note</Text>
+                  <Text style={styles.commentNoteText}>{payload.observer_note}</Text>
+                </View>
+              ) : null}
+
+              {/* Community comments */}
+              {comments.length > 0 ? (
+                <>
+                  <Text style={styles.commentsHeading}>
+                    {comments.length === 1 ? '1 comment' : `${comments.length} comments`}
+                  </Text>
+                  {comments.map((c, i) => (
+                    <View key={i} style={styles.commentRow}>
+                      <View style={styles.commentAvatar}>
+                        <Text style={styles.commentAvatarText}>{c.author[0]?.toUpperCase() ?? '?'}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.commentMeta}>
+                          <Text style={styles.commentAuthor}>{c.author}</Text>
+                          {c.created_at ? (
+                            <Text style={styles.commentDate}>{formatDate(c.created_at)}</Text>
+                          ) : null}
+                        </View>
+                        <Text style={styles.commentText}>{c.text}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              ) : null}
+            </ScrollView>
+          )}
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 // ---- Sighting card ----
 function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => void }) {
   const count = item.how_many != null ? item.how_many + 'x ' : '';
@@ -222,9 +339,12 @@ function SightingCard({ item, onMapPress }: { item: Sighting; onMapPress: () => 
   const tier = getRarityTier(item.rarity_count);
   const [notesExpanded, setNotesExpanded] = useState(false);
 
-  const hotspotUrl = item.source === 'ebird' && item.location_id
-    ? `https://ebird.org/hotspot/${item.location_id}`
-    : null;
+  const hotspotUrl =
+    item.source === 'ebird' && item.location_id
+      ? `https://ebird.org/hotspot/${item.location_id}`
+      : item.source === 'inaturalist' && item.source_id
+      ? `https://www.inaturalist.org/observations/${item.source_id}`
+      : null;
 
   const locationDisplay = item.location_name ?? item.region_name;
 
@@ -496,36 +616,7 @@ export default function App() {
       )}
 
       {/* Per-sighting map modal */}
-      <Modal
-        visible={modalSighting !== null}
-        animationType="slide"
-        onRequestClose={() => setModalSighting(null)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#2d6a4f' }}>
-          <View style={styles.modalHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.modalTitle} numberOfLines={1}>
-                {modalSighting?.common_name}
-              </Text>
-              {modalSighting?.location_name ? (
-                <Text style={styles.modalSub} numberOfLines={1}>
-                  {modalSighting.location_name}
-                </Text>
-              ) : null}
-            </View>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setModalSighting(null)}>
-              <Text style={styles.closeBtnText}>Done</Text>
-            </TouchableOpacity>
-          </View>
-          {modalSighting && modalSighting.lat != null && modalSighting.lng != null && (
-            <LeafletMap
-              pins={[toPin(modalSighting)!]}
-              center={{ lat: modalSighting.lat, lng: modalSighting.lng }}
-              zoom={15}
-            />
-          )}
-        </SafeAreaView>
-      </Modal>
+      <MapModal sighting={modalSighting} onClose={() => setModalSighting(null)} />
     </SafeAreaView>
   );
 }
@@ -646,4 +737,22 @@ const styles = StyleSheet.create({
   modalSub: { fontSize: 13, color: '#b7e4c7', marginTop: 2 },
   closeBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   closeBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  modalMapContainer: { height: 280 },
+  // Comments panel
+  commentsPanel: { flex: 1, backgroundColor: '#fff' },
+  commentsCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
+  commentsHint: { fontSize: 14, color: '#888', textAlign: 'center' },
+  commentsHeading: { fontSize: 13, fontWeight: '700', color: '#4a7c59', textTransform: 'uppercase', letterSpacing: 0.5 },
+  // Observer note block
+  commentNote: { backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: '#2d6a4f', borderRadius: 6, padding: 12 },
+  commentNoteLabel: { fontSize: 11, fontWeight: '700', color: '#2d6a4f', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 },
+  commentNoteText: { fontSize: 14, color: '#1a3a2a', lineHeight: 20 },
+  // Community comment rows
+  commentRow: { flexDirection: 'row', gap: 10 },
+  commentAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#2d6a4f', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  commentAvatarText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
+  commentAuthor: { fontSize: 13, fontWeight: '600', color: '#1a3a2a' },
+  commentDate: { fontSize: 11, color: '#888' },
+  commentText: { fontSize: 14, color: '#374151', lineHeight: 20 },
 });

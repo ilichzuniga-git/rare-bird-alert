@@ -1,6 +1,26 @@
 const express = require('express');
+const https = require('https');
 const router = express.Router();
 const db = require('../db');
+const config = require('../config');
+
+/** Minimal HTTPS GET → parsed JSON. */
+function httpsGet(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers }, res => {
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
+      }
+      let body = '';
+      res.on('data', c => { body += c; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(body)); }
+        catch (e) { reject(new Error(`JSON parse error: ${e.message}`)); }
+      });
+    }).on('error', reject);
+  });
+}
 
 // GET /api/sightings
 // Query params:
@@ -64,6 +84,74 @@ router.get('/regions', async (req, res) => {
   } catch (err) {
     console.error('[GET /api/sightings/regions]', err.message);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/sightings/:id/comments
+// Returns observer notes + community comments for a single sighting.
+// Unified response shape:
+//   { source, observer_note: string|null, comments: [{author, text, created_at}] }
+router.get('/:id/comments', async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT source, source_id, species_code FROM sightings WHERE id = $1',
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Sighting not found' });
+
+    const { source, source_id, species_code } = rows[0];
+
+    // ── eBird ──────────────────────────────────────────────────────────────────
+    if (source === 'ebird') {
+      const data = await httpsGet(
+        `https://api.ebird.org/v2/product/checklist/view/${source_id}`,
+        { 'X-eBirdApiToken': config.ebird.apiKey }
+      );
+
+      // Find the matching species observation in the checklist
+      const obs = (data.obs || []).find(o => o.speciesCode === species_code);
+      const observer_note = obs?.comments?.trim() || null;
+
+      // Checklist-level comments are stored in data.comments (array of strings)
+      // Each is a plain string, attributed to the checklist submitter
+      const submitterName = data.userDisplayName || 'Observer';
+      const clComments = (data.comments || [])
+        .filter(c => typeof c === 'string' && c.trim())
+        .map(text => ({ author: submitterName, text: text.trim(), created_at: null }));
+
+      return res.json({ source: 'ebird', observer_note, comments: clComments });
+    }
+
+    // ── iNaturalist ────────────────────────────────────────────────────────────
+    if (source === 'inaturalist') {
+      const data = await httpsGet(
+        `https://api.inaturalist.org/v1/observations/${source_id}`,
+        {
+          'User-Agent': 'RareBirdAlertApp/1.0',
+          'Accept': 'application/json',
+        }
+      );
+
+      const obs = data.results?.[0];
+      if (!obs) return res.json({ source: 'inaturalist', observer_note: null, comments: [] });
+
+      const observer_note = obs.description?.trim() || null;
+
+      const comments = (obs.comments || []).map(c => ({
+        author: c.user?.login || 'iNaturalist user',
+        text:   c.body?.trim() || '',
+        created_at: c.created_at || null,
+      })).filter(c => c.text);
+
+      return res.json({ source: 'inaturalist', observer_note, comments });
+    }
+
+    // Unknown source
+    return res.json({ source, observer_note: null, comments: [] });
+
+  } catch (err) {
+    console.error(`[GET /api/sightings/${req.params.id}/comments]`, err.message);
+    res.status(500).json({ error: 'Failed to fetch comments' });
   }
 });
 
