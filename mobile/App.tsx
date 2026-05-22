@@ -683,7 +683,12 @@ export default function App() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: statusBarHeight + 12 }]}>
-        <Text style={styles.headerTitle}>Rare Bird Alert</Text>
+        <View style={styles.headerTitleRow}>
+          <View style={styles.headerBirdIcon}>
+            <Text style={styles.headerBirdEmoji}>🐦</Text>
+          </View>
+          <Text style={styles.headerTitle}>Birder's Best Friend</Text>
+        </View>
         <Text style={styles.headerSub}>LA & Orange County</Text>
       </View>
 
@@ -789,8 +794,15 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f0f4f0' },
   header: { backgroundColor: '#2d6a4f', paddingBottom: 14, paddingHorizontal: 20 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerBirdIcon: {
+    width: 36, height: 36, borderRadius: 9,
+    backgroundColor: '#ecf4ed',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerBirdEmoji: { fontSize: 20 },
   headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#b7e4c7', marginTop: 2 },
+  headerSub: { fontSize: 13, color: '#b7e4c7', marginTop: 4 },
 
   tabs: { flexDirection: 'row', backgroundColor: '#245a41' },
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center' },

@@ -1,12 +1,12 @@
-# Rare Bird Alert (RBA)
+# 🐦 Birder's Best Friend
 
-A mobile app that shows rare bird sightings for LA & Orange County, powered by eBird and iNaturalist data, with push notifications and an interactive map.
+A mobile app for LA & Orange County birders that shows rare bird sightings from eBird and iNaturalist, tracks whether a bird is continuing at a location, and lets chasers report refounds and dips in real time.
 
 ## Project structure
 
 ```
 rba-app/
-  backend/   Express API + PostgreSQL + eBird poller
+  backend/   Express API + PostgreSQL + poller + clustering engine
   mobile/    React Native / Expo mobile app
   docs/      Notes, architecture, data source legal posture
 ```
@@ -126,6 +126,7 @@ Port 8081 = Metro bundler · Port 3000 = API server
 | Metro port already in use | `npx kill-port 8081` |
 | iNaturalist showing 0 sightings | Run `node src/scripts/testInat.js` to diagnose; check `inat_place_id` is set correctly |
 | iNaturalist showing wrong-region results | Run `node src/scripts/fixInatPlaceIds.js`, then `npm run db:migrate` to apply the fix |
+| Cluster status not showing on cards | Run `npm run poll:once` to trigger clustering on existing sightings |
 
 The **most common issue** is the adb tunnel dropping silently after `npm install` or a Metro restart. When in doubt, re-run both `adb reverse` commands.
 
@@ -137,7 +138,7 @@ The **most common issue** is the adb tunnel dropping silently after `npm install
 # Apply any unapplied DB migrations (safe to re-run)
 npm run db:migrate
 
-# Manually trigger a one-shot poll (all enabled sources)
+# Manually trigger a one-shot poll (all enabled sources) + clustering
 npm run poll:once
 
 # Test iNaturalist fetch pipeline and print diagnostic output
@@ -189,15 +190,16 @@ The `.gitignore` handles this automatically, but avoid:
 ## How it works
 
 - The **poller** runs every 10 minutes, fetches sightings from all enabled sources for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres
-- The **API** serves sightings to the mobile app via `GET /api/sightings`
+- After each poll, the **clustering engine** groups same-species sightings within 250m into continuing-bird clusters and updates their status
+- The **API** serves sightings and clusters to the mobile app
 - **Push notifications** fire via Expo's push service whenever new sightings arrive
 - The **map** uses OpenStreetMap + Leaflet (free, no API key) rendered inside a WebView
 
 ### Data sources
 
-**eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key.
+**eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key. Location rows on eBird cards are tappable and link to the eBird hotspot page for that location.
 
-**iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. No API key required. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
+**iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. No API key required. Location rows on iNaturalist cards link to the original observation on inaturalist.org. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
 
 ### iNaturalist rarity tuning
 
@@ -211,7 +213,7 @@ Default is `50`.
 
 iNaturalist photos carry a variety of Creative Commons licenses. The app **only displays photos with commercially usable licenses**: `CC0`, `CC BY`, `CC BY-SA`, and `CC BY-ND`. Photos licensed as **NC (non-commercial)** — `CC BY-NC`, `CC BY-NC-SA`, `CC BY-NC-ND` — and **all-rights-reserved** photos are never fetched or stored.
 
-In practice, roughly 90% of rare-species taxon photos on iNaturalist are NC or all-rights-reserved, so most sightings will show a generic 🐦 placeholder instead of a photo. When a photo is available, it is displayed with a photographer credit overlay pulled from iNaturalist's pre-formatted attribution string (e.g. "© Jane Smith").
+In practice, roughly 90% of rare-species taxon photos on iNaturalist are NC or all-rights-reserved, so most sightings show a 🐦 placeholder instead. Tapping the placeholder (or any photo) opens the species page on All About Birds. When a licensed photo is shown, a photographer credit overlay is displayed at the bottom of the image.
 
 This filter is applied in two places:
 - `INaturalistSource.js` — at poll time, before storing `photo_url` and `photo_attribution` to the DB
@@ -227,3 +229,39 @@ Each sighting card displays a color-coded rarity badge based on the species' all
 | Very Rare | 4–9 all-time records | Orange |
 | Rare | 10–49 all-time records | Amber |
 | Notable | eBird notable / no count | Gray |
+
+### Continuing bird clusters
+
+After each poll the backend runs a spatial clustering pass. Sightings of the same species within 250m of each other are grouped into a **cluster** representing a single continuing individual. Each cluster tracks:
+
+- First and last sighting date
+- Number of distinct observer checklists
+- User-submitted Refound and Dipped counts
+
+The status label shown on each card and in the map modal is derived from these values:
+
+| Label | Meaning |
+|---|---|
+| Continuing · Xh ago | Multi-observer or recently refound, seen within 48h |
+| Single report · Xd ago | Only one checklist, no independent confirmation |
+| Last seen Xd ago | Not seen in 2–7 days |
+| May have departed | No sighting in over 7 days |
+
+### Refound and Dipped reporting
+
+Tapping the **Map** button on any sighting opens the map modal, which shows:
+
+- The sighting's location with a dashed green circle indicating the 250m cluster stakeout zone
+- Trail dots for all other sightings of the same individual (oldest to newest)
+- The current continuing status in the header
+- **✓ Refound** and **✗ Dipped** buttons
+
+Tapping either button shows a confirmation sheet ("Yes, I'm sure"). On confirming a Refound, the cluster's `last_refound_at` is updated immediately for all users and a short bird chirp plays. Reports are anonymous (no account required).
+
+### Observer comments
+
+The map modal also fetches live observer notes and community comments from the source API:
+- **eBird** — retrieves the full checklist via `/v2/product/checklist/view/{subId}` and shows per-species comments if present
+- **iNaturalist** — retrieves the observation's description and community comment thread
+
+Comments are fetched on demand and never stored in the local database.
