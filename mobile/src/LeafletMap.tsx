@@ -121,8 +121,13 @@ function buildHtml(
 
 export default function LeafletMap({ pins, center, zoom, clusterCircle }: Props) {
   const html = buildHtml(pins, center, zoom, clusterCircle);
+  // Force WebView to remount when the circle arrives (cluster loads async after map renders)
+  const webViewKey = clusterCircle
+    ? `circle-${clusterCircle.lat}-${clusterCircle.lng}-${clusterCircle.radiusM}`
+    : `no-circle-${pins.length}`;
   return (
     <WebView
+      key={webViewKey}
       style={styles.map}
       source={{ html }}
       originWhitelist={['*']}

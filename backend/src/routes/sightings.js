@@ -101,49 +101,57 @@ router.get('/:id/comments', async (req, res) => {
 
     const { source, source_id, species_code } = rows[0];
 
+    // Guard: if source_id is missing we can't fetch from upstream
+    if (!source_id) {
+      return res.json({ source, observer_note: null, comments: [] });
+    }
+
     // ── eBird ──────────────────────────────────────────────────────────────────
     if (source === 'ebird') {
-      const data = await httpsGet(
-        `https://api.ebird.org/v2/product/checklist/view/${source_id}`,
-        { 'X-eBirdApiToken': config.ebird.apiKey }
-      );
+      try {
+        const data = await httpsGet(
+          `https://api.ebird.org/v2/product/checklist/view/${source_id}`,
+          { 'X-eBirdApiToken': config.ebird.apiKey }
+        );
 
-      // Find the matching species observation in the checklist
-      const obs = (data.obs || []).find(o => o.speciesCode === species_code);
-      const observer_note = obs?.comments?.trim() || null;
+        const obs = (data.obs || []).find(o => o.speciesCode === species_code);
+        const observer_note = obs?.comments?.trim() || null;
 
-      // Checklist-level comments are stored in data.comments (array of strings)
-      // Each is a plain string, attributed to the checklist submitter
-      const submitterName = data.userDisplayName || 'Observer';
-      const clComments = (data.comments || [])
-        .filter(c => typeof c === 'string' && c.trim())
-        .map(text => ({ author: submitterName, text: text.trim(), created_at: null }));
+        const submitterName = data.userDisplayName || 'Observer';
+        const clComments = (data.comments || [])
+          .filter(c => typeof c === 'string' && c.trim())
+          .map(text => ({ author: submitterName, text: text.trim(), created_at: null }));
 
-      return res.json({ source: 'ebird', observer_note, comments: clComments });
+        return res.json({ source: 'ebird', observer_note, comments: clComments });
+      } catch (ebirdErr) {
+        console.warn(`[comments] eBird fetch failed for ${source_id}:`, ebirdErr.message);
+        return res.json({ source: 'ebird', observer_note: null, comments: [] });
+      }
     }
 
     // ── iNaturalist ────────────────────────────────────────────────────────────
     if (source === 'inaturalist') {
-      const data = await httpsGet(
-        `https://api.inaturalist.org/v1/observations/${source_id}`,
-        {
-          'User-Agent': 'RareBirdAlertApp/1.0',
-          'Accept': 'application/json',
-        }
-      );
+      try {
+        const data = await httpsGet(
+          `https://api.inaturalist.org/v1/observations/${source_id}`,
+          { 'User-Agent': 'RareBirdAlertApp/1.0', 'Accept': 'application/json' }
+        );
 
-      const obs = data.results?.[0];
-      if (!obs) return res.json({ source: 'inaturalist', observer_note: null, comments: [] });
+        const obs = data.results?.[0];
+        if (!obs) return res.json({ source: 'inaturalist', observer_note: null, comments: [] });
 
-      const observer_note = obs.description?.trim() || null;
+        const observer_note = obs.description?.trim() || null;
+        const comments = (obs.comments || []).map(c => ({
+          author: c.user?.login || 'iNaturalist user',
+          text:   c.body?.trim() || '',
+          created_at: c.created_at || null,
+        })).filter(c => c.text);
 
-      const comments = (obs.comments || []).map(c => ({
-        author: c.user?.login || 'iNaturalist user',
-        text:   c.body?.trim() || '',
-        created_at: c.created_at || null,
-      })).filter(c => c.text);
-
-      return res.json({ source: 'inaturalist', observer_note, comments });
+        return res.json({ source: 'inaturalist', observer_note, comments });
+      } catch (inatErr) {
+        console.warn(`[comments] iNat fetch failed for ${source_id}:`, inatErr.message);
+        return res.json({ source: 'inaturalist', observer_note: null, comments: [] });
+      }
     }
 
     // Unknown source
@@ -151,7 +159,8 @@ router.get('/:id/comments', async (req, res) => {
 
   } catch (err) {
     console.error(`[GET /api/sightings/${req.params.id}/comments]`, err.message);
-    res.status(500).json({ error: 'Failed to fetch comments' });
+    // Return empty rather than a 500 so the mobile shows "no notes" not an error
+    res.json({ source: 'unknown', observer_note: null, comments: [] });
   }
 });
 

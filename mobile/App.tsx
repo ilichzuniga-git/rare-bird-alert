@@ -300,8 +300,12 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
     // Fetch comments
     setCommentsState('loading'); setPayload(null);
     fetch(`${API_BASE}/api/sightings/${sighting.id}/comments`)
-      .then(r => r.json())
-      .then(data => { setPayload(data); setCommentsState('done'); })
+      .then(async r => {
+        const data = await r.json();
+        // Always settle as 'done' — backend now returns empty arrays instead of errors
+        setPayload(data);
+        setCommentsState('done');
+      })
       .catch(() => setCommentsState('error'));
 
     // Fetch cluster if this sighting belongs to one
