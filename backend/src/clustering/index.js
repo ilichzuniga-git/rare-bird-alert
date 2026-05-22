@@ -1,6 +1,6 @@
 const db = require('../db');
 
-const CLUSTER_RADIUS_M = 250;
+const CLUSTER_RADIUS_M = 300;
 
 /**
  * Haversine distance in metres between two lat/lng points.

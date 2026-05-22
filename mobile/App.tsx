@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Audio } from 'expo-av';
+import * as Location from 'expo-location';
 import { registerForPushNotificationsAsync } from './src/notifications';
 import LeafletMap, { MapPin, ClusterCircle } from './src/LeafletMap';
 
@@ -38,6 +39,22 @@ async function playChirp() {
 }
 
 const INAT_BASE = 'https://api.inaturalist.org/v1';
+
+/** Haversine distance in metres between two lat/lng points. */
+function distanceMetres(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+function formatDistance(m: number): string {
+  if (m < 1000) return `${Math.round(m)}m`;
+  return `${(m / 1000).toFixed(1)}km`;
+}
 
 // Per-session cache: scientific_name → { url, attribution } (or empty if not found)
 type PhotoInfo = { url: string; attribution: string };
@@ -272,6 +289,8 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
   // confirm: null=hidden, 'refound'|'dipped'=waiting for user confirmation
   const [confirm, setConfirm] = useState<'refound' | 'dipped' | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     if (!sighting) {
@@ -296,14 +315,36 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
     }
   }, [sighting?.id]);
 
+  /** Request GPS and store result in userLocation when confirm sheet opens. */
+  const openConfirm = async (type: 'refound' | 'dipped') => {
+    setConfirm(type);
+    setUserLocation(null);
+    setLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      }
+    } catch (_) {
+      // GPS is best-effort — the report can still be submitted without it
+    }
+    setLocationLoading(false);
+  };
+
   const submitReport = async (type: 'refound' | 'dipped') => {
     if (!sighting?.cluster_id) return;
     setReporting(true);
     try {
+      const body: Record<string, unknown> = { type };
+      if (userLocation) {
+        body.lat = userLocation.lat;
+        body.lng = userLocation.lng;
+      }
       const res = await fetch(`${API_BASE}/api/clusters/${sighting.cluster_id}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.ok && cluster) {
@@ -379,14 +420,14 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
           <View style={styles.reportBar}>
             <TouchableOpacity
               style={[styles.reportBtn, styles.refoundBtn]}
-              onPress={() => setConfirm('refound')}
+              onPress={() => openConfirm('refound')}
               disabled={reporting}
             >
               <Text style={styles.reportBtnText}>✓ Refound</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.reportBtn, styles.dippedBtn]}
-              onPress={() => setConfirm('dipped')}
+              onPress={() => openConfirm('dipped')}
               disabled={reporting}
             >
               <Text style={styles.reportBtnText}>✗ Dipped</Text>
@@ -460,6 +501,35 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
                 ? 'Confirm you personally observed this bird right now at this location?'
                 : 'Confirm you searched and could not find this bird?'}
             </Text>
+            {/* GPS distance row */}
+            {locationLoading ? (
+              <View style={styles.confirmDistRow}>
+                <ActivityIndicator size="small" color="#64748b" style={{ marginRight: 6 }} />
+                <Text style={styles.confirmDistText}>Getting your location…</Text>
+              </View>
+            ) : userLocation && cluster ? (() => {
+              const distM = distanceMetres(
+                userLocation.lat, userLocation.lng,
+                cluster.center_lat, cluster.center_lng,
+              );
+              const isFar = distM > 1000;
+              return (
+                <View>
+                  <View style={styles.confirmDistRow}>
+                    <Text style={styles.confirmDistText}>
+                      📍 You are ~{formatDistance(distM)} from this spot
+                    </Text>
+                  </View>
+                  {isFar && (
+                    <View style={styles.confirmDistWarning}>
+                      <Text style={styles.confirmDistWarningText}>
+                        ⚠️ You appear to be far from this location
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })() : null}
             <View style={styles.confirmButtons}>
               <TouchableOpacity style={styles.confirmCancel} onPress={() => setConfirm(null)}>
                 <Text style={styles.confirmCancelText}>Cancel</Text>
@@ -932,6 +1002,10 @@ const styles = StyleSheet.create({
   confirmOkGreen: { backgroundColor: '#2d6a4f' },
   confirmOkRed:   { backgroundColor: '#b91c1c' },
   confirmOkText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  confirmDistRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, marginTop: 4 },
+  confirmDistText: { fontSize: 13, color: '#475569' },
+  confirmDistWarning: { backgroundColor: '#fffbeb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 6 },
+  confirmDistWarningText: { fontSize: 13, color: '#b45309' },
   closeBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   closeBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   modalMapContainer: { flex: 2 },

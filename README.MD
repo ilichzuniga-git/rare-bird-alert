@@ -190,7 +190,7 @@ The `.gitignore` handles this automatically, but avoid:
 ## How it works
 
 - The **poller** runs every 10 minutes, fetches sightings from all enabled sources for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres
-- After each poll, the **clustering engine** groups same-species sightings within 250m into continuing-bird clusters and updates their status
+- After each poll, the **clustering engine** groups same-species sightings within 300m into continuing-bird clusters and updates their status
 - The **API** serves sightings and clusters to the mobile app
 - **Push notifications** fire via Expo's push service whenever new sightings arrive
 - The **map** uses OpenStreetMap + Leaflet (free, no API key) rendered inside a WebView
@@ -232,7 +232,7 @@ Each sighting card displays a color-coded rarity badge based on the species' all
 
 ### Continuing bird clusters
 
-After each poll the backend runs a spatial clustering pass. Sightings of the same species within 250m of each other are grouped into a **cluster** representing a single continuing individual. Each cluster tracks:
+After each poll the backend runs a spatial clustering pass. Sightings of the same species within 300m of each other are grouped into a **cluster** representing a single continuing individual. Each cluster tracks:
 
 - First and last sighting date
 - Number of distinct observer checklists
@@ -251,12 +251,12 @@ The status label shown on each card and in the map modal is derived from these v
 
 Tapping the **Map** button on any sighting opens the map modal, which shows:
 
-- The sighting's location with a dashed green circle indicating the 250m cluster stakeout zone
+- The sighting's location with a dashed green circle indicating the 300m cluster stakeout zone
 - Trail dots for all other sightings of the same individual (oldest to newest)
 - The current continuing status in the header
 - **✓ Refound** and **✗ Dipped** buttons
 
-Tapping either button shows a confirmation sheet ("Yes, I'm sure"). On confirming a Refound, the cluster's `last_refound_at` is updated immediately for all users and a short bird chirp plays. Reports are anonymous (no account required).
+Tapping either button shows a confirmation sheet. The app requests foreground GPS permission and displays your distance from the cluster centre (e.g. "You are ~120m from this spot"). If you appear to be more than 1km away an amber warning is shown. On confirming a Refound, the cluster's `last_refound_at` is updated immediately for all users, a short bird chirp plays, and your GPS coordinates (if available) are stored with the report. Reports are anonymous (no account required).
 
 ### Observer comments
 
