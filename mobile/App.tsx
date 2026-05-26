@@ -159,7 +159,7 @@ function BirdPhoto({
   );
 }
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'https://rba-backend.cloudedapps.org';
 
 interface Sighting {
   id: number;
