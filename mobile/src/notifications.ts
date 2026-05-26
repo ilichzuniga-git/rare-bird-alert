@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'https://rba-backend.cloudedapps.org';
 
 // Push notifications are not supported in Expo Go SDK 53+.
 // They require a development build or production build.
