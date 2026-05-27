@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Rare Bird Alert",
-    "slug": "rare-bird-alert",
+    "name": "Birder's Best Friend",
+    "slug": "birders-best-friend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

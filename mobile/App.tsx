@@ -596,9 +596,9 @@ function SightingCard({ item, cluster, onMapPress }: { item: Sighting; cluster: 
       </View>
 
       <View style={styles.cardFooter}>
-        {/* Location — tappable hotspot link for eBird, plain text otherwise */}
-        {hotspotUrl ? (
-          <TouchableOpacity onPress={() => Linking.openURL(hotspotUrl)} style={styles.hotspotBtn}>
+        {/* Location — tappable to open map if coords exist, plain text otherwise */}
+        {hasCoords ? (
+          <TouchableOpacity onPress={onMapPress} style={styles.hotspotBtn}>
             <Text style={styles.hotspotText} numberOfLines={1}>{'📍'} {locationDisplay}</Text>
             <Text style={styles.hotspotChevron}>›</Text>
           </TouchableOpacity>
@@ -753,10 +753,10 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar style="light" />
+      <StatusBar style="light" backgroundColor="#2d6a4f" translucent={false} />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: statusBarHeight + 12 }]}>
+      <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <View style={styles.headerBirdIcon}>
             <Text style={styles.headerBirdEmoji}>🐦</Text>
