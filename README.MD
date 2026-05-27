@@ -153,6 +153,92 @@ npm run dev
 
 ---
 
+## Production deployment
+
+The app runs against a live backend hosted on Dokploy at **https://cloudedapps.org**.
+
+| Service | URL |
+|---|---|
+| Backend API | https://rba-backend.cloudedapps.org |
+| Dokploy dashboard | https://cloudedapps.org |
+
+The backend is configured with these environment variables in Dokploy:
+
+```
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=<internal postgres connection string>
+JWT_SECRET=<secret>
+EBIRD_API_KEY=<key>
+EBIRD_ENABLED=true
+INAT_ENABLED=true
+INAT_RARITY_THRESHOLD=20
+INAT_LOOKBACK_DAYS=30
+```
+
+If you need to run database migrations on the production server, open the **Docker Terminal** in the Dokploy app service and run:
+
+```bash
+node src/db/migrate.js
+```
+
+---
+
+## Updating the app
+
+### Backend changes
+
+1. Make your changes in `backend/`
+2. Commit and push to GitHub — Dokploy is set to **Autodeploy on push**, so the server updates automatically within a minute or two
+3. If you added a new migration, run `node src/db/migrate.js` in the Dokploy terminal after deploy
+
+### Mobile app changes
+
+1. Make your changes in `mobile/`
+2. Commit and push to GitHub
+3. Build a new APK (see below)
+4. Install the new APK on your phone
+
+You do **not** need to rebuild the APK for backend-only changes — those take effect immediately since the app talks to the live server.
+
+---
+
+## Building the APK
+
+The app is built in the cloud using [EAS Build](https://docs.expo.dev/build/introduction/) (Expo's build service). You need an Expo account — sign up free at https://expo.dev.
+
+### One-time setup
+
+```bash
+npm install -g eas-cli
+eas login
+```
+
+### Build a preview APK (sideloadable, no Play Store needed)
+
+```bash
+cd mobile
+eas build -p android --profile preview
+```
+
+This uploads your code to Expo's servers and builds it in the cloud. Takes roughly 5–10 minutes. When done, EAS prints a download link for the `.apk` file.
+
+Install it on your Android phone by:
+1. Downloading the `.apk` to your phone
+2. Opening the file — Android will prompt you to allow installs from unknown sources
+3. Tap Install
+
+### Build profiles
+
+The `mobile/eas.json` file defines two profiles:
+
+| Profile | Output | Use for |
+|---|---|---|
+| `preview` | `.apk` | Testing — sideload directly onto any Android device |
+| `production` | `.aab` (App Bundle) | Google Play Store submission |
+
+---
+
 ## Updating GitHub
 
 ### Everyday workflow
@@ -197,9 +283,11 @@ The `.gitignore` handles this automatically, but avoid:
 
 ### Data sources
 
-**eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key. Location rows on eBird cards are tappable and link to the eBird hotspot page for that location.
+**eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key.
 
-**iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. No API key required. Location rows on iNaturalist cards link to the original observation on inaturalist.org. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
+**iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. No API key required. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
+
+On each sighting card, tapping the location address opens the map modal for that sighting (same as tapping the Map button used to do).
 
 ### iNaturalist rarity tuning
 
@@ -249,7 +337,7 @@ The status label shown on each card and in the map modal is derived from these v
 
 ### Refound and Dipped reporting
 
-Tapping the **Map** button on any sighting opens the map modal, which shows:
+Tapping the **location address** on any sighting opens the map modal, which shows:
 
 - The sighting's location with a dashed green circle indicating the 300m cluster stakeout zone
 - Trail dots for all other sightings of the same individual (oldest to newest)
