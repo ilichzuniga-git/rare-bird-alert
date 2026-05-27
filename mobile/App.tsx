@@ -386,7 +386,7 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
     <Modal visible={sighting !== null} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: '#2d6a4f' }}>
         {/* Header */}
-        <View style={styles.modalHeader}>
+        <View style={[styles.modalHeader, { paddingTop: (Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0) + 12 }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.modalTitle} numberOfLines={1}>{sighting?.common_name}</Text>
             {sighting?.location_name ? (
@@ -612,11 +612,6 @@ function SightingCard({ item, cluster, onMapPress }: { item: Sighting; cluster: 
               <Text style={item.source === 'inaturalist' ? styles.sourceTagTextInat : styles.sourceTagText}>{formatSource(item.source)}</Text>
             </View>
           )}
-          {hasCoords && (
-            <TouchableOpacity style={styles.mapBtn} onPress={onMapPress}>
-              <Text style={styles.mapBtnText}>Map</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -756,7 +751,7 @@ export default function App() {
       <StatusBar style="light" backgroundColor="#2d6a4f" translucent={false} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: (Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0) + 12 }]}>
         <View style={styles.headerTitleRow}>
           <View style={styles.headerBirdIcon}>
             <Text style={styles.headerBirdEmoji}>🐦</Text>
@@ -866,7 +861,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f0f4f0' },
+  safe: { flex: 1, backgroundColor: '#2d6a4f' },
   header: { backgroundColor: '#2d6a4f', paddingBottom: 14, paddingHorizontal: 20 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerBirdIcon: {
@@ -983,7 +978,7 @@ const styles = StyleSheet.create({
 
   modalHeader: {
     backgroundColor: '#2d6a4f', flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12, gap: 12,
+    paddingHorizontal: 16, paddingBottom: 12, gap: 12,
   },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
   modalSub: { fontSize: 13, color: '#b7e4c7', marginTop: 2 },
