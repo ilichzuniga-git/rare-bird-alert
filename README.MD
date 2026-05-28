@@ -196,14 +196,15 @@ node src/db/migrate.js
 
 1. Make your changes in `mobile/`
 2. Commit and push to GitHub
-3. Build a new APK (see below)
-4. Install the new APK on your phone
+3. Run `eas build -p android --profile production` and download the `.aab`
+4. Upload the `.aab` to Play Console → Internal Testing → Create new release
+5. Testers get the update automatically through the Play Store
 
-You do **not** need to rebuild the APK for backend-only changes — those take effect immediately since the app talks to the live server.
+You do **not** need to rebuild for backend-only changes — those take effect immediately since the app talks to the live server.
 
 ---
 
-## Building the APK
+## Building the app
 
 The app is built in the cloud using [EAS Build](https://docs.expo.dev/build/introduction/) (Expo's build service). You need an Expo account — sign up free at https://expo.dev.
 
@@ -214,19 +215,9 @@ npm install -g eas-cli
 eas login
 ```
 
-### Build a preview APK (sideloadable, no Play Store needed)
+The Android keystore (signing key) is managed by EAS and was generated via `eas credentials`. Do not delete it — it's required for all future Play Store uploads.
 
-```bash
-cd mobile
-eas build -p android --profile preview
-```
-
-This uploads your code to Expo's servers and builds it in the cloud. Takes roughly 5–10 minutes. When done, EAS prints a download link for the `.apk` file.
-
-Install it on your Android phone by:
-1. Downloading the `.apk` to your phone
-2. Opening the file — Android will prompt you to allow installs from unknown sources
-3. Tap Install
+Firebase (`google-services.json`) is configured in `mobile/google-services.json` and referenced in `app.json`. This is required for push notifications to work in production builds.
 
 ### Build profiles
 
@@ -234,8 +225,57 @@ The `mobile/eas.json` file defines two profiles:
 
 | Profile | Output | Use for |
 |---|---|---|
-| `preview` | `.apk` | Testing — sideload directly onto any Android device |
-| `production` | `.aab` (App Bundle) | Google Play Store submission |
+| `preview` | `.apk` | Quick local testing — sideload directly onto any Android device |
+| `production` | `.aab` (App Bundle) | Google Play Store (Internal Testing / release) |
+
+### Build a preview APK (sideloadable, no Play Store needed)
+
+```bash
+cd mobile
+eas build -p android --profile preview
+```
+
+Takes roughly 5–10 minutes. When done, EAS prints a download link for the `.apk` file.
+
+Install it on your Android phone by:
+1. Downloading the `.apk` to your phone
+2. Opening the file — Android will prompt you to allow installs from unknown sources
+3. Tap Install
+
+> **Note:** Push notifications do **not** work in preview APK builds or in Expo Go. Use the Play Store Internal Testing track to test notifications.
+
+### Build a production AAB (for Play Store)
+
+```bash
+cd mobile
+eas build -p android --profile production
+```
+
+Takes roughly 5–10 minutes. Download the `.aab` file from the link EAS provides when done.
+
+---
+
+## Play Store — Internal Testing (Beta)
+
+The app is distributed to beta testers via Google Play's Internal Testing track. Testers install through the Play Store normally — no sideloading warnings, and push notifications work correctly.
+
+### Uploading a new build to testers
+
+1. Build a production AAB (see above)
+2. Go to [Google Play Console](https://play.google.com/console) → Birder's Best Friend
+3. Navigate to **Testing → Internal Testing**
+4. Click **Create new release**
+5. Upload the `.aab` file, add release notes, and click **Save and publish**
+6. Testers receive the update automatically through the Play Store within a few minutes
+
+### Adding new testers
+
+1. In Play Console go to **Testing → Internal Testing → Testers tab**
+2. Edit your tester email list and add their Gmail address
+3. Save, then send them the opt-in URL shown on that page
+4. They open the URL on their Android device, tap "Become a tester", then install from the Play Store
+
+> **Important:** You must add yourself to the tester list too, or your device will keep running the old sideloaded version.
 
 ---
 
