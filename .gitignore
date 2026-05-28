@@ -39,3 +39,4 @@ mobile/android/
 *.keystore
 *.jks
 *.mobileprovision
+mobile/google-services.json
