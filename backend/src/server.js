@@ -8,6 +8,9 @@ const { startPoller } = require('./poller');
 
 const app = express();
 
+// Behind Traefik (one hop), so req.ip is the real client IP for rate limiting
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json());
 

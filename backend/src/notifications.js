@@ -25,12 +25,25 @@ async function dispatchNotifications(region, newCount) {
 
   // Expo push API accepts batches of up to 100
   const BATCH = 100;
+  const deadTokens = [];
   for (let i = 0; i < messages.length; i += BATCH) {
     const batch = messages.slice(i, i + BATCH);
-    await _postJSON(EXPO_PUSH_URL, batch);
+    const response = await _postJSON(EXPO_PUSH_URL, batch);
+    // Expo returns one ticket per message, in order. DeviceNotRegistered means
+    // the app was uninstalled or the token expired — stop sending to it.
+    (response?.data || []).forEach((ticket, j) => {
+      if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
+        deadTokens.push(batch[j].to);
+      }
+    });
   }
 
   console.log(`[notifications] Sent to ${devices.length} device(s) for ${region.name}`);
+
+  if (deadTokens.length) {
+    await db.query('DELETE FROM device_tokens WHERE token = ANY($1)', [deadTokens]);
+    console.log(`[notifications] Removed ${deadTokens.length} unregistered device token(s).`);
+  }
 }
 
 function _postJSON(url, body) {
@@ -41,13 +54,16 @@ function _postJSON(url, body) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
         'Content-Length': Buffer.byteLength(payload),
       },
     };
     const req = https.request(url, options, res => {
-      res.resume();
-      resolve();
+      let body = '';
+      res.on('data', c => { body += c; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(body)); }
+        catch (_) { resolve(null); } // non-JSON error page: nothing to prune
+      });
     });
     req.on('error', reject);
     req.write(payload);

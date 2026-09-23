@@ -3,6 +3,40 @@ const router = express.Router();
 const db = require('../db');
 const { CLUSTER_RADIUS_M } = require('../clustering');
 
+// Abuse guards for anonymous refound/dipped reports, keyed by client IP.
+// In-memory is fine: the backend runs as a single replica, and a restart
+// only resets the windows.
+const REPORT_RATE_WINDOW_MS = 15 * 60 * 1000;
+const REPORT_RATE_MAX       = 10;             // reports per IP per window
+const DUPLICATE_WINDOW_MS   = 60 * 60 * 1000; // same IP + cluster + type counts once per hour
+
+const reportTimesByIp = new Map(); // ip -> [timestamp, ...]
+const lastReportByKey = new Map(); // `${ip}:${clusterId}:${type}` -> timestamp
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, times] of reportTimesByIp) {
+    const recent = times.filter(t => now - t < REPORT_RATE_WINDOW_MS);
+    if (recent.length) reportTimesByIp.set(ip, recent);
+    else reportTimesByIp.delete(ip);
+  }
+  for (const [key, t] of lastReportByKey) {
+    if (now - t >= DUPLICATE_WINDOW_MS) lastReportByKey.delete(key);
+  }
+}, REPORT_RATE_WINDOW_MS).unref();
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const recent = (reportTimesByIp.get(ip) || []).filter(t => now - t < REPORT_RATE_WINDOW_MS);
+  if (recent.length >= REPORT_RATE_MAX) {
+    reportTimesByIp.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  reportTimesByIp.set(ip, recent);
+  return false;
+}
+
 /**
  * Derive a human-readable status label from cluster data.
  * Returns { label, level } where level is 'green' | 'amber' | 'red' | 'gray'
@@ -109,21 +143,37 @@ router.get('/:id', async (req, res) => {
 // POST /api/clusters/:id/report
 // Body: { type: 'refound' | 'dipped', device_id?: string, lat?: number, lng?: number }
 router.post('/:id/report', async (req, res) => {
-  const { type, device_id, lat, lng } = req.body;
+  const { type, device_id, lat, lng } = req.body || {};
   if (!['refound', 'dipped'].includes(type)) {
     return res.status(400).json({ error: 'type must be "refound" or "dipped"' });
+  }
+  const clusterId = Number(req.params.id);
+  if (!Number.isInteger(clusterId) || clusterId <= 0) {
+    return res.status(400).json({ error: 'Invalid cluster id' });
+  }
+
+  if (isRateLimited(req.ip)) {
+    return res.status(429).json({ error: 'Too many reports — try again later' });
   }
 
   try {
     // Check cluster exists
-    const { rows } = await db.query('SELECT id FROM clusters WHERE id = $1', [req.params.id]);
+    const { rows } = await db.query('SELECT * FROM clusters WHERE id = $1', [clusterId]);
     if (!rows.length) return res.status(404).json({ error: 'Cluster not found' });
+
+    // Repeat report from the same IP: acknowledge without counting it again
+    const dupKey = `${req.ip}:${clusterId}:${type}`;
+    const lastAt = lastReportByKey.get(dupKey);
+    if (lastAt && Date.now() - lastAt < DUPLICATE_WINDOW_MS) {
+      return res.json({ ok: true, duplicate: true, status: clusterStatus(rows[0]) });
+    }
+    lastReportByKey.set(dupKey, Date.now());
 
     // Insert report
     await db.query(
       `INSERT INTO cluster_reports (cluster_id, type, device_id, lat, lng)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.params.id, type, device_id || null, lat || null, lng || null]
+      [clusterId, type, device_id || null, lat || null, lng || null]
     );
 
     // Update cluster aggregate stats
@@ -134,7 +184,7 @@ router.post('/:id/report', async (req, res) => {
            refound_count   = refound_count + 1,
            updated_at      = NOW()
          WHERE id = $1`,
-        [req.params.id]
+        [clusterId]
       );
     } else {
       await db.query(
@@ -143,12 +193,12 @@ router.post('/:id/report', async (req, res) => {
            dip_count      = dip_count + 1,
            updated_at     = NOW()
          WHERE id = $1`,
-        [req.params.id]
+        [clusterId]
       );
     }
 
     // Return fresh cluster status
-    const { rows: updated } = await db.query('SELECT * FROM clusters WHERE id = $1', [req.params.id]);
+    const { rows: updated } = await db.query('SELECT * FROM clusters WHERE id = $1', [clusterId]);
     res.json({ ok: true, status: clusterStatus(updated[0]) });
   } catch (err) {
     console.error('[POST /api/clusters/:id/report]', err.message);

@@ -50,7 +50,6 @@ INAT_ENABLED=true
 INAT_RARITY_THRESHOLD=50
 INAT_LOOKBACK_DAYS=30
 
-JWT_SECRET=change_me_to_a_long_random_string
 PORT=3000
 ```
 
@@ -168,7 +167,6 @@ The backend is configured with these environment variables in Dokploy:
 NODE_ENV=production
 PORT=3000
 DATABASE_URL=<internal postgres connection string>
-JWT_SECRET=<secret>
 EBIRD_API_KEY=<key>
 EBIRD_ENABLED=true
 INAT_ENABLED=true
