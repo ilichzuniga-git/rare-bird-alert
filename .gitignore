@@ -40,3 +40,5 @@ mobile/android/
 *.jks
 *.mobileprovision
 mobile/google-services.json
+# Deployment secrets notes
+dokploy-env-vars.txt

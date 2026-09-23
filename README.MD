@@ -190,7 +190,7 @@ node src/db/migrate.js
 
 1. Make your changes in `backend/`
 2. Commit and push to GitHub — Dokploy is set to **Autodeploy on push**, so the server updates automatically within a minute or two
-3. If you added a new migration, run `node src/db/migrate.js` in the Dokploy terminal after deploy
+3. New migrations apply automatically — `npm start` runs `node src/db/migrate.js` before starting the server
 
 ### Mobile app changes
 

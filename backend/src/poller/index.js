@@ -3,26 +3,10 @@ const db = require('../db');
 const { getSources } = require('../sources');
 const { clusterSightings } = require('../clustering');
 
-/**
- * Upsert a single normalized sighting into the DB.
- * The UNIQUE(source, source_id) constraint means duplicate observations
- * are silently ignored.
- */
-async function upsertSighting(s) {
-  const sql = `
-    INSERT INTO sightings
-      (region_code, source, source_id, species_code, common_name, scientific_name,
-       lat, lng, location_name, observed_at, how_many, rarity_count, photo_url)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-    ON CONFLICT (source, source_id) DO NOTHING
-  `;
-  await db.query(sql, [
-    s.region_code, s.source, s.source_id, s.species_code,
-    s.common_name, s.scientific_name,
-    s.lat, s.lng, s.location_name,
-    s.observed_at, s.how_many, s.rarity_count ?? null, s.photo_url ?? null,
-  ]);
-}
+// Sightings older than this are purged after each poll, and skipped on insert
+// so sources with a longer lookback (iNaturalist: 30 days) don't re-insert
+// them every cycle and trigger "new sighting" notifications.
+const RETENTION_DAYS = 28;
 
 /**
  * Run one full poll cycle across all enabled sources × all enabled regions.
@@ -45,19 +29,24 @@ async function pollAll() {
     for (const source of sources) {
       try {
         const sightings = await source.fetchSightings(region.code);
+        const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
         let newCount = 0;
         for (const s of sightings) {
+          if (new Date(s.observed_at).getTime() < cutoff) continue;
+          // xmax = 0 only for freshly inserted rows; rowCount alone also counts
+          // ON CONFLICT updates, which made every re-fetched sighting look new.
           const result = await db.query(
             `INSERT INTO sightings
                (region_code, source, source_id, species_code, common_name, scientific_name,
                 lat, lng, location_name, location_id, observed_at, how_many, rarity_count,
                 photo_url, photo_attribution, notes)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-             ON CONFLICT (source, source_id) DO UPDATE SET
+             ON CONFLICT (source, source_id, COALESCE(species_code, '')) DO UPDATE SET
                location_id       = COALESCE(sightings.location_id, EXCLUDED.location_id),
                photo_url         = COALESCE(sightings.photo_url, EXCLUDED.photo_url),
                photo_attribution = COALESCE(sightings.photo_attribution, EXCLUDED.photo_attribution),
-               notes             = COALESCE(sightings.notes, EXCLUDED.notes)`,
+               notes             = COALESCE(sightings.notes, EXCLUDED.notes)
+             RETURNING (xmax = 0) AS inserted`,
             [
               s.region_code, s.source, s.source_id, s.species_code,
               s.common_name, s.scientific_name,
@@ -66,7 +55,7 @@ async function pollAll() {
               s.photo_url ?? null, s.photo_attribution ?? null, s.notes ?? null,
             ]
           );
-          if (result.rowCount > 0) newCount++;
+          if (result.rows[0]?.inserted) newCount++;
         }
         console.log(
           `[poller] ${source.name} / ${region.name}: ${sightings.length} fetched, ${newCount} new`
@@ -88,12 +77,13 @@ async function pollAll() {
     }
   }
 
-  // Purge sightings older than 28 days (keep 4 weeks of history)
+  // Purge sightings older than the retention window
   try {
     const { rowCount } = await db.query(
-      "DELETE FROM sightings WHERE observed_at < NOW() - INTERVAL '28 days'"
+      "DELETE FROM sightings WHERE observed_at < NOW() - make_interval(days => $1)",
+      [RETENTION_DAYS]
     );
-    if (rowCount > 0) console.log(`[poller] Purged ${rowCount} sightings older than 28 days.`);
+    if (rowCount > 0) console.log(`[poller] Purged ${rowCount} sightings older than ${RETENTION_DAYS} days.`);
   } catch (err) {
     console.error('[poller] Purge error:', err.message);
   }
