@@ -45,7 +45,8 @@ async function pollAll() {
                location_id       = COALESCE(sightings.location_id, EXCLUDED.location_id),
                photo_url         = COALESCE(sightings.photo_url, EXCLUDED.photo_url),
                photo_attribution = COALESCE(sightings.photo_attribution, EXCLUDED.photo_attribution),
-               notes             = COALESCE(sightings.notes, EXCLUDED.notes)
+               notes             = COALESCE(sightings.notes, EXCLUDED.notes),
+               observed_at       = EXCLUDED.observed_at
              RETURNING (xmax = 0) AS inserted`,
             [
               s.region_code, s.source, s.source_id, s.species_code,

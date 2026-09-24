@@ -1,6 +1,7 @@
 const https = require('https');
 const SightingSource = require('./SightingSource');
 const config = require('../config');
+const { parseLocalTime } = require('../time');
 
 const EBIRD_BASE = 'https://api.ebird.org/v2';
 
@@ -35,7 +36,8 @@ class EbirdSource extends SightingSource {
       lng:             obs.lng != null ? parseFloat(obs.lng) : null,
       location_name:     obs.locName || null,
       location_id:       obs.locId  || null, // e.g. 'L123456' — used for hotspot link
-      observed_at:       new Date(obs.obsDt.replace(' ', 'T')),
+      // obsDt is the observer's local time with no zone; the server runs in UTC
+      observed_at:       parseLocalTime(obs.obsDt),
       how_many:          obs.howMany != null ? parseInt(obs.howMany, 10) : null,
       rarity_count:      null,   // eBird already filters to notable — no numeric count needed
       photo_url:         null,   // lazy-loaded in the mobile app via iNaturalist taxa API

@@ -42,11 +42,9 @@ export function groupBirds(sightings: Sighting[], clusters: Map<number, ClusterD
   return birds.sort((a, b) => (a.latest.observed_at < b.latest.observed_at ? 1 : -1));
 }
 
-// observed_at carries the observer's local wall-clock time in its UTC fields (eBird
-// reports local time and the backend stores it unconverted), so compare *dates* in
-// those fields against today's local date rather than doing hour arithmetic.
+/** The local calendar date (YYYY-MM-DD) of an observed_at timestamp. */
 function wallDate(iso: string): string {
-  return iso.slice(0, 10);
+  return localDate(new Date(iso));
 }
 function localDate(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -100,9 +98,9 @@ export function byRarity(a: Bird, b: Bird): number {
   );
 }
 
-/** "Continuing", "Single report", … without the backend's hour count (see wallDate note). */
+/** The cluster's status, e.g. "Continuing · 2h ago" or "Single report · 1d ago". */
 export function statusWord(bird: Bird): string | null {
-  return bird.cluster ? bird.cluster.status.label.split(' · ')[0] : null;
+  return bird.cluster ? bird.cluster.status.label : null;
 }
 
 /** "Refound 38 min ago" when a user refound it in the last day (server time, so accurate). */

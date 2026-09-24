@@ -20,6 +20,7 @@ Before adding any monetization — ads, paid features, subscriptions, even donat
 - Attribution (required): **"Data from eBird (Cornell Lab of Ornithology, ebird.org)"**
   - Shown in the app header ("Data from eBird & iNaturalist") and in full, with a link, on the About screen
 - Notes: notable sightings include reports not yet confirmed by eBird reviewers — don't describe them as "reviewed" in the UI.
+- `obsDt` is the observer's local time with no zone. It must be parsed as Pacific time (`backend/src/time.js`), not by `new Date()` on the UTC server — that bug stored every eBird time 7–8 hours early until migration 015.
 - Links out to ebird.org hotspot pages (`/hotspot/{locId}`) and species pages (`/species/{code}`).
 - Last terms review: 2026-05-11. Non-commercial decision recorded: 2026-09-23.
 
