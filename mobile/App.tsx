@@ -234,6 +234,44 @@ function openInMaps(lat: number, lng: number, label: string) {
   );
 }
 
+// ---- Coordinates typed into observer notes ----
+// Hotspot reports all share the hotspot's pin, so birders often paste the bird's
+// actual spot into their notes. Find it so the app can show and navigate to it.
+const DECIMAL_COORDS = /(-?\d{1,2}\.\d{3,})\s*°?\s*([NS])?[\s,;/]+(-?\d{1,3}\.\d{3,})\s*°?\s*([EW])?/gi;
+const DMS_COORDS = /(\d{1,2})\s*°\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:\.\d+)?)\s*(?:["″]|'')?\s*([NS])[\s,;/]+(\d{1,3})\s*°\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:\.\d+)?)\s*(?:["″]|'')?\s*([EW])/gi;
+const MAX_NOTE_COORD_DISTANCE_M = 25_000;
+
+/**
+ * First coordinate pair in `texts` that lies within 25km of the report (which
+ * rules out unrelated numbers and fixes a dropped minus sign on longitude).
+ */
+function findNoteCoordinates(
+  texts: (string | null | undefined)[],
+  near: { lat: number; lng: number },
+): { lat: number; lng: number } | null {
+  const candidates: { lat: number; lng: number }[] = [];
+  for (const text of texts) {
+    if (!text) continue;
+    for (const m of text.matchAll(DMS_COORDS)) {
+      const lat = (+m[1] + +m[2] / 60 + +m[3] / 3600) * (m[4].toUpperCase() === 'S' ? -1 : 1);
+      const lng = (+m[5] + +m[6] / 60 + +m[7] / 3600) * (m[8].toUpperCase() === 'W' ? -1 : 1);
+      candidates.push({ lat, lng });
+    }
+    for (const m of text.matchAll(DECIMAL_COORDS)) {
+      let lat = parseFloat(m[1]);
+      let lng = parseFloat(m[3]);
+      if (m[2]?.toUpperCase() === 'S') lat = -Math.abs(lat);
+      if (m[4]?.toUpperCase() === 'W') lng = -Math.abs(lng);
+      candidates.push({ lat, lng });
+      if (!m[4]) candidates.push({ lat, lng: -lng }); // "118.28397" meant as west
+    }
+  }
+  return candidates.find(c =>
+    Math.abs(c.lat) <= 90 && Math.abs(c.lng) <= 180 &&
+    distanceMetres(c.lat, c.lng, near.lat, near.lng) <= MAX_NOTE_COORD_DISTANCE_M
+  ) ?? null;
+}
+
 function toPin(s: Sighting): MapPin | null {
   if (s.lat == null || s.lng == null) return null;
   return { lat: s.lat, lng: s.lng, label: s.common_name, sciName: s.scientific_name };
@@ -397,6 +435,17 @@ function MapModal({
   const comments = payload?.comments ?? [];
   const hasContent = payload && (payload.observer_note || comments.length > 0);
 
+  const reportPoint = sighting?.lat != null && sighting?.lng != null
+    ? { lat: Number(sighting.lat), lng: Number(sighting.lng) }
+    : null;
+  const exactSpot = useMemo(
+    () => reportPoint && payload
+      ? findNoteCoordinates([payload.observer_note, ...comments.map(c => c.text)], reportPoint)
+      : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [payload, reportPoint?.lat, reportPoint?.lng]
+  );
+
   // Build map pins: trail dots for older cluster sightings, main pin for this one
   const mapPins: MapPin[] = [];
   if (cluster?.sighting_pins) {
@@ -408,6 +457,9 @@ function MapModal({
   }
   if (sighting?.lat != null && sighting?.lng != null) {
     mapPins.push(toPin(sighting)!);
+  }
+  if (exactSpot) {
+    mapPins.push({ ...exactSpot, label: "Observer's exact spot (from notes)", isExact: true });
   }
 
   const clusterCircle: ClusterCircle | null = cluster
@@ -517,6 +569,17 @@ function MapModal({
               >
                 <Text style={styles.openMapsText}>
                   📍 Open this report's location in Maps ({Number(sighting.lat).toFixed(5)}, {Number(sighting.lng).toFixed(5)})
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+            {exactSpot && reportPoint ? (
+              <TouchableOpacity
+                style={styles.openMapsBtn}
+                onPress={() => openInMaps(exactSpot.lat, exactSpot.lng, `${sighting.common_name} (observer's spot)`)}
+              >
+                <Text style={[styles.openMapsText, styles.exactSpotText]}>
+                  🎯 Open observer's exact spot in Maps ({exactSpot.lat.toFixed(5)}, {exactSpot.lng.toFixed(5)})
+                  {' · '}~{formatDistance(distanceMetres(exactSpot.lat, exactSpot.lng, reportPoint.lat, reportPoint.lng))} from the report pin
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -1149,6 +1212,7 @@ const styles = StyleSheet.create({
   reportChipTextActive: { color: '#fff' },
   openMapsBtn: { paddingVertical: 2 },
   openMapsText: { fontSize: 13, color: '#1d4ed8', fontWeight: '600' },
+  exactSpotText: { color: '#c2410c' },
   commentsPanel: { flex: 1, backgroundColor: '#fff', minHeight: 0 },
   commentsCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
   commentsHint: { fontSize: 14, color: '#888', textAlign: 'center' },

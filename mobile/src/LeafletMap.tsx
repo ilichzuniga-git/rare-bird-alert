@@ -12,6 +12,8 @@ export interface MapPin {
   sublabel?: string;
   /** If true, render as a smaller "trail" dot (older sighting in a cluster) */
   isTrail?: boolean;
+  /** If true, render as a target marker: a precise spot parsed from observer notes */
+  isExact?: boolean;
 }
 
 export interface ClusterCircle {
@@ -116,6 +118,15 @@ function buildHtml(
     iconAnchor: [5, 5],
   });
 
+  // Precise spot an observer typed into their notes
+  var exactIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:22px;height:22px;border-radius:50%;background:rgba(234,88,12,0.25);border:3px solid #ea580c;display:flex;align-items:center;justify-content:center;"><div style="width:6px;height:6px;border-radius:50%;background:#ea580c;"></div></div>',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -11],
+  });
+
   var bounds = [];
   var groups = {}; // interactive mode: pins at the same spot share one marker
   pins.forEach(function(pin) {
@@ -126,11 +137,12 @@ function buildHtml(
       (groups[key] = groups[key] || []).push(pin);
       return;
     }
-    var icon = pin.isTrail ? trailIcon : birdIcon;
+    var icon = pin.isExact ? exactIcon : pin.isTrail ? trailIcon : birdIcon;
     var popup = '<b>' + esc(pin.label) + '</b>' + (pin.sciName ? '<br><i>' + esc(pin.sciName) + '</i>' : '');
     var marker = L.marker([pin.lat, pin.lng], { icon: icon }).addTo(map);
     if (!pin.isTrail) marker.bindPopup(popup);
     if (pins.length === 1 && !pin.isTrail) marker.openPopup();
+    if (pin.isExact) marker.openPopup();
   });
 
   Object.keys(groups).forEach(function(key) {
