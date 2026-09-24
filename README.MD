@@ -2,6 +2,46 @@
 
 A mobile app for LA & Orange County birders that shows rare bird sightings from eBird and iNaturalist, tracks whether a bird is continuing at a location, and lets chasers report refounds and dips in real time.
 
+## Starting the app in Expo Go (every session)
+
+**Where this runs:** every command below runs in a terminal **on your laptop** (Command Prompt or PowerShell), inside the `mobile` folder — never on the phone, and never from the repo root (`C:\claude\rba-app` itself has no `package.json`). The phone only comes in at the last step, where you type a URL into the **Expo Go app**.
+
+One-time setup (installing `adb`, the Samsung USB driver, USB debugging, `npm install` in `mobile/`) is covered in [Running the app on your phone](#running-the-app-on-your-phone). After that:
+
+1. **Open a terminal on the laptop** and go to the mobile folder:
+   ```bash
+   cd C:\claude\rba-app\mobile
+   ```
+2. **Start Metro in tunnel mode:**
+   ```bash
+   npx expo start --tunnel
+   ```
+   This is the mode that actually works right now — see the note below. The first run installs `@expo/ngrok` (answer `y` if asked) and takes longer to connect than a normal start; wait for `Tunnel ready` and a line like:
+   ```
+   › Metro waiting on exp://abc123-yourname-8081.exp.direct
+   ```
+3. **On the phone**, open **Expo Go** → **Enter URL** → type the `exp://....exp.direct` address from step 2 → **Connect**. (The phone does *not* need to be plugged into the laptop for this step — the tunnel works over the phone's own Wi-Fi or mobile data.)
+4. **Edit code on the laptop:** saving reloads the app on the phone automatically. Press `r` in the Metro terminal to force a reload.
+5. **Stop:** press `Ctrl+C` in the Metro terminal, on the laptop.
+
+The app talks to the **production backend** by default, so you don't need Postgres or a local server for app changes.
+
+> **Why `--tunnel` and not `--localhost` or a QR code:** as of 2026-09-24, connecting Expo Go (Android client 57.0.9) to a plain local dev server — `exp://127.0.0.1:8081` over USB, or a LAN address — reliably fails with **"Something went wrong" / "failed to download remote update"**, even with Metro confirmed running and the bundle already warm. This reproduced identically via a raw deep link, via typing the URL into Expo Go's own UI, and on a second independent run — it is not a one-off. `--tunnel` (a real `https://…exp.direct` URL, not `127.0.0.1`) reliably avoids it. Revisit this note if a future Expo Go update fixes the local-connection path — `--localhost` is simpler when it works, and doesn't need `@expo/ngrok`.
+
+**If it doesn't load:**
+
+| Problem | Fix |
+|---|---|
+| "Something went wrong" / "failed to download remote update" | Expected on `--localhost`/LAN right now — switch to `npx expo start --tunnel` (see note above) |
+| `CommandError: … @expo/ngrok … non-interactive mode` | Run `npm install --no-save @expo/ngrok@4.1.3` inside `mobile/` first, then retry `--tunnel` |
+| `ConfigError: … package.json does not exist` | You're in the repo root — `cd mobile` first |
+| Port 8081 already in use | An old Metro is still running: close that terminal, or run `npx kill-port 8081` |
+| Stale bundle after an edit (old code still runs) | The dev server may be in `CI=1` mode, which disables the file watcher — restart it without `CI=1`, or add `--clear` |
+
+The `expo-notifications` error in the Metro log is expected: Expo Go doesn't support push notifications.
+
+---
+
 ## Project structure
 
 ```
@@ -18,7 +58,7 @@ rba-app/
 Install these once:
 
 - [Node.js](https://nodejs.org/) v20+
-- [Expo Go](https://expo.dev/go) on your phone, matching the app's Expo SDK (54)
+- [Expo Go](https://expo.dev/go) on your phone, matching the app's Expo SDK (57) — Expo Go auto-updates from the Play Store and only runs the one SDK version it ships with, so this can silently drift out of sync with the app; see [Starting the app in Expo Go](#starting-the-app-in-expo-go-every-session) if it says "incompatible"
 - Android Debug Bridge (ADB) — `winget install Google.PlatformTools` on Windows, or via Android Studio
 - [PostgreSQL](https://www.postgresql.org/) on port 5432 — only needed to run the backend locally
 
@@ -76,31 +116,34 @@ npm install
 
 ## Running the app on your phone
 
-By default the app talks to the **production backend** (`https://rba-backend.cloudedapps.org`), so for mobile-only changes you just need Metro and a USB tunnel — no local backend or Postgres.
+For the everyday commands, see [Starting the app in Expo Go](#starting-the-app-in-expo-go-every-session) above — this section is the one-time setup and the full picture behind them.
 
-### 1. Connect the phone over USB
+By default the app talks to the **production backend** (`https://rba-backend.cloudedapps.org`), so for mobile-only changes you just need Metro — no local backend or Postgres.
 
-Enable **USB debugging** (Settings → About phone → tap Build number 7× → Developer options → USB debugging), plug in, and accept the "Allow USB debugging?" prompt. Then:
+### 1. One-time: install adb and connect the phone
+
+Enable **USB debugging** (Settings → About phone → tap Build number 7× → Developer options → USB debugging), plug the phone into the laptop over USB, and accept the "Allow USB debugging?" prompt. On Windows, install `adb` first: `winget install Google.PlatformTools` (see [Prerequisites](#prerequisites)). Then, in a laptop terminal:
 
 ```bash
-adb devices                     # phone should be listed as "device" (not "unauthorized")
-adb reverse tcp:8081 tcp:8081   # Metro — re-run after replugging or restarting Metro
+adb devices   # phone should be listed as "device" (not "unauthorized")
 ```
 
-USB is the reliable path on networks with client isolation (e.g. work Wi-Fi), where the phone can't reach the laptop's LAN IP.
+USB is only needed to confirm the phone/driver setup and for the (currently broken, see below) `--localhost` mode — the day-to-day `--tunnel` workflow doesn't need the phone plugged in at all.
 
 ### 2. Start Metro — from `mobile/`, not the repo root
 
 ```bash
 cd mobile
-npx expo start --localhost
+npx expo start --tunnel
 ```
+
+`--tunnel` is the mode that currently works reliably from this network (see the note in [Starting the app in Expo Go](#starting-the-app-in-expo-go-every-session)). `--localhost` (`adb reverse tcp:8081 tcp:8081` + `exp://127.0.0.1:8081`, no `@expo/ngrok` needed) is faster to start and worth trying again in the future, but as of 2026-09-24 it reliably fails to load on this phone's Expo Go build.
 
 ### 3. Open in Expo Go
 
-Open **Expo Go** and enter `exp://127.0.0.1:8081`. Code changes reload automatically.
+Open **Expo Go** on the phone → **Enter URL** → the `exp://….exp.direct` address Metro printed → **Connect**. Code changes reload automatically.
 
-Expected in Expo Go: an `expo-notifications` error saying push was removed from Expo Go in SDK 53. The app skips push registration there — test notifications with a Play Store Internal Testing build instead.
+Expected in Expo Go: an `expo-notifications` error saying push was removed from Expo Go in SDK 53. `mobile/src/notifications.ts` loads that module dynamically and only outside Expo Go for exactly this reason — if you ever see this crash the whole app (a red "[runtime not ready]" screen, not just a log line), something is importing `expo-notifications` statically again. Test real notifications with a Play Store Internal Testing build instead.
 
 ### Optional: run against a local backend
 
@@ -110,8 +153,9 @@ Only needed when changing `backend/` (requires Postgres — see First-time setup
 cd backend
 npm run db:migrate   # npm start migrates automatically; npm run dev does not
 npm run dev
-adb reverse tcp:3000 tcp:3000
 ```
+
+If using `--tunnel`, the backend needs to be reachable the same way — either point `EXPO_PUBLIC_API_BASE` (below) at a tunnel/public URL for the backend too, or temporarily switch the mobile dev server to `--localhost` and run `adb reverse tcp:3000 tcp:3000` alongside `adb reverse tcp:8081 tcp:8081`.
 
 Create `mobile/.env.local` (git-ignored) with:
 
@@ -130,11 +174,14 @@ Restart Metro after creating, changing, or deleting it (the value is baked in at
 | `adb devices` lists nothing (Windows, Samsung) | Install the [Samsung Android USB Driver](https://developer.samsung.com/android-usb-driver) — without it Windows binds a generic driver to the phone's ADB interface. Other brands: [Google USB Driver](https://developer.android.com/studio/run/win-usb) |
 | `adb devices` shows `unauthorized` | Unlock the phone and accept the "Allow USB debugging?" prompt |
 | `ConfigError: … package.json does not exist` | You ran Expo from the repo root — `cd mobile` first |
-| "java.io.IOException: failed to download remote update" | Check `adb reverse --list` shows `tcp:8081`, restart `npx expo start --localhost`, then reopen `exp://127.0.0.1:8081` (the first bundle build can be slow) |
+| "Something went wrong" / "failed to download remote update" (via `--localhost` or a QR/LAN connection) | Known-broken as of 2026-09-24 with this phone's Expo Go build — use `npx expo start --tunnel` instead (see [Starting the app in Expo Go](#starting-the-app-in-expo-go-every-session)) |
+| `[runtime not ready]: Error: expo-notifications: …` (red screen, app never renders) | A real crash, not the expected log-only warning — something added a static `import ... from 'expo-notifications'`. Load it dynamically in `src/notifications.ts` instead (only outside Expo Go) |
+| `CommandError: … @expo/ngrok … non-interactive mode` when running `--tunnel` | Run `npm install --no-save @expo/ngrok@4.1.3` inside `mobile/`, then retry |
 | "relation regions does not exist" | Run `npm run db:migrate` in the backend folder |
-| "Network request failed" on phone | If using a local backend, re-run `adb reverse tcp:3000 tcp:3000`, then tap Retry in the app |
-| White screen / "No apps connected" | Re-run `adb reverse`, open Expo Go, scan the QR code again |
+| "Network request failed" on phone | If using a local backend, re-run `adb reverse tcp:3000 tcp:3000` (only relevant when the mobile dev server is also on `--localhost`), then tap Retry in the app |
+| White screen / "No apps connected" in the Metro terminal | The previously-connected app crashed or was closed — reopen it from Expo Go's URL/recents |
 | Metro port already in use | `npx kill-port 8081` |
+| Edited code doesn't show up on the phone | The dev server may be running with `CI=1` set, which disables the file watcher — restart it without `CI=1`, or pass `--clear` |
 | iNaturalist showing 0 sightings | Run `node src/scripts/testInat.js` to diagnose; check `inat_place_id` is set correctly |
 | iNaturalist showing wrong-region results | Run `node src/scripts/fixInatPlaceIds.js`, then `npm run db:migrate` to apply the fix |
 | Cluster status not showing on cards | Run `npm run poll:once` to trigger clustering on existing sightings |

@@ -17,7 +17,7 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 import { registerForPushNotificationsAsync } from './src/notifications';
 import LeafletMap, { MapPin, ClusterCircle } from './src/LeafletMap';
@@ -26,13 +26,15 @@ import AboutModal from './src/AboutModal';
 /** Play the bundled bird chirp sound. */
 async function playChirp() {
   try {
-    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-    const { sound } = await Audio.Sound.createAsync(
-      require('./assets/chirp.wav')
-    );
-    await sound.playAsync();
-    sound.setOnPlaybackStatusUpdate(status => {
-      if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+    await setAudioModeAsync({ playsInSilentMode: true });
+    const player = createAudioPlayer(require('./assets/chirp.wav'));
+    player.play();
+    // expo-audio players aren't garbage-collected automatically — remove once done
+    const sub = player.addListener('playbackStatusUpdate', status => {
+      if (status.didJustFinish) {
+        sub.remove();
+        player.remove();
+      }
     });
   } catch (e) {
     // Sound is best-effort — never block the UI
@@ -520,7 +522,7 @@ function MapModal({
           <View style={styles.modalMapContainer}>
             <LeafletMap
               pins={mapPins.length > 0 ? mapPins : [toPin(sighting)!].filter(Boolean) as MapPin[]}
-              center={sighting.lat != null ? { lat: sighting.lat, lng: sighting.lng } : undefined}
+              center={sighting.lat != null && sighting.lng != null ? { lat: Number(sighting.lat), lng: Number(sighting.lng) } : undefined}
               zoom={15}
               clusterCircle={clusterCircle}
             />
@@ -944,7 +946,10 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar style="light" backgroundColor="#2d6a4f" translucent={false} />
+      {/* SDK 57: Android is edge-to-edge only now (app.json already had edgeToEdgeEnabled),
+          so backgroundColor/translucent were dropped from StatusBarProps — the status bar
+          was already an overlay in practice; the header View's own green shows through it. */}
+      <StatusBar style="light" />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: (Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0) + 12 }]}>

@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+// Type-only import — erased at compile time, so it never triggers expo-notifications'
+// own module-init side effects (see below).
+import type * as NotificationsModule from 'expo-notifications';
 import Constants from 'expo-constants';
 
 const API_BASE = 'https://rba-backend.cloudedapps.org';
@@ -8,6 +10,19 @@ const API_BASE = 'https://rba-backend.cloudedapps.org';
 // They require a development build or production build.
 function isExpoGo(): boolean {
   return Constants.executionEnvironment === 'storeClient';
+}
+
+// IMPORTANT: never statically `import * as Notifications from 'expo-notifications'` —
+// as of the SDK 57 version of the package, merely importing it runs an auto-registration
+// side effect (DevicePushTokenAutoRegistration.fx.js) that calls addPushTokenListener(),
+// which on Android inside Expo Go does `throw new Error(...)` (not console.warn), crashing
+// the whole app before any of our own isExpoGo() checks below ever run. Loading the module
+// only via dynamic import, and only when we already know we're not in Expo Go on Android,
+// keeps that side effect from ever executing there.
+let notificationsPromise: Promise<typeof NotificationsModule> | null = null;
+function loadNotifications(): Promise<typeof NotificationsModule> {
+  notificationsPromise ??= import('expo-notifications');
+  return notificationsPromise;
 }
 
 /**
@@ -22,6 +37,8 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     console.log('[notifications] Skipping push registration -- not supported in Expo Go (SDK 53+). Use a dev build to test notifications.');
     return null;
   }
+
+  const Notifications = await loadNotifications();
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -65,14 +82,19 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
 /**
  * Configure how notifications are handled while the app is foregrounded.
- * Call once at app startup (before rendering).
+ * Call once at app startup (before rendering). Safe in Expo Go -- see loadNotifications().
  */
-export function configureNotificationHandler() {
+export async function configureNotificationHandler() {
   if (isExpoGo()) return;
+
+  const Notifications = await loadNotifications();
 
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
+      // shouldShowAlert is deprecated in favor of the two below (banner = heads-up,
+      // list = notification center/shade) — both true keeps the old behavior.
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: false,
     }),
