@@ -36,7 +36,14 @@
     },
     "plugins": [
       "expo-status-bar",
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
       "expo-asset",
       [
         "expo-splash-screen",
