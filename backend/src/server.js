@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const config = require('./config');
@@ -18,6 +19,11 @@ app.use(express.json());
 
 app.get('/health', (req, res) => {
   res.json({ ok: true, env: config.nodeEnv });
+});
+
+// Public privacy policy, linked from the Play Store listing
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'privacy.html'));
 });
 
 app.use('/api/sightings', sightingsRouter);
