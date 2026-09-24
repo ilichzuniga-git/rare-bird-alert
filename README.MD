@@ -280,16 +280,28 @@ You do **not** need to rebuild for backend-only changes — those take effect im
 
 The app is built in the cloud using [EAS Build](https://docs.expo.dev/build/introduction/) (Expo's build service). You need an Expo account — sign up free at https://expo.dev.
 
+**Where this runs:** every command below runs in a terminal on the laptop, inside `C:\claude\rba-app\mobile`. The build itself happens on Expo's servers; nothing needs the phone.
+
 ### One-time setup
 
 ```bash
-npm install -g eas-cli
+npm install -g eas-cli@23.2.0
 eas login
 ```
 
-The Android keystore (signing key) is managed by EAS and was generated via `eas credentials`. Do not delete it — it's required for all future Play Store uploads.
+`eas-cli` is pinned to a vetted version (see `security.md`); bump it deliberately rather than taking whatever is newest.
 
-Firebase (`google-services.json`) is configured in `mobile/google-services.json` and referenced in `app.json`. This is required for push notifications to work in production builds.
+**Firebase config for cloud builds.** `mobile/google-services.json` (needed for push notifications) is git-ignored, and EAS doesn't upload ignored files. Instead, it's stored once as a secret EAS file variable; `mobile/app.config.js` uses it in cloud builds and the local file otherwise:
+
+```bash
+eas env:set --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment production --environment preview --visibility secret
+```
+
+Re-run the same command if the Firebase file ever changes (`env:set` creates or updates).
+
+**Version codes.** Google Play rejects any upload whose version code it has seen before. `eas.json` sets `appVersionSource: "remote"` and `autoIncrement: true` on the production profile, so EAS stores the version code and bumps it on every production build. Check it with `eas build:version:get -p android`. If Play Console has ever received a higher code than EAS shows, raise it once with `eas build:version:set -p android`.
+
+The Android keystore (signing key) is managed by EAS and was generated via `eas credentials`. Do not delete it — it's required for all future Play Store uploads.
 
 ### Build profiles
 
@@ -298,7 +310,9 @@ The `mobile/eas.json` file defines two profiles:
 | Profile | Output | Use for |
 |---|---|---|
 | `preview` | `.apk` | Quick local testing — sideload directly onto any Android device |
-| `production` | `.aab` (App Bundle) | Google Play Store (Internal Testing / release) |
+| `production` | `.aab` (App Bundle) | Google Play Store (Internal Testing / release); auto-increments the version code |
+
+The user-visible version (`1.1.0`) is `expo.version` in `app.json`; bump it for releases testers should notice.
 
 ### Build a preview APK (sideloadable, no Play Store needed)
 
@@ -323,7 +337,7 @@ cd mobile
 eas build -p android --profile production
 ```
 
-Takes roughly 5–10 minutes. Download the `.aab` file from the link EAS provides when done.
+Takes roughly 10–20 minutes. EAS prints a link to the build page; download the `.aab` from there, then upload it as described below.
 
 ---
 
