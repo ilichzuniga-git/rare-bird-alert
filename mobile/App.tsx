@@ -13,7 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerForPushNotificationsAsync } from './src/notifications';
-import LeafletMap, { type MapFocus, type MapPin } from './src/LeafletMap';
+import LeafletMap, { type MapFocus, type MapPin, type UserSpot } from './src/LeafletMap';
 import AboutModal from './src/AboutModal';
 import { DetailBody, DetailHeader, useSightingDetail } from './src/SightingDetail';
 import BottomSheet, { type BottomSheetHandle } from './src/BottomSheet';
@@ -92,7 +92,7 @@ function Main() {
   }, [queryText]);
 
   // "Near me" needs the user's position
-  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLoc, setUserLoc] = useState<UserSpot | null>(null);
   const [nearState, setNearState] = useState<'idle' | 'locating' | 'denied' | 'ready'>('idle');
   const choosePeriod = useCallback(async (p: Period) => {
     setPeriod(p);
@@ -102,7 +102,7 @@ function Main() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setNearState('denied'); return; }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: pos.coords.accuracy });
       setNearState('ready');
     } catch {
       setNearState('denied');
@@ -221,6 +221,7 @@ function Main() {
           insets={{ top: searchBottom, bottom: snapPoints[1] }}
           fitKey={fitKey}
           focus={focus}
+          me={period === 'near' ? userLoc : null}
         />
       </View>
 

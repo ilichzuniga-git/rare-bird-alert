@@ -32,6 +32,13 @@ export interface MapFocus {
   exact?: { lat: number; lng: number } | null;
 }
 
+/** The user's approximate position ("Near me"): binoculars pin inside an accuracy halo. */
+export interface UserSpot {
+  lat: number;
+  lng: number;
+  accuracyM?: number | null;
+}
+
 export interface ClusterCircle {
   lat: number;
   lng: number;
@@ -58,9 +65,19 @@ interface Props {
   fitKey?: string;
   /** Fly to and decorate this bird; null clears it (the view stays where it is) */
   focus?: MapFocus | null;
+  /** Show where the user is; null hides it */
+  me?: UserSpot | null;
 }
 
 // White bird silhouette from the design renders (renders/shared.js)
+// White binoculars for the user's pin (24×24 box; lenses cut out in the pin color)
+const BINOCULARS_SVG =
+  '<svg viewBox="0 0 24 24"><g fill="#fff">'
+  + '<rect x="5" y="4" width="4" height="6" rx="1"/><rect x="15" y="4" width="4" height="6" rx="1"/>'
+  + '<rect x="9" y="9" width="6" height="4" rx="1"/>'
+  + '<circle cx="7" cy="15" r="5"/><circle cx="17" cy="15" r="5"/></g>'
+  + '<g fill="#101a15"><circle cx="7" cy="15" r="2.4"/><circle cx="17" cy="15" r="2.4"/></g></svg>';
+
 const BIRD_PATH =
   'M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z';
 
@@ -90,6 +107,11 @@ function buildHtml(
           display: flex; align-items: center; justify-content: center; }
     .tp svg { width: 16px; height: 16px; transform: rotate(45deg); }
     .tp.sel { box-shadow: 0 0 0 6px rgba(31,122,85,.28), 0 4px 10px rgba(0,0,0,.25); }
+    .me { width: 34px; height: 34px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg);
+          background: #101a15; border: 3px solid #fff;
+          box-shadow: 0 0 0 5px rgba(16,26,21,.18), 0 4px 10px rgba(0,0,0,.3);
+          display: flex; align-items: center; justify-content: center; }
+    .me svg { width: 19px; height: 19px; transform: rotate(45deg); }
     .tag { position: absolute; left: 30px; top: -2px; background: #fff; border-radius: 9px;
            padding: 3px 8px; font: 700 11px system-ui, sans-serif; color: #101a15;
            white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,.14); }
@@ -164,8 +186,46 @@ function buildHtml(
     });
   }
 
+  var meIcon = L.divIcon({
+    className: '',
+    html: '<div class="me">${BINOCULARS_SVG}</div>',
+    iconSize: [34, 34], iconAnchor: [17, 41], popupAnchor: [0, -38],
+  });
+
+  var meLayer = L.layerGroup().addTo(map);
   var layer = L.layerGroup().addTo(map);
   var focusLayer = L.layerGroup().addTo(map);
+  var me = null;          // user's position, included when fitting the pins
+  var lastPins = [];
+
+  function fitAll(pins) {
+    var bounds = pins.map(function(p) { return [Number(p.lat), Number(p.lng)]; });
+    if (me) bounds.push([me.lat, me.lng]);
+    if (center || bounds.length === 0) return;
+    if (bounds.length === 1) {
+      map.setView(bounds[0], me && pins.length === 0 ? 13 : zoom);
+    } else {
+      map.fitBounds(bounds, insets
+        ? { paddingTopLeft: [30, insets.top + 30], paddingBottomRight: [30, insets.bottom + 30] }
+        : { padding: [40, 40] });
+    }
+  }
+
+  // "Near me": binoculars pin with a soft halo for the location's uncertainty
+  function showMe(m) {
+    meLayer.clearLayers();
+    var wasShown = !!me;
+    me = m ? { lat: Number(m.lat), lng: Number(m.lng) } : null;
+    if (!me) return;
+    L.circle([me.lat, me.lng], {
+      radius: Math.max(Number(m.accuracyM) || 0, 150), color: '#101a15', weight: 1,
+      opacity: 0.25, fillColor: '#101a15', fillOpacity: 0.07, interactive: false,
+    }).addTo(meLayer);
+    L.marker([me.lat, me.lng], { icon: meIcon, zIndexOffset: 1000 })
+      .bindPopup('You are about here').addTo(meLayer);
+    if (!wasShown) fitAll(lastPins);
+  }
+  window.__me = showMe;
 
   // Selected bird: stakeout circle, trail of earlier reports, observer's exact spot
   function focus(f) {
@@ -196,12 +256,11 @@ function buildHtml(
 
   function render(pins, fit) {
     layer.clearLayers();
-    var bounds = [];
+    lastPins = pins;
     var groups = {}; // interactive mode: pins at the same spot share one marker
     pins.forEach(function(pin) {
       // lat/lng arrive as strings (Postgres NUMERIC via pg), so coerce first
       var lat = Number(pin.lat), lng = Number(pin.lng);
-      bounds.push([lat, lng]);
       if (interactive && !pin.isTrail && pin.id != null) {
         var key = lat.toFixed(5) + ',' + lng.toFixed(5);
         (groups[key] = groups[key] || []).push(pin);
@@ -237,15 +296,7 @@ function buildHtml(
       marker.bindPopup(html + '</div>');
     });
 
-    if (fit && !center && bounds.length > 0) {
-      if (bounds.length === 1) {
-        map.setView(bounds[0], zoom);
-      } else {
-        map.fitBounds(bounds, insets
-          ? { paddingTopLeft: [30, insets.top + 30], paddingBottomRight: [30, insets.bottom + 30] }
-          : { padding: [40, 40] });
-      }
-    }
+    if (fit) fitAll(pins);
   }
   window.__render = render;
   render(${JSON.stringify(pins)}, true);
@@ -254,7 +305,7 @@ function buildHtml(
 </html>`;
 }
 
-export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPress, insets, fitKey, focus }: Props) {
+export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPress, insets, fitKey, focus, me }: Props) {
   const webRef = useRef<WebView>(null);
   const loaded = useRef(false);
   const sent = useRef({ pins: '', fitKey });
@@ -292,6 +343,15 @@ export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPre
   };
   useEffect(pushFocus, [focusJson]);
 
+  const meJson = JSON.stringify(me ?? null);
+  const sentMe = useRef('null');
+  const pushMe = () => {
+    if (!loaded.current || !webRef.current || sentMe.current === meJson) return;
+    sentMe.current = meJson;
+    webRef.current.injectJavaScript(`window.__me && window.__me(${meJson}); true;`);
+  };
+  useEffect(pushMe, [meJson]);
+
   return (
     <WebView
       ref={webRef}
@@ -305,6 +365,8 @@ export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPre
         pushPins(); // catch up on anything that changed while the page was loading
         sentFocus.current = 'null';
         pushFocus();
+        sentMe.current = 'null';
+        pushMe();
       }}
       onMessage={event => {
         if (!onPinPress) return;
