@@ -6,6 +6,7 @@ const devicesRouter  = require('./routes/devices');
 const clustersRouter = require('./routes/clusters');
 const { startPoller } = require('./poller');
 const { ensureLoaded: loadTaxonomy } = require('./ebirdTaxonomy');
+const { warm: warmRarity } = require('./rarity');
 
 const app = express();
 
@@ -26,5 +27,6 @@ app.use('/api/clusters', clustersRouter);
 app.listen(config.port, () => {
   console.log(`RBA backend listening on port ${config.port}`);
   startPoller();
-  loadTaxonomy(); // warm the cache so the first /api/sightings isn't slowed by it
+  loadTaxonomy(); // warm the caches so the first /api/sightings isn't slowed by them
+  warmRarity();
 });

@@ -442,14 +442,14 @@ The filter lives in two places that must stay in sync:
 
 ### Rarity badges
 
-Each sighting card displays a color-coded rarity badge based on the species' all-time observation count in the region (iNaturalist) or eBird notable status:
+Each bird gets a color-coded rarity tier from the species' **all-time research-grade iNaturalist observations in its county**. That count comes with iNaturalist sightings; for eBird sightings the backend looks it up by scientific name (`backend/src/rarity.js`, cached daily, added to `/api/sightings` responses only). A species iNaturalist knows from the other county but never recorded in this one counts as 0.
 
 | Badge | Threshold | Color |
 |---|---|---|
 | Exceptional | ≤ 3 all-time records | Red |
 | Very Rare | 4–9 all-time records | Orange |
 | Rare | 10–49 all-time records | Amber |
-| Notable | eBird notable / no count | Gray |
+| Notable | 50+ records, or no iNaturalist match (eBird can still flag these, e.g. out of season) | Gray |
 
 ### Continuing bird clusters
 

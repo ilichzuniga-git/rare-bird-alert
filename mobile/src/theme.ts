@@ -34,9 +34,13 @@ export const TIERS: Record<TierName, Tier> = {
   Notable:     { name: 'Notable',     color: '#5f6b64', soft: '#eef1ee', rank: 0 },
 };
 
-/** Rarity tier from the all-time regional observation count (iNaturalist only for now). */
+/**
+ * Rarity tier from the species' all-time research-grade iNaturalist observations in
+ * the county (the backend supplies this for eBird sightings too). 50+ records, or no
+ * data, stays "Notable": eBird may still flag it, e.g. for being out of season.
+ */
 export function tierFor(rarityCount: number | null): Tier {
-  if (rarityCount === null) return TIERS.Notable;
+  if (rarityCount === null || rarityCount >= 50) return TIERS.Notable;
   if (rarityCount <= 3) return TIERS.Exceptional;
   if (rarityCount <= 9) return TIERS['Very Rare'];
   return TIERS.Rare;

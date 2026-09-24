@@ -2,6 +2,7 @@ const https = require('https');
 const SightingSource = require('./SightingSource');
 const config = require('../config');
 const db = require('../db');
+const { fetchSpeciesCounts } = require('../speciesCounts');
 
 const INAT_BASE = 'https://api.inaturalist.org/v1';
 
@@ -80,21 +81,7 @@ class INaturalistSource extends SightingSource {
 
   /** Returns a Map<taxon_id, all_time_count> for all bird species in the place. */
   async _getAllTimeSpeciesCounts(placeId) {
-    const url = [
-      `${INAT_BASE}/observations/species_counts`,
-      `?place_id=${placeId}`,
-      `&taxon_id=${AVES_TAXON_ID}`,
-      `&quality_grade=research`,
-      `&captive=false`,
-      `&per_page=500`,
-    ].join('');
-
-    const data = await this._get(url);
-    const map = new Map();
-    for (const item of (data.results || [])) {
-      if (item.taxon?.id != null) map.set(item.taxon.id, item.count);
-    }
-    return map;
+    return (await fetchSpeciesCounts(placeId)).byTaxonId;
   }
 
   /** Returns the list of species observed in this place since d1Str. */

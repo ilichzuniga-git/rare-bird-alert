@@ -26,6 +26,7 @@ Before adding any monetization — ads, paid features, subscriptions, even donat
 ## iNaturalist API
 - Used by: `backend/src/sources/INaturalistSource.js` (sightings, photos), `backend/src/routes/sightings.js` (observer notes/comments), `mobile/App.tsx` `fetchPhotoForSpecies` (photos for eBird sightings)
 - Endpoints: `/v1/observations` and `/v1/observations/species_counts` (rare research-grade birds per place), `/v1/observations/{id}` (notes/comments, on demand), `/v1/taxa?q=` (species photo)
+- `species_counts` is paged (`backend/src/speciesCounts.js`): LA County has ~600 species and the list is sorted most-observed first, so a single 500-row page silently dropped the rarest ones. The same counts rate eBird sightings (`backend/src/rarity.js`, cached daily; 2–3 requests per day).
 - Only `quality_grade=research` observations are used (2+ agreeing community IDs).
 - No API key. Requests send a descriptive `User-Agent`; keep request volume modest (iNaturalist asks clients to stay around 1 request/second).
 - Attribution: "Data from iNaturalist" — shown in the header and on the About screen, linking to inaturalist.org.

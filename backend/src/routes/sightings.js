@@ -4,6 +4,7 @@ const router = express.Router();
 const db = require('../db');
 const config = require('../config');
 const { ensureLoaded: ensureTaxonomy, ebirdCodeFor } = require('../ebirdTaxonomy');
+const { ensureLoaded: ensureRarity, rarityCountFor } = require('../rarity');
 
 /** Minimal HTTPS GET → parsed JSON. */
 function httpsGet(url, headers = {}) {
@@ -76,6 +77,14 @@ router.get('/', async (req, res) => {
       for (const r of rows) {
         if (!r.species_code) r.species_code = ebirdCodeFor(r.scientific_name);
       }
+    }
+
+    // eBird rows carry no rarity measure; give them the one iNaturalist rows are
+    // rated by (all-time research-grade observations in the county), response only.
+    const unrated = rows.filter(r => r.rarity_count == null && r.scientific_name);
+    if (unrated.length) {
+      await ensureRarity([...new Set(unrated.map(r => r.region_code))]);
+      for (const r of unrated) r.rarity_count = rarityCountFor(r.region_code, r.scientific_name);
     }
 
     res.json({ sightings: rows, count: rows.length });
