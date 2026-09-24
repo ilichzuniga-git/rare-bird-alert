@@ -167,6 +167,7 @@ interface Sighting {
   id: number;
   common_name: string;
   scientific_name: string | null;
+  species_code: string | null; // eBird code; the backend fills it in for iNaturalist rows too
   location_name: string | null;
   region_name: string;
   observed_at: string;
@@ -211,6 +212,26 @@ function formatDate(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso.slice(0, 10);
   return MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate().toString();
+}
+
+/** "Sep 17 · 11:15 AM"; date only when the report has no time (midnight). */
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return formatDate(iso);
+  const h = d.getUTCHours(), m = d.getUTCMinutes();
+  if (h === 0 && m === 0) return formatDate(iso);
+  const time = `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  return `${formatDate(iso)} · ${time}`;
+}
+
+/** Open the phone's maps app at an exact point (Android geo: intent, Apple Maps on iOS). */
+function openInMaps(lat: number, lng: number, label: string) {
+  const q = `${lat},${lng}`;
+  Linking.openURL(
+    Platform.OS === 'ios'
+      ? `https://maps.apple.com/?ll=${q}&q=${encodeURIComponent(label)}`
+      : `geo:${q}?q=${q}(${encodeURIComponent(label)})`
+  );
 }
 
 function toPin(s: Sighting): MapPin | null {
@@ -284,7 +305,18 @@ const STATUS_COLORS: Record<string, string> = {
   green: '#2d6a4f', amber: '#b45309', red: '#b91c1c', gray: '#64748b',
 };
 
-function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: () => void }) {
+function MapModal({
+  sighting,
+  reports,
+  onSelectReport,
+  onClose,
+}: {
+  sighting: Sighting | null;
+  /** Every report of this bird (same cluster), newest first — includes `sighting` */
+  reports: Sighting[];
+  onSelectReport: (s: Sighting) => void;
+  onClose: () => void;
+}) {
   const [commentsState, setCommentsState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [payload, setPayload] = useState<CommentsPayload | null>(null);
   const [cluster, setCluster] = useState<ClusterData | null>(null);
@@ -399,6 +431,14 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
                 {cluster.status.label}
               </Text>
             )}
+            {sighting?.species_code ? (
+              <TouchableOpacity
+                style={styles.speciesLink}
+                onPress={() => Linking.openURL(`https://ebird.org/species/${encodeURIComponent(sighting.species_code!)}`)}
+              >
+                <Text style={styles.speciesLinkText}>eBird species page ↗</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeBtnText}>Done</Text>
@@ -440,6 +480,48 @@ function MapModal({ sighting, onClose }: { sighting: Sighting | null; onClose: (
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Which report is shown, and its exact spot */}
+        {sighting ? (
+          <View style={styles.reportsBar}>
+            {reports.length > 1 ? (
+              <>
+                <Text style={styles.reportsHeading}>
+                  {reports.length} reports of this bird — tap one for its exact spot and notes
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {reports.map(r => {
+                    const active = r.id === sighting.id;
+                    return (
+                      <TouchableOpacity
+                        key={r.id}
+                        style={[styles.reportChip, active && styles.reportChipActive]}
+                        onPress={() => onSelectReport(r)}
+                      >
+                        <Text style={[styles.reportChipText, active && styles.reportChipTextActive]}>
+                          {formatDateTime(r.observed_at)}
+                        </Text>
+                        <Text style={[styles.reportChipSub, active && styles.reportChipTextActive]}>
+                          {formatSource(r.source)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </>
+            ) : null}
+            {sighting.lat != null && sighting.lng != null ? (
+              <TouchableOpacity
+                style={styles.openMapsBtn}
+                onPress={() => openInMaps(Number(sighting.lat), Number(sighting.lng), sighting.common_name)}
+              >
+                <Text style={styles.openMapsText}>
+                  📍 Open this report's location in Maps ({Number(sighting.lat).toFixed(5)}, {Number(sighting.lng).toFixed(5)})
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* Comments panel */}
         <View style={styles.commentsPanel}>
@@ -741,10 +823,40 @@ export default function App() {
     [rawSections, expandedWeeks]
   );
 
-  const allPins: MapPin[] = filteredSightings.flatMap(s => {
-    const p = toPin(s);
-    return p ? [p] : [];
-  });
+  // One map pin per bird: sightings in the same cluster (same species within
+  // 300m — usually several observers' checklists) collapse into their most
+  // recent report, which opens the cluster's Refound/Dipped view.
+  const allPins: MapPin[] = useMemo(() => {
+    const groups = new Map<string, Sighting[]>();
+    for (const s of filteredSightings) {
+      const key = s.cluster_id != null ? `c${s.cluster_id}` : `s${s.id}`;
+      const group = groups.get(key);
+      if (group) group.push(s);
+      else groups.set(key, [s]);
+    }
+    return [...groups.values()].flatMap(group => {
+      const latest = group.reduce((a, b) => (b.observed_at > a.observed_at ? b : a));
+      const p = toPin(latest);
+      if (!p) return [];
+      const date = formatDate(latest.observed_at);
+      const sublabel = group.length > 1 ? `${group.length} reports · ${date}` : date;
+      return [{ ...p, id: latest.id, sublabel }];
+    });
+  }, [filteredSightings]);
+
+  // All reports of the bird shown in the modal (same cluster), newest first
+  const modalReports = useMemo(() => {
+    if (!modalSighting) return [];
+    if (modalSighting.cluster_id == null) return [modalSighting];
+    return sightings
+      .filter(s => s.cluster_id === modalSighting.cluster_id)
+      .sort((a, b) => (a.observed_at < b.observed_at ? 1 : -1));
+  }, [sightings, modalSighting]);
+
+  const openSightingById = useCallback(
+    (id: number) => setModalSighting(sightings.find(s => s.id === id) ?? null),
+    [sightings]
+  );
 
   const statusBarHeight = Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0;
 
@@ -851,13 +963,18 @@ export default function App() {
               <Text style={styles.emptyText}>No sightings with GPS coordinates yet.</Text>
             </View>
           ) : (
-            <LeafletMap pins={allPins} />
+            <LeafletMap pins={allPins} onPinPress={openSightingById} />
           )}
         </View>
       )}
 
       {/* Per-sighting map modal */}
-      <MapModal sighting={modalSighting} onClose={() => setModalSighting(null)} />
+      <MapModal
+        sighting={modalSighting}
+        reports={modalReports}
+        onSelectReport={setModalSighting}
+        onClose={() => setModalSighting(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -1009,8 +1126,29 @@ const styles = StyleSheet.create({
   confirmDistWarningText: { fontSize: 13, color: '#b45309' },
   closeBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   closeBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  speciesLink: {
+    alignSelf: 'flex-start', marginTop: 6,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  speciesLinkText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   modalMapContainer: { flex: 2 },
   // Comments panel
+  reportsBar: {
+    backgroundColor: '#f8fafc', paddingHorizontal: 16, paddingVertical: 10, gap: 8,
+    borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
+  },
+  reportsHeading: { fontSize: 12, color: '#64748b' },
+  reportChip: {
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#cbd5e1',
+  },
+  reportChipActive: { backgroundColor: '#2d6a4f', borderColor: '#2d6a4f' },
+  reportChipText: { fontSize: 13, fontWeight: '600', color: '#1e293b' },
+  reportChipSub: { fontSize: 11, color: '#64748b', marginTop: 1 },
+  reportChipTextActive: { color: '#fff' },
+  openMapsBtn: { paddingVertical: 2 },
+  openMapsText: { fontSize: 13, color: '#1d4ed8', fontWeight: '600' },
   commentsPanel: { flex: 1, backgroundColor: '#fff', minHeight: 0 },
   commentsCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
   commentsHint: { fontSize: 14, color: '#888', textAlign: 'center' },

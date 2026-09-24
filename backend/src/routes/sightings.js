@@ -3,6 +3,7 @@ const https = require('https');
 const router = express.Router();
 const db = require('../db');
 const config = require('../config');
+const { ensureLoaded: ensureTaxonomy, ebirdCodeFor } = require('../ebirdTaxonomy');
 
 /** Minimal HTTPS GET → parsed JSON. */
 function httpsGet(url, headers = {}) {
@@ -67,6 +68,16 @@ router.get('/', async (req, res) => {
     `;
 
     const { rows } = await db.query(sql, params);
+
+    // iNaturalist rows have no eBird species code; fill it in for the response
+    // only (the DB column is part of the dedupe key, so it must stay NULL).
+    if (rows.some(r => !r.species_code && r.scientific_name)) {
+      await ensureTaxonomy();
+      for (const r of rows) {
+        if (!r.species_code) r.species_code = ebirdCodeFor(r.scientific_name);
+      }
+    }
+
     res.json({ sightings: rows, count: rows.length });
   } catch (err) {
     console.error('[GET /api/sightings]', err.message);

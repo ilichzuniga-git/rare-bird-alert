@@ -6,6 +6,10 @@ export interface MapPin {
   lng: number;
   label: string;
   sciName?: string | null;
+  /** Sighting id — when set and onPinPress is given, tapping the pin reports it */
+  id?: number;
+  /** Secondary text shown when several pins share a spot (e.g. the date) */
+  sublabel?: string;
   /** If true, render as a smaller "trail" dot (older sighting in a cluster) */
   isTrail?: boolean;
 }
@@ -22,6 +26,8 @@ interface Props {
   zoom?: number;
   /** If provided, draws a shaded circle showing the cluster stakeout area */
   clusterCircle?: ClusterCircle | null;
+  /** Called with a pin's id when the user taps it (pins sharing a spot show a picker first) */
+  onPinPress?: (id: number) => void;
 }
 
 function buildHtml(
@@ -29,6 +35,7 @@ function buildHtml(
   center?: { lat: number; lng: number },
   zoom?: number,
   clusterCircle?: ClusterCircle | null,
+  interactive?: boolean,
 ): string {
   const pinsJson        = JSON.stringify(pins);
   const centerJson      = center ? JSON.stringify(center) : 'null';
@@ -53,6 +60,18 @@ function buildHtml(
   var center = ${centerJson};
   var zoom   = ${zoomVal};
   var circle = ${circleJson};
+  var interactive = ${interactive ? 'true' : 'false'};
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function openSighting(id) {
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'openSighting', id: id }));
+    }
+  }
 
   var map;
   if (center) {
@@ -98,13 +117,40 @@ function buildHtml(
   });
 
   var bounds = [];
+  var groups = {}; // interactive mode: pins at the same spot share one marker
   pins.forEach(function(pin) {
+    bounds.push([pin.lat, pin.lng]);
+    if (interactive && !pin.isTrail && pin.id != null) {
+      // lat/lng arrive as strings (Postgres NUMERIC via pg), so coerce first
+      var key = Number(pin.lat).toFixed(5) + ',' + Number(pin.lng).toFixed(5);
+      (groups[key] = groups[key] || []).push(pin);
+      return;
+    }
     var icon = pin.isTrail ? trailIcon : birdIcon;
-    var popup = '<b>' + pin.label + '</b>' + (pin.sciName ? '<br><i>' + pin.sciName + '</i>' : '');
+    var popup = '<b>' + esc(pin.label) + '</b>' + (pin.sciName ? '<br><i>' + esc(pin.sciName) + '</i>' : '');
     var marker = L.marker([pin.lat, pin.lng], { icon: icon }).addTo(map);
     if (!pin.isTrail) marker.bindPopup(popup);
     if (pins.length === 1 && !pin.isTrail) marker.openPopup();
-    bounds.push([pin.lat, pin.lng]);
+  });
+
+  Object.keys(groups).forEach(function(key) {
+    var group = groups[key];
+    var marker = L.marker([group[0].lat, group[0].lng], { icon: birdIcon }).addTo(map);
+    if (group.length === 1) {
+      marker.on('click', function() { openSighting(group[0].id); });
+      return;
+    }
+    // Several birds at one spot (e.g. a busy hotspot): let the user pick
+    var html = '<div style="font-size:13px;max-height:220px;overflow-y:auto;">'
+      + '<div style="color:#64748b;margin-bottom:6px;">' + group.length + ' sightings here</div>';
+    group.forEach(function(p) {
+      html += '<a href="#" onclick="openSighting(' + Number(p.id) + ');return false;" '
+        + 'style="display:block;padding:7px 0;border-top:1px solid #e2e8f0;color:#1d4ed8;text-decoration:none;">'
+        + '<b>' + esc(p.label) + '</b>'
+        + (p.sublabel ? ' <span style="color:#64748b;">· ' + esc(p.sublabel) + '</span>' : '')
+        + '</a>';
+    });
+    marker.bindPopup(html + '</div>');
   });
 
   if (!center && bounds.length > 0) {
@@ -119,8 +165,8 @@ function buildHtml(
 </html>`;
 }
 
-export default function LeafletMap({ pins, center, zoom, clusterCircle }: Props) {
-  const html = buildHtml(pins, center, zoom, clusterCircle);
+export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPress }: Props) {
+  const html = buildHtml(pins, center, zoom, clusterCircle, !!onPinPress);
   // Force WebView to remount when the circle arrives (cluster loads async after map renders)
   const webViewKey = clusterCircle
     ? `circle-${clusterCircle.lat}-${clusterCircle.lng}-${clusterCircle.radiusM}`
@@ -132,6 +178,15 @@ export default function LeafletMap({ pins, center, zoom, clusterCircle }: Props)
       source={{ html }}
       originWhitelist={['*']}
       javaScriptEnabled
+      onMessage={event => {
+        if (!onPinPress) return;
+        try {
+          const msg = JSON.parse(event.nativeEvent.data);
+          if (msg?.type === 'openSighting' && typeof msg.id === 'number') onPinPress(msg.id);
+        } catch {
+          // ignore non-JSON messages
+        }
+      }}
     />
   );
 }

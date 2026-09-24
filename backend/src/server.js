@@ -5,6 +5,7 @@ const sightingsRouter = require('./routes/sightings');
 const devicesRouter  = require('./routes/devices');
 const clustersRouter = require('./routes/clusters');
 const { startPoller } = require('./poller');
+const { ensureLoaded: loadTaxonomy } = require('./ebirdTaxonomy');
 
 const app = express();
 
@@ -25,4 +26,5 @@ app.use('/api/clusters', clustersRouter);
 app.listen(config.port, () => {
   console.log(`RBA backend listening on port ${config.port}`);
   startPoller();
+  loadTaxonomy(); // warm the cache so the first /api/sightings isn't slowed by it
 });
