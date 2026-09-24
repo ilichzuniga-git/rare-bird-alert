@@ -143,10 +143,15 @@ class INaturalistSource extends SightingSource {
   }
 
   /**
-   * Licenses that are safe for commercial/public use.
-   * Excludes NC (non-commercial) variants and all-rights-reserved.
+   * Photo licenses we may display. The app is free and non-commercial, so NC
+   * variants are allowed (with the photographer credit shown on every photo).
+   * All-rights-reserved photos (no license code) are never used.
+   * See docs/SOURCES.MD.
    */
-  static COMMERCIAL_LICENSES = new Set(['cc0', 'cc-by', 'cc-by-sa', 'cc-by-nd']);
+  static USABLE_LICENSES = new Set([
+    'cc0', 'cc-by', 'cc-by-sa', 'cc-by-nd',
+    'cc-by-nc', 'cc-by-nc-sa', 'cc-by-nc-nd',
+  ]);
 
   /**
    * Normalize an iNaturalist observation into the shared NormalizedSighting shape.
@@ -158,10 +163,10 @@ class INaturalistSource extends SightingSource {
     const taxon = obs.taxon || {};
     const coords = obs.location ? obs.location.split(',').map(Number) : [null, null];
 
-    // Only use photo if it carries a commercially usable license
+    // Only use the photo if it carries a Creative Commons license we can display
     const defaultPhoto = taxon.default_photo;
     const license = (defaultPhoto?.license_code || '').toLowerCase();
-    const photoUsable = INaturalistSource.COMMERCIAL_LICENSES.has(license);
+    const photoUsable = INaturalistSource.USABLE_LICENSES.has(license);
 
     return {
       source:            this.name,

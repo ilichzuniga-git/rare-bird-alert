@@ -21,6 +21,7 @@ import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import { registerForPushNotificationsAsync } from './src/notifications';
 import LeafletMap, { MapPin, ClusterCircle } from './src/LeafletMap';
+import AboutModal from './src/AboutModal';
 
 /** Play the bundled bird chirp sound. */
 async function playChirp() {
@@ -60,8 +61,13 @@ function formatDistance(m: number): string {
 type PhotoInfo = { url: string; attribution: string };
 const photoCache = new Map<string, PhotoInfo>();
 
-// CC licenses that are commercially usable (no NC)
-const COMMERCIAL_LICENSES = new Set(['cc0', 'cc-by', 'cc-by-sa', 'cc-by-nd']);
+// Creative Commons photo licenses we may display. The app is free and
+// non-commercial, so NC variants are fine (the photographer is credited on
+// every photo). All-rights-reserved photos are never shown. See docs/SOURCES.MD.
+const USABLE_LICENSES = new Set([
+  'cc0', 'cc-by', 'cc-by-sa', 'cc-by-nd',
+  'cc-by-nc', 'cc-by-nc-sa', 'cc-by-nc-nd',
+]);
 
 async function fetchPhotoForSpecies(scientificName: string): Promise<PhotoInfo> {
   if (photoCache.has(scientificName)) return photoCache.get(scientificName)!;
@@ -73,7 +79,7 @@ async function fetchPhotoForSpecies(scientificName: string): Promise<PhotoInfo> 
     const taxon = data?.results?.[0];
     const photo = taxon?.default_photo;
     const license = (photo?.license_code || '').toLowerCase();
-    if (photo?.square_url && COMMERCIAL_LICENSES.has(license)) {
+    if (photo?.square_url && USABLE_LICENSES.has(license)) {
       const info: PhotoInfo = { url: photo.square_url, attribution: photo.attribution ?? '' };
       photoCache.set(scientificName, info);
       return info;
@@ -137,11 +143,18 @@ function BirdPhoto({
     );
   }
 
-  // Clean up iNaturalist attribution: strip license suffix, keep photographer name
-  // e.g. "(c) Jane Smith, some rights reserved (CC BY)" → "© Jane Smith"
+  // Split iNaturalist's attribution into photographer and license, e.g.
+  // "(c) Jane Smith, some rights reserved (CC BY-NC), uploaded by Jane Smith"
+  //   → "© Jane Smith" + "CC BY-NC". The license must stay visible (CC terms),
+  // so it gets its own line instead of being truncated with a long name.
   const credit = attribution
-    ? attribution.replace(/\(c\)/i, '©').replace(/,?\s*some rights reserved.*$/i, '').replace(/,?\s*no rights reserved.*$/i, '').trim()
+    ? attribution
+        .replace(/\(c\)/i, '©')
+        .replace(/,?\s*(some|no|all) rights reserved.*$/i, '')
+        .replace(/,?\s*uploaded by.*$/i, '')
+        .trim()
     : '';
+  const license = attribution?.match(/\((CC[^)]*)\)/i)?.[1]?.toUpperCase() ?? null;
 
   return (
     <TouchableOpacity
@@ -150,9 +163,14 @@ function BirdPhoto({
       activeOpacity={0.85}
     >
       <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
-      {credit ? (
-        <View style={styles.photoCredit}>
-          <Text style={styles.photoCreditText} numberOfLines={1}>{credit}</Text>
+      {credit || license ? (
+        <View style={[styles.photoCredit, license ? styles.photoCreditTwoLine : null]}>
+          {credit ? <Text style={styles.photoCreditText} numberOfLines={1}>{credit}</Text> : null}
+          {license ? (
+            <Text style={styles.photoCreditText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+              {license}
+            </Text>
+          ) : null}
         </View>
       ) : null}
     </TouchableOpacity>
@@ -813,6 +831,7 @@ export default function App() {
   const [tab, setTab] = useState<'list' | 'map'>('list');
   const [modalSighting, setModalSighting] = useState<Sighting | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const currentWeekKey = useMemo(() => getWeekKey(new Date()), []);
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(
@@ -933,9 +952,12 @@ export default function App() {
           <View style={styles.headerBirdIcon}>
             <Text style={styles.headerBirdEmoji}>🐦</Text>
           </View>
-          <Text style={styles.headerTitle}>Birder's Best Friend</Text>
+          <Text style={[styles.headerTitle, { flex: 1 }]} numberOfLines={1}>Birder's Best Friend</Text>
+          <TouchableOpacity style={styles.aboutBtn} onPress={() => setAboutOpen(true)} accessibilityLabel="About and data sources">
+            <Text style={styles.aboutBtnText}>About</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.headerSub}>LA & Orange County</Text>
+        <Text style={styles.headerSub}>LA & Orange County · Data from eBird & iNaturalist</Text>
       </View>
 
       {/* Tabs */}
@@ -1032,6 +1054,8 @@ export default function App() {
       )}
 
       {/* Per-sighting map modal */}
+      <AboutModal visible={aboutOpen} onClose={() => setAboutOpen(false)} />
+
       <MapModal
         sighting={modalSighting}
         reports={modalReports}
@@ -1046,6 +1070,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#2d6a4f' },
   header: { backgroundColor: '#2d6a4f', paddingBottom: 14, paddingHorizontal: 20 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  aboutBtn: { backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  aboutBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   headerBirdIcon: {
     width: 36, height: 36, borderRadius: 9,
     backgroundColor: '#ecf4ed',
@@ -1104,6 +1130,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 2,
   },
+  photoCreditTwoLine: { marginTop: -24 },
   photoCreditText: { fontSize: 8, color: '#fff', lineHeight: 10 },
   photoPlaceholder: {
     width: 64,

@@ -19,8 +19,9 @@ Key principles:
   refactor
 - Every sighting carries its source attribution; legal posture is
   tracked in docs/SOURCES.md
-- The eBird API uses a non-commercial license; commercial use will
-  be requested from Cornell before any paid launch
+- The app is free and non-commercial (decided 2026-09-23), which keeps
+  the eBird API on its default non-commercial terms and allows CC BY-NC
+  photos. Monetizing would require revisiting both — see docs/SOURCES.MD
 
 Style preferences:
 - Provide complete working files, not patches, when changes are

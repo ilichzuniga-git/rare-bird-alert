@@ -325,19 +325,34 @@ The `.gitignore` handles this automatically, but avoid:
 
 ## How it works
 
-- The **poller** runs every 10 minutes, fetches sightings from all enabled sources for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres
+- The **poller** runs every 10 minutes, fetches sightings from all enabled sources for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres. Only genuinely new sightings count as new and trigger push notifications. Sightings older than 28 days are skipped and purged.
 - After each poll, the **clustering engine** groups same-species sightings within 300m into continuing-bird clusters and updates their status
 - The **API** serves sightings and clusters to the mobile app
-- **Push notifications** fire via Expo's push service whenever new sightings arrive
+- **Push notifications** fire via Expo's push service whenever new sightings arrive; tokens for uninstalled apps are pruned automatically
 - The **map** uses OpenStreetMap + Leaflet (free, no API key) rendered inside a WebView
+
+The app is **free and non-commercial**. That's what lets it use eBird's API under its default terms and show CC BY-NC photos. See [`docs/SOURCES.MD`](docs/SOURCES.MD) before changing that.
 
 ### Data sources
 
-**eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key.
+**eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key. Notable sightings can include reports not yet confirmed by eBird reviewers.
 
 **iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. No API key required. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
 
-On each sighting card, tapping the location address opens the map modal for that sighting (same as tapping the Map button used to do).
+**eBird species codes for iNaturalist sightings** — iNaturalist has no eBird codes, so the backend downloads eBird's taxonomy once a day (`backend/src/ebirdTaxonomy.js`) and fills in `species_code` by scientific name in `/api/sightings` responses. Only the response is changed. The database column stays `NULL` for iNaturalist rows, because it is part of the sightings dedupe key.
+
+Full licensing and attribution details for every source are in [`docs/SOURCES.MD`](docs/SOURCES.MD).
+
+### About screen and attribution
+
+The **About** button in the header opens `mobile/src/AboutModal.tsx`, which carries the required credits:
+
+- eBird: *"Data from eBird (Cornell Lab of Ornithology, ebird.org)"*
+- iNaturalist data and the photo licenses
+- © OpenStreetMap contributors and Leaflet
+- a short "your data" note
+
+The header also shows "Data from eBird & iNaturalist" at all times. Keep the About text in sync with `docs/SOURCES.MD`.
 
 ### iNaturalist rarity tuning
 
@@ -347,15 +362,21 @@ Adjust `INAT_RARITY_THRESHOLD` in `backend/.env` to control how strict "rare" is
 
 Default is `50`.
 
-### iNaturalist photo licensing
+### Photo licensing
 
-iNaturalist photos carry a variety of Creative Commons licenses. The app **only displays photos with commercially usable licenses**: `CC0`, `CC BY`, `CC BY-SA`, and `CC BY-ND`. Photos licensed as **NC (non-commercial)** — `CC BY-NC`, `CC BY-NC-SA`, `CC BY-NC-ND` — and **all-rights-reserved** photos are never fetched or stored.
+Bird photos come from iNaturalist under Creative Commons licenses. Because the app is non-commercial, it shows:
 
-In practice, roughly 90% of rare-species taxon photos on iNaturalist are NC or all-rights-reserved, so most sightings show a 🐦 placeholder instead. Tapping the placeholder (or any photo) opens the species page on All About Birds. When a licensed photo is shown, a photographer credit overlay is displayed at the bottom of the image.
+| License | Shown? |
+|---|---|
+| `CC0`, `CC BY`, `CC BY-SA`, `CC BY-ND` | ✅ |
+| `CC BY-NC`, `CC BY-NC-SA`, `CC BY-NC-ND` | ✅ (non-commercial use only) |
+| All rights reserved | ❌ never fetched or stored |
 
-This filter is applied in two places:
-- `INaturalistSource.js` — at poll time, before storing `photo_url` and `photo_attribution` to the DB
-- `App.tsx` (`fetchPhotoForSpecies`) — for eBird sightings where photos are fetched lazily at display time
+Allowing NC licenses raised photo coverage from 3 to 30 out of 40 sampled species. Each photo shows the photographer credit **and the license code** in an overlay, as CC requires. Tapping a photo, or the 🐦 placeholder, opens the species page on All About Birds.
+
+The filter lives in two places that must stay in sync:
+- `USABLE_LICENSES` in `backend/src/sources/INaturalistSource.js`: photos stored with iNaturalist sightings at poll time
+- `USABLE_LICENSES` in `mobile/App.tsx`: photos looked up lazily for eBird sightings
 
 ### Rarity badges
 
@@ -385,21 +406,39 @@ The status label shown on each card and in the map modal is derived from these v
 | Last seen Xd ago | Not seen in 2–7 days |
 | May have departed | No sighting in over 7 days |
 
-### Refound and Dipped reporting
+### Map tab
 
-Tapping the **location address** on any sighting opens the map modal, which shows:
+- **One pin per bird.** Sightings in the same cluster collapse into a single pin, using their most recent report. For example, five observers' checklists of one Vesper Sparrow show as one pin.
+- **Tapping a pin** opens that bird's Refound/Dipped view.
+- **A spot with several birds** (a busy hotspot) shows a picker listing each bird with its report count and date, e.g. "Vesper Sparrow · 5 reports · Sep 17".
 
-- The sighting's location with a dashed green circle indicating the 300m cluster stakeout zone
-- Trail dots for all other sightings of the same individual (oldest to newest)
-- The current continuing status in the header
-- **✓ Refound** and **✗ Dipped** buttons
+### Refound/Dipped view
 
-Tapping either button shows a confirmation sheet. The app requests foreground GPS permission and displays your distance from the cluster centre (e.g. "You are ~120m from this spot"). If you appear to be more than 1km away an amber warning is shown. On confirming a Refound, the cluster's `last_refound_at` is updated immediately for all users, a short bird chirp plays, and your GPS coordinates (if available) are stored with the report. Reports are anonymous (no account required).
+Opened by tapping a map pin, or the **location address** on any sighting card. It shows:
+
+- **Header:** the bird's name, location and continuing status, plus an **eBird species page ↗** link.
+- **Map:** the report's location with a dashed green circle for the 300m cluster stakeout zone, and trail dots for the other sightings of the same individual.
+- **✓ Refound** and **✗ Dipped** buttons.
+- **Report chips**, when the bird has several reports: one chip per report (date, time, source). Selecting a chip switches the map, coordinates and observer notes to that report.
+- **📍 Open this report's location in Maps:** opens the phone's maps app at the report's exact coordinates for directions.
+- **🎯 Open observer's exact spot in Maps:** shown when the observer typed coordinates into their notes, which birders often do because hotspot reports all share the hotspot's pin. Decimal (`34.15575° N, 118.28397° W`, `34.15575, -118.28397`) and degree-minute-second (`34°09'20.7"N 118°17'02.3"W`) formats are recognised. Only coordinates within 25km of the report are accepted. The spot also gets an orange target marker on the map, with its distance from the report pin.
+- **Observer notes and comments** for the selected report.
+
+Tapping Refound or Dipped shows a confirmation sheet. The app requests foreground GPS permission and displays your distance from the cluster centre (e.g. "You are ~120m from this spot"). If you appear to be more than 1km away, an amber warning is shown.
+
+On confirming a Refound:
+- the cluster's `last_refound_at` is updated immediately for all users
+- a short bird chirp plays
+- your GPS coordinates (if available) are stored with the report
+
+Reports are anonymous (no account required). To limit abuse, the backend:
+- accepts at most 10 reports per IP per 15 minutes
+- counts a repeat report of the same type on the same bird from the same IP only once per hour
 
 ### Observer comments
 
-The map modal also fetches live observer notes and community comments from the source API:
-- **eBird** — retrieves the full checklist via `/v2/product/checklist/view/{subId}` and shows per-species comments if present
-- **iNaturalist** — retrieves the observation's description and community comment thread
+The Refound/Dipped view fetches live observer notes and community comments from the source API:
+- **eBird:** retrieves the full checklist via `/v2/product/checklist/view/{subId}`. Shows the per-species observer note plus the checklist comments, which eBird may return as a single string.
+- **iNaturalist:** retrieves the observation's description and community comment thread.
 
 Comments are fetched on demand and never stored in the local database.
