@@ -159,7 +159,9 @@ function BirdPhoto({
   );
 }
 
-const API_BASE = 'https://rba-backend.cloudedapps.org';
+// Set EXPO_PUBLIC_API_BASE (e.g. in mobile/.env.local) to point at a local backend;
+// defaults to production. Read at bundle time, so restart Metro after changing it.
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? 'https://rba-backend.cloudedapps.org';
 
 interface Sighting {
   id: number;

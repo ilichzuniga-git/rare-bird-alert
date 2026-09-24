@@ -18,9 +18,9 @@ rba-app/
 Install these once:
 
 - [Node.js](https://nodejs.org/) v20+
-- [PostgreSQL](https://www.postgresql.org/) running locally on port 5432
-- [Expo Go](https://expo.dev/go) on your phone (iOS or Android)
-- Android Debug Bridge (ADB) — included with Android Studio, or install platform-tools standalone
+- [Expo Go](https://expo.dev/go) on your phone, matching the app's Expo SDK (54)
+- Android Debug Bridge (ADB) — `winget install Google.PlatformTools` on Windows, or via Android Studio
+- [PostgreSQL](https://www.postgresql.org/) on port 5432 — only needed to run the backend locally
 
 ---
 
@@ -76,42 +76,50 @@ npm install
 
 ## Running the app on your phone
 
-You need **three things running simultaneously**. Open separate terminal windows for each.
+By default the app talks to the **production backend** (`https://rba-backend.cloudedapps.org`), so for mobile-only changes you just need Metro and a USB tunnel — no local backend or Postgres.
 
-### Terminal 1 — backend server
+### 1. Connect the phone over USB
+
+Enable **USB debugging** (Settings → About phone → tap Build number 7× → Developer options → USB debugging), plug in, and accept the "Allow USB debugging?" prompt. Then:
 
 ```bash
-cd backend
-npm run dev
+adb devices                     # phone should be listed as "device" (not "unauthorized")
+adb reverse tcp:8081 tcp:8081   # Metro — re-run after replugging or restarting Metro
 ```
 
-You should see: `RBA backend listening on port 3000`
+USB is the reliable path on networks with client isolation (e.g. work Wi-Fi), where the phone can't reach the laptop's LAN IP.
 
-### Terminal 2 — Expo / Metro bundler
+### 2. Start Metro — from `mobile/`, not the repo root
 
 ```bash
 cd mobile
-npx expo start
+npx expo start --localhost
 ```
 
-A QR code will appear in the terminal.
+### 3. Open in Expo Go
 
-### Terminal 3 — ADB USB tunnels (Android only)
+Open **Expo Go** and enter `exp://127.0.0.1:8081`. Code changes reload automatically.
 
-> **Run this every time you restart Metro or run `npm install`.** It bridges your phone's network requests to your computer's localhost.
+Expected in Expo Go: an `expo-notifications` error saying push was removed from Expo Go in SDK 53. The app skips push registration there — test notifications with a Play Store Internal Testing build instead.
+
+### Optional: run against a local backend
+
+Only needed when changing `backend/` (requires Postgres — see First-time setup).
 
 ```bash
-adb reverse tcp:8081 tcp:8081
+cd backend
+npm run db:migrate   # npm start migrates automatically; npm run dev does not
+npm run dev
 adb reverse tcp:3000 tcp:3000
 ```
 
-Port 8081 = Metro bundler · Port 3000 = API server
+Create `mobile/.env.local` (git-ignored) with:
 
-### On your phone
+```
+EXPO_PUBLIC_API_BASE=http://127.0.0.1:3000
+```
 
-1. Connect your phone via USB with USB debugging enabled
-2. Open **Expo Go**
-3. Scan the QR code from Terminal 2, or type `exp://127.0.0.1:8081` manually
+Restart Metro after creating, changing, or deleting it (the value is baked in at bundle time). Delete the file to go back to production.
 
 ---
 
@@ -119,8 +127,12 @@ Port 8081 = Metro bundler · Port 3000 = API server
 
 | Symptom | Fix |
 |---|---|
+| `adb devices` lists nothing (Windows, Samsung) | Install the [Samsung Android USB Driver](https://developer.samsung.com/android-usb-driver) — without it Windows binds a generic driver to the phone's ADB interface. Other brands: [Google USB Driver](https://developer.android.com/studio/run/win-usb) |
+| `adb devices` shows `unauthorized` | Unlock the phone and accept the "Allow USB debugging?" prompt |
+| `ConfigError: … package.json does not exist` | You ran Expo from the repo root — `cd mobile` first |
+| "java.io.IOException: failed to download remote update" | Check `adb reverse --list` shows `tcp:8081`, restart `npx expo start --localhost`, then reopen `exp://127.0.0.1:8081` (the first bundle build can be slow) |
 | "relation regions does not exist" | Run `npm run db:migrate` in the backend folder |
-| "Network request failed" on phone | Re-run both `adb reverse` commands, then tap Retry in the app |
+| "Network request failed" on phone | If using a local backend, re-run `adb reverse tcp:3000 tcp:3000`, then tap Retry in the app |
 | White screen / "No apps connected" | Re-run `adb reverse`, open Expo Go, scan the QR code again |
 | Metro port already in use | `npx kill-port 8081` |
 | iNaturalist showing 0 sightings | Run `node src/scripts/testInat.js` to diagnose; check `inat_place_id` is set correctly |
