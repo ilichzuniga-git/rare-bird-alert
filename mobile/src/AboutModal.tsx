@@ -3,7 +3,6 @@ import {
   Linking,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar as RNStatusBar,
   StyleSheet,
@@ -37,7 +36,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export default function AboutModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#2d6a4f' }}>
+      <View style={{ flex: 1, backgroundColor: '#2d6a4f' }}>
         <View style={[styles.header, { paddingTop: (Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0) + 12 }]}>
           <Text style={styles.headerTitle}>About</Text>
           <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
@@ -108,7 +107,7 @@ export default function AboutModal({ visible, onClose }: { visible: boolean; onC
             </Text>
           </Section>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

@@ -1,844 +1,50 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Linking,
-  Modal,
-  Platform,
+  BackHandler,
+  Keyboard,
   Pressable,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  SectionList,
-  StatusBar as RNStatusBar,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerForPushNotificationsAsync } from './src/notifications';
-import LeafletMap, { MapPin, ClusterCircle } from './src/LeafletMap';
+import LeafletMap, { type MapPin } from './src/LeafletMap';
 import AboutModal from './src/AboutModal';
+import SightingModal from './src/SightingModal';
+import BottomSheet, { type BottomSheetHandle } from './src/BottomSheet';
+import { SheetHeader, SheetList } from './src/RaritiesSheet';
+import { byRarity, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
+import { colors } from './src/theme';
+import { API_BASE, formatDate } from './src/util';
+import type { ClusterData, Sighting } from './src/types';
 
-/** Play the bundled bird chirp sound. */
-async function playChirp() {
-  try {
-    await setAudioModeAsync({ playsInSilentMode: true });
-    const player = createAudioPlayer(require('./assets/chirp.wav'));
-    player.play();
-    // expo-audio players aren't garbage-collected automatically — remove once done
-    const sub = player.addListener('playbackStatusUpdate', status => {
-      if (status.didJustFinish) {
-        sub.remove();
-        player.remove();
-      }
-    });
-  } catch (e) {
-    // Sound is best-effort — never block the UI
-  }
-}
+const SEARCH_BAR_H = 48;
 
-const INAT_BASE = 'https://api.inaturalist.org/v1';
-
-/** Haversine distance in metres between two lat/lng points. */
-function distanceMetres(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6_371_000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.asin(Math.sqrt(a));
-}
-
-function formatDistance(m: number): string {
-  if (m < 1000) return `${Math.round(m)}m`;
-  return `${(m / 1000).toFixed(1)}km`;
-}
-
-// Per-session cache: scientific_name → { url, attribution } (or empty if not found)
-type PhotoInfo = { url: string; attribution: string };
-const photoCache = new Map<string, PhotoInfo>();
-
-// Creative Commons photo licenses we may display. The app is free and
-// non-commercial, so NC variants are fine (the photographer is credited on
-// every photo). All-rights-reserved photos are never shown. See docs/SOURCES.MD.
-const USABLE_LICENSES = new Set([
-  'cc0', 'cc-by', 'cc-by-sa', 'cc-by-nd',
-  'cc-by-nc', 'cc-by-nc-sa', 'cc-by-nc-nd',
-]);
-
-async function fetchPhotoForSpecies(scientificName: string): Promise<PhotoInfo> {
-  if (photoCache.has(scientificName)) return photoCache.get(scientificName)!;
-  try {
-    const res = await fetch(
-      `${INAT_BASE}/taxa?q=${encodeURIComponent(scientificName)}&rank=species&per_page=1`
-    );
-    const data = await res.json();
-    const taxon = data?.results?.[0];
-    const photo = taxon?.default_photo;
-    const license = (photo?.license_code || '').toLowerCase();
-    if (photo?.square_url && USABLE_LICENSES.has(license)) {
-      const info: PhotoInfo = { url: photo.square_url, attribution: photo.attribution ?? '' };
-      photoCache.set(scientificName, info);
-      return info;
-    }
-    const empty: PhotoInfo = { url: '', attribution: '' };
-    photoCache.set(scientificName, empty);
-    return empty;
-  } catch {
-    const empty: PhotoInfo = { url: '', attribution: '' };
-    photoCache.set(scientificName, empty);
-    return empty;
-  }
-}
-
-/** Opens the All About Birds species page for a given common name. */
-function openAllAboutBirds(commonName: string) {
-  const slug = commonName.trim().replace(/ /g, '_');
-  Linking.openURL(`https://www.allaboutbirds.org/guide/${encodeURIComponent(slug)}`);
-}
-
-function BirdPhoto({
-  photoUrl,
-  photoAttribution,
-  scientificName,
-  commonName,
-}: {
-  photoUrl: string | null;
-  photoAttribution: string | null;
-  scientificName: string | null;
-  commonName: string;
-}) {
-  const [url, setUrl] = useState<string>(photoUrl ?? '');
-  const [attribution, setAttribution] = useState<string>(photoAttribution ?? '');
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    // If no pre-stored photo (e.g. eBird sightings), try lazy fetch from iNat taxa API
-    if (!photoUrl && scientificName) {
-      fetchPhotoForSpecies(scientificName).then(info => {
-        if (mounted.current) {
-          setUrl(info.url);
-          setAttribution(info.attribution);
-        }
-      });
-    }
-    return () => { mounted.current = false; };
-  }, [photoUrl, scientificName]);
-
-  if (!url) {
-    // Placeholder: tappable link to All About Birds
-    return (
-      <TouchableOpacity
-        style={styles.photoPlaceholder}
-        onPress={() => openAllAboutBirds(commonName)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.photoPlaceholderIcon}>🐦</Text>
-        <Text style={styles.photoPlaceholderLink}>Info</Text>
-      </TouchableOpacity>
-    );
-  }
-
-  // Split iNaturalist's attribution into photographer and license, e.g.
-  // "(c) Jane Smith, some rights reserved (CC BY-NC), uploaded by Jane Smith"
-  //   → "© Jane Smith" + "CC BY-NC". The license must stay visible (CC terms),
-  // so it gets its own line instead of being truncated with a long name.
-  const credit = attribution
-    ? attribution
-        .replace(/\(c\)/i, '©')
-        .replace(/,?\s*(some|no|all) rights reserved.*$/i, '')
-        .replace(/,?\s*uploaded by.*$/i, '')
-        .trim()
-    : '';
-  const license = attribution?.match(/\((CC[^)]*)\)/i)?.[1]?.toUpperCase() ?? null;
-
-  return (
-    <TouchableOpacity
-      style={styles.photoWrapper}
-      onPress={() => openAllAboutBirds(commonName)}
-      activeOpacity={0.85}
-    >
-      <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
-      {credit || license ? (
-        <View style={[styles.photoCredit, license ? styles.photoCreditTwoLine : null]}>
-          {credit ? <Text style={styles.photoCreditText} numberOfLines={1}>{credit}</Text> : null}
-          {license ? (
-            <Text style={styles.photoCreditText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-              {license}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-    </TouchableOpacity>
-  );
-}
-
-// Set EXPO_PUBLIC_API_BASE (e.g. in mobile/.env.local) to point at a local backend;
-// defaults to production. Read at bundle time, so restart Metro after changing it.
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? 'https://rba-backend.cloudedapps.org';
-
-interface Sighting {
-  id: number;
-  common_name: string;
-  scientific_name: string | null;
-  species_code: string | null; // eBird code; the backend fills it in for iNaturalist rows too
-  location_name: string | null;
-  region_name: string;
-  observed_at: string;
-  how_many: number | null;
-  lat: number | null;
-  lng: number | null;
-  source: string | null;
-  source_id: string | null;
-  rarity_count: number | null;
-  photo_url: string | null;
-  photo_attribution: string | null;
-  location_id: string | null;
-  notes: string | null;
-  cluster_id: number | null;
-}
-
-type RarityTier = { label: string; bg: string; text: string };
-
-function getRarityTier(rarity_count: number | null): RarityTier {
-  if (rarity_count === null) return { label: 'Notable',    bg: '#f1f5f9', text: '#475569' };
-  if (rarity_count <= 3)     return { label: 'Exceptional', bg: '#fef2f2', text: '#dc2626' };
-  if (rarity_count <= 9)     return { label: 'Very Rare',   bg: '#fff7ed', text: '#ea580c' };
-  return                            { label: 'Rare',        bg: '#fffbeb', text: '#d97706' };
-}
-
-interface WeekSection {
-  weekKey: string;
-  title: string;
-  count: number;
-  data: Sighting[];
-}
-
-function formatSource(source: string | null): string {
-  if (!source) return 'Unknown';
-  if (source.toLowerCase() === 'ebird') return 'eBird';
-  return source.charAt(0).toUpperCase() + source.slice(1);
-}
-
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function formatDate(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso.slice(0, 10);
-  return MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate().toString();
-}
-
-/** "Sep 17 · 11:15 AM"; date only when the report has no time (midnight). */
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return formatDate(iso);
-  const h = d.getUTCHours(), m = d.getUTCMinutes();
-  if (h === 0 && m === 0) return formatDate(iso);
-  const time = `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-  return `${formatDate(iso)} · ${time}`;
-}
-
-/** Open the phone's maps app at an exact point (Android geo: intent, Apple Maps on iOS). */
-function openInMaps(lat: number, lng: number, label: string) {
-  const q = `${lat},${lng}`;
-  Linking.openURL(
-    Platform.OS === 'ios'
-      ? `https://maps.apple.com/?ll=${q}&q=${encodeURIComponent(label)}`
-      : `geo:${q}?q=${q}(${encodeURIComponent(label)})`
-  );
-}
-
-// ---- Coordinates typed into observer notes ----
-// Hotspot reports all share the hotspot's pin, so birders often paste the bird's
-// actual spot into their notes. Find it so the app can show and navigate to it.
-const DECIMAL_COORDS = /(-?\d{1,2}\.\d{3,})\s*°?\s*([NS])?[\s,;/]+(-?\d{1,3}\.\d{3,})\s*°?\s*([EW])?/gi;
-const DMS_COORDS = /(\d{1,2})\s*°\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:\.\d+)?)\s*(?:["″]|'')?\s*([NS])[\s,;/]+(\d{1,3})\s*°\s*(\d{1,2})\s*['′]\s*(\d{1,2}(?:\.\d+)?)\s*(?:["″]|'')?\s*([EW])/gi;
-const MAX_NOTE_COORD_DISTANCE_M = 25_000;
-
-/**
- * First coordinate pair in `texts` that lies within 25km of the report (which
- * rules out unrelated numbers and fixes a dropped minus sign on longitude).
- */
-function findNoteCoordinates(
-  texts: (string | null | undefined)[],
-  near: { lat: number; lng: number },
-): { lat: number; lng: number } | null {
-  const candidates: { lat: number; lng: number }[] = [];
-  for (const text of texts) {
-    if (!text) continue;
-    for (const m of text.matchAll(DMS_COORDS)) {
-      const lat = (+m[1] + +m[2] / 60 + +m[3] / 3600) * (m[4].toUpperCase() === 'S' ? -1 : 1);
-      const lng = (+m[5] + +m[6] / 60 + +m[7] / 3600) * (m[8].toUpperCase() === 'W' ? -1 : 1);
-      candidates.push({ lat, lng });
-    }
-    for (const m of text.matchAll(DECIMAL_COORDS)) {
-      let lat = parseFloat(m[1]);
-      let lng = parseFloat(m[3]);
-      if (m[2]?.toUpperCase() === 'S') lat = -Math.abs(lat);
-      if (m[4]?.toUpperCase() === 'W') lng = -Math.abs(lng);
-      candidates.push({ lat, lng });
-      if (!m[4]) candidates.push({ lat, lng: -lng }); // "118.28397" meant as west
-    }
-  }
-  return candidates.find(c =>
-    Math.abs(c.lat) <= 90 && Math.abs(c.lng) <= 180 &&
-    distanceMetres(c.lat, c.lng, near.lat, near.lng) <= MAX_NOTE_COORD_DISTANCE_M
-  ) ?? null;
-}
-
-function toPin(s: Sighting): MapPin | null {
-  if (s.lat == null || s.lng == null) return null;
-  return { lat: s.lat, lng: s.lng, label: s.common_name, sciName: s.scientific_name };
-}
-
-// Returns the ISO date string of the Sunday that starts the week containing `date`
-function getWeekKey(date: Date): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().split('T')[0];
-}
-
-function getWeekLabel(weekKey: string, isCurrentWeek: boolean): string {
-  if (isCurrentWeek) return 'This week';
-  const sunday = new Date(weekKey + 'T12:00:00');
-  const saturday = new Date(sunday);
-  saturday.setDate(saturday.getDate() + 6);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  return fmt(sunday) + ' - ' + fmt(saturday);
-}
-
-function groupByWeek(sightings: Sighting[], currentWeekKey: string): WeekSection[] {
-  const map = new Map<string, Sighting[]>();
-  for (const s of sightings) {
-    const key = getWeekKey(new Date(s.observed_at));
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(s);
-  }
-  return [...map.keys()]
-    .sort((a, b) => b.localeCompare(a))
-    .map(key => ({
-      weekKey: key,
-      title: getWeekLabel(key, key === currentWeekKey),
-      count: map.get(key)!.length,
-      data: map.get(key)!,
-    }));
-}
-
-// ---- Cluster types ----
-interface ClusterPin { lat: number; lng: number; observed_at: string; source: string; }
-interface ClusterData {
-  id: number;
-  center_lat: number;
-  center_lng: number;
-  radius_m: number;
-  first_seen: string;
-  last_seen: string;
-  sighting_count: number;
-  checklist_count: number;
-  refound_count: number;
-  dip_count: number;
-  last_refound_at: string | null;
-  last_dipped_at: string | null;
-  sighting_pins: ClusterPin[] | null;
-  status: { label: string; level: 'green' | 'amber' | 'red' | 'gray' };
-}
-
-// ---- Map modal with lazy-loaded comments ----
-interface CommentEntry { author: string; text: string; created_at: string | null; }
-interface CommentsPayload {
-  source: string;
-  observer_note: string | null;
-  comments: CommentEntry[];
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  green: '#2d6a4f', amber: '#b45309', red: '#b91c1c', gray: '#64748b',
-};
-
-function MapModal({
-  sighting,
-  reports,
-  onSelectReport,
-  onClose,
-}: {
-  sighting: Sighting | null;
-  /** Every report of this bird (same cluster), newest first — includes `sighting` */
-  reports: Sighting[];
-  onSelectReport: (s: Sighting) => void;
-  onClose: () => void;
-}) {
-  const [commentsState, setCommentsState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [payload, setPayload] = useState<CommentsPayload | null>(null);
-  const [cluster, setCluster] = useState<ClusterData | null>(null);
-  // confirm: null=hidden, 'refound'|'dipped'=waiting for user confirmation
-  const [confirm, setConfirm] = useState<'refound' | 'dipped' | null>(null);
-  const [reporting, setReporting] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-
-  useEffect(() => {
-    if (!sighting) {
-      setCommentsState('idle'); setPayload(null); setCluster(null); setConfirm(null);
-      return;
-    }
-    // Fetch comments
-    setCommentsState('loading'); setPayload(null);
-    fetch(`${API_BASE}/api/sightings/${sighting.id}/comments`)
-      .then(async r => {
-        const data = await r.json();
-        // Always settle as 'done' — backend now returns empty arrays instead of errors
-        setPayload(data);
-        setCommentsState('done');
-      })
-      .catch(() => setCommentsState('error'));
-
-    // Fetch cluster if this sighting belongs to one
-    if (sighting.cluster_id) {
-      fetch(`${API_BASE}/api/clusters/${sighting.cluster_id}`)
-        .then(r => r.json())
-        .then(data => setCluster(data.cluster ?? null))
-        .catch(() => {});
-    } else {
-      setCluster(null);
-    }
-  }, [sighting?.id]);
-
-  /** Request GPS and store result in userLocation when confirm sheet opens. */
-  const openConfirm = async (type: 'refound' | 'dipped') => {
-    setConfirm(type);
-    setUserLocation(null);
-    setLocationLoading(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      }
-    } catch (_) {
-      // GPS is best-effort — the report can still be submitted without it
-    }
-    setLocationLoading(false);
-  };
-
-  const submitReport = async (type: 'refound' | 'dipped') => {
-    if (!sighting?.cluster_id) return;
-    setReporting(true);
-    try {
-      const body: Record<string, unknown> = { type };
-      if (userLocation) {
-        body.lat = userLocation.lat;
-        body.lng = userLocation.lng;
-      }
-      const res = await fetch(`${API_BASE}/api/clusters/${sighting.cluster_id}/report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.ok && cluster) {
-        setCluster(prev => prev ? { ...prev, status: data.status } : prev);
-      }
-      if (type === 'refound') await playChirp();
-    } catch (_) {}
-    setReporting(false);
-    setConfirm(null);
-  };
-
-  const comments = payload?.comments ?? [];
-  const hasContent = payload && (payload.observer_note || comments.length > 0);
-
-  const reportPoint = sighting?.lat != null && sighting?.lng != null
-    ? { lat: Number(sighting.lat), lng: Number(sighting.lng) }
-    : null;
-  const exactSpot = useMemo(
-    () => reportPoint && payload
-      ? findNoteCoordinates([payload.observer_note, ...comments.map(c => c.text)], reportPoint)
-      : null,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [payload, reportPoint?.lat, reportPoint?.lng]
-  );
-
-  // Build map pins: trail dots for older cluster sightings, main pin for this one
-  const mapPins: MapPin[] = [];
-  if (cluster?.sighting_pins) {
-    for (const p of cluster.sighting_pins) {
-      if (p.lat && p.lng) {
-        mapPins.push({ lat: p.lat, lng: p.lng, label: sighting?.common_name ?? '', isTrail: true });
-      }
-    }
-  }
-  if (sighting?.lat != null && sighting?.lng != null) {
-    mapPins.push(toPin(sighting)!);
-  }
-  if (exactSpot) {
-    mapPins.push({ ...exactSpot, label: "Observer's exact spot (from notes)", isExact: true });
-  }
-
-  const clusterCircle: ClusterCircle | null = cluster
-    ? { lat: cluster.center_lat, lng: cluster.center_lng, radiusM: cluster.radius_m }
-    : null;
-
-  const statusColor = cluster ? STATUS_COLORS[cluster.status.level] ?? '#64748b' : null;
-
-  return (
-    <Modal visible={sighting !== null} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#2d6a4f' }}>
-        {/* Header */}
-        <View style={[styles.modalHeader, { paddingTop: (Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0) + 12 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.modalTitle} numberOfLines={1}>{sighting?.common_name}</Text>
-            {sighting?.location_name ? (
-              <Text style={styles.modalSub} numberOfLines={1}>{sighting.location_name}</Text>
-            ) : null}
-            {cluster && (
-              <Text style={[styles.modalStatus, { color: statusColor ?? '#b7e4c7' }]} numberOfLines={1}>
-                {cluster.status.label}
-              </Text>
-            )}
-            {sighting?.species_code ? (
-              <TouchableOpacity
-                style={styles.speciesLink}
-                onPress={() => Linking.openURL(`https://ebird.org/species/${encodeURIComponent(sighting.species_code!)}`)}
-              >
-                <Text style={styles.speciesLinkText}>eBird species page ↗</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeBtnText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Map */}
-        {sighting ? (
-          <View style={styles.modalMapContainer}>
-            <LeafletMap
-              pins={mapPins.length > 0 ? mapPins : [toPin(sighting)!].filter(Boolean) as MapPin[]}
-              center={sighting.lat != null && sighting.lng != null ? { lat: Number(sighting.lat), lng: Number(sighting.lng) } : undefined}
-              zoom={15}
-              clusterCircle={clusterCircle}
-            />
-          </View>
-        ) : (
-          <View style={[styles.modalMapContainer, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#1a3a2a' }]}>
-            <Text style={{ color: '#aaa', fontSize: 14 }}>No location data</Text>
-          </View>
-        )}
-
-        {/* Refound / Dipped buttons */}
-        {sighting?.cluster_id && (
-          <View style={styles.reportBar}>
-            <TouchableOpacity
-              style={[styles.reportBtn, styles.refoundBtn]}
-              onPress={() => openConfirm('refound')}
-              disabled={reporting}
-            >
-              <Text style={styles.reportBtnText}>✓ Refound</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.reportBtn, styles.dippedBtn]}
-              onPress={() => openConfirm('dipped')}
-              disabled={reporting}
-            >
-              <Text style={styles.reportBtnText}>✗ Dipped</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Which report is shown, and its exact spot */}
-        {sighting ? (
-          <View style={styles.reportsBar}>
-            {reports.length > 1 ? (
-              <>
-                <Text style={styles.reportsHeading}>
-                  {reports.length} reports of this bird — tap one for its exact spot and notes
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {reports.map(r => {
-                    const active = r.id === sighting.id;
-                    return (
-                      <TouchableOpacity
-                        key={r.id}
-                        style={[styles.reportChip, active && styles.reportChipActive]}
-                        onPress={() => onSelectReport(r)}
-                      >
-                        <Text style={[styles.reportChipText, active && styles.reportChipTextActive]}>
-                          {formatDateTime(r.observed_at)}
-                        </Text>
-                        <Text style={[styles.reportChipSub, active && styles.reportChipTextActive]}>
-                          {formatSource(r.source)}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </>
-            ) : null}
-            {sighting.lat != null && sighting.lng != null ? (
-              <TouchableOpacity
-                style={styles.openMapsBtn}
-                onPress={() => openInMaps(Number(sighting.lat), Number(sighting.lng), sighting.common_name)}
-              >
-                <Text style={styles.openMapsText}>
-                  📍 Open this report's location in Maps ({Number(sighting.lat).toFixed(5)}, {Number(sighting.lng).toFixed(5)})
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-            {exactSpot && reportPoint ? (
-              <TouchableOpacity
-                style={styles.openMapsBtn}
-                onPress={() => openInMaps(exactSpot.lat, exactSpot.lng, `${sighting.common_name} (observer's spot)`)}
-              >
-                <Text style={[styles.openMapsText, styles.exactSpotText]}>
-                  🎯 Open observer's exact spot in Maps ({exactSpot.lat.toFixed(5)}, {exactSpot.lng.toFixed(5)})
-                  {' · '}~{formatDistance(distanceMetres(exactSpot.lat, exactSpot.lng, reportPoint.lat, reportPoint.lng))} from the report pin
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        ) : null}
-
-        {/* Comments panel */}
-        <View style={styles.commentsPanel}>
-          {commentsState === 'loading' && (
-            <View style={styles.commentsCenter}>
-              <ActivityIndicator color="#2d6a4f" />
-              <Text style={styles.commentsHint}>Loading notes…</Text>
-            </View>
-          )}
-          {commentsState === 'error' && (
-            <View style={styles.commentsCenter}>
-              <Text style={styles.commentsHint}>Could not load comments</Text>
-            </View>
-          )}
-          {commentsState === 'done' && !hasContent && (
-            <View style={styles.commentsCenter}>
-              <Text style={styles.commentsHint}>No observer notes or comments for this sighting</Text>
-            </View>
-          )}
-          {commentsState === 'done' && hasContent && (
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }}>
-              {payload?.observer_note ? (
-                <View style={styles.commentNote}>
-                  <Text style={styles.commentNoteLabel}>Observer note</Text>
-                  <Text style={styles.commentNoteText}>{payload.observer_note}</Text>
-                </View>
-              ) : null}
-              {comments.length > 0 ? (
-                <>
-                  <Text style={styles.commentsHeading}>
-                    {comments.length === 1 ? '1 comment' : `${comments.length} comments`}
-                  </Text>
-                  {comments.map((c, i) => (
-                    <View key={i} style={styles.commentRow}>
-                      <View style={styles.commentAvatar}>
-                        <Text style={styles.commentAvatarText}>{c.author[0]?.toUpperCase() ?? '?'}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={styles.commentMeta}>
-                          <Text style={styles.commentAuthor}>{c.author}</Text>
-                          {c.created_at ? (
-                            <Text style={styles.commentDate}>{formatDate(c.created_at)}</Text>
-                          ) : null}
-                        </View>
-                        <Text style={styles.commentText}>{c.text}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </>
-              ) : null}
-            </ScrollView>
-          )}
-        </View>
-      </SafeAreaView>
-
-      {/* Confirmation sheet */}
-      <Modal visible={confirm !== null} transparent animationType="fade" onRequestClose={() => setConfirm(null)}>
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmSheet}>
-            <Text style={styles.confirmTitle}>
-              {confirm === 'refound' ? '🐦 You found it!' : '😔 You dipped'}
-            </Text>
-            <Text style={styles.confirmBody}>
-              {confirm === 'refound'
-                ? 'Confirm you personally observed this bird right now at this location?'
-                : 'Confirm you searched and could not find this bird?'}
-            </Text>
-            {/* GPS distance row */}
-            {locationLoading ? (
-              <View style={styles.confirmDistRow}>
-                <ActivityIndicator size="small" color="#64748b" style={{ marginRight: 6 }} />
-                <Text style={styles.confirmDistText}>Getting your location…</Text>
-              </View>
-            ) : userLocation && cluster ? (() => {
-              const distM = distanceMetres(
-                userLocation.lat, userLocation.lng,
-                cluster.center_lat, cluster.center_lng,
-              );
-              const isFar = distM > 1000;
-              return (
-                <View>
-                  <View style={styles.confirmDistRow}>
-                    <Text style={styles.confirmDistText}>
-                      📍 You are ~{formatDistance(distM)} from this spot
-                    </Text>
-                  </View>
-                  {isFar && (
-                    <View style={styles.confirmDistWarning}>
-                      <Text style={styles.confirmDistWarningText}>
-                        ⚠️ You appear to be far from this location
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              );
-            })() : null}
-            <View style={styles.confirmButtons}>
-              <TouchableOpacity style={styles.confirmCancel} onPress={() => setConfirm(null)}>
-                <Text style={styles.confirmCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmOk, confirm === 'refound' ? styles.confirmOkGreen : styles.confirmOkRed]}
-                onPress={() => confirm && submitReport(confirm)}
-                disabled={reporting}
-              >
-                {reporting
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.confirmOkText}>Yes, I'm sure</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </Modal>
-  );
-}
-
-// ---- Sighting card ----
-function SightingCard({ item, cluster, onMapPress }: { item: Sighting; cluster: ClusterData | null; onMapPress: () => void }) {
-  const count = item.how_many != null ? item.how_many + 'x ' : '';
-  const hasCoords = item.lat != null && item.lng != null;
-  const tier = getRarityTier(item.rarity_count);
-  const [notesExpanded, setNotesExpanded] = useState(false);
-
-  const hotspotUrl =
-    item.source === 'ebird' && item.location_id
-      ? `https://ebird.org/hotspot/${item.location_id}`
-      : item.source === 'inaturalist' && item.source_id
-      ? `https://www.inaturalist.org/observations/${item.source_id}`
-      : null;
-
-  const locationDisplay = item.location_name ?? item.region_name;
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardBody}>
-        <View style={styles.cardContent}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardHeaderLeft}>
-              <Text style={styles.commonName}>{count}{item.common_name}</Text>
-              <View style={[styles.rarityBadge, { backgroundColor: tier.bg }]}>
-                <Text style={[styles.rarityBadgeText, { color: tier.text }]}>{tier.label}</Text>
-              </View>
-            </View>
-            <Text style={styles.date} numberOfLines={1}>{formatDate(item.observed_at)}</Text>
-          </View>
-          {item.scientific_name ? <Text style={styles.sciName}>{item.scientific_name}</Text> : null}
-          {cluster ? (
-            <Text style={[styles.clusterStatus, { color: STATUS_COLORS[cluster.status.level] ?? '#64748b' }]} numberOfLines={1}>
-              {cluster.status.label}
-            </Text>
-          ) : null}
-        </View>
-        <BirdPhoto photoUrl={item.photo_url} photoAttribution={item.photo_attribution} scientificName={item.scientific_name} commonName={item.common_name} />
-      </View>
-
-      <View style={styles.cardFooter}>
-        {/* Location — tappable to open map if coords exist, plain text otherwise */}
-        {hasCoords ? (
-          <TouchableOpacity onPress={onMapPress} style={styles.hotspotBtn}>
-            <Text style={styles.hotspotText} numberOfLines={1}>{'📍'} {locationDisplay}</Text>
-            <Text style={styles.hotspotChevron}>›</Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={styles.location} numberOfLines={1}>{'📍'} {locationDisplay}</Text>
-        )}
-
-        <View style={styles.cardFooterRight}>
-          {item.source && (
-            <View style={item.source === 'inaturalist' ? styles.sourceTagInat : styles.sourceTag}>
-              <Text style={item.source === 'inaturalist' ? styles.sourceTagTextInat : styles.sourceTagText}>{formatSource(item.source)}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Expandable observer notes */}
-      {item.notes ? (
-        <>
-          <TouchableOpacity style={styles.notesToggle} onPress={() => setNotesExpanded(e => !e)} activeOpacity={0.7}>
-            <Text style={styles.notesToggleText}>Observer notes</Text>
-            <Text style={styles.notesChevron}>{notesExpanded ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {notesExpanded && (
-            <View style={styles.notesBody}>
-              <Text style={styles.notesText}>{item.notes}</Text>
-            </View>
-          )}
-        </>
-      ) : null}
-    </View>
-  );
-}
-
-// ---- Week section header ----
-function WeekHeader({
-  section,
-  expanded,
-  onPress,
-}: {
-  section: WeekSection;
-  expanded: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity style={styles.weekHeader} onPress={onPress} activeOpacity={0.7}>
-      <Text style={styles.weekTitle}>{section.title}</Text>
-      <View style={styles.weekHeaderRight}>
-        <View style={styles.weekBadge}>
-          <Text style={styles.weekBadgeText}>{section.count}</Text>
-        </View>
-        <Text style={styles.weekChevron}>{expanded ? 'v' : '>'}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-// ---- Main app ----
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <Main />
+    </SafeAreaProvider>
+  );
+}
+
+function Main() {
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+
+  // ---- data ----
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [clusters, setClusters] = useState<Map<number, ClusterData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'list' | 'map'>('list');
-  const [modalSighting, setModalSighting] = useState<Sighting | null>(null);
-  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
-  const [aboutOpen, setAboutOpen] = useState(false);
-
-  const currentWeekKey = useMemo(() => getWeekKey(new Date()), []);
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(
-    () => new Set([currentWeekKey])
-  );
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
 
   const fetchSightings = useCallback(async () => {
     try {
@@ -856,15 +62,17 @@ export default function App() {
         setClusters(map);
       }
       setError(null);
+      setUpdatedAt(Date.now());
     } catch (e: any) {
       setError(e.message ?? 'Failed to load sightings');
     }
   }, []);
 
   useEffect(() => {
-    setLoading(true);
     fetchSightings().finally(() => setLoading(false));
     registerForPushNotificationsAsync();
+    const tick = setInterval(() => setNow(Date.now()), 60_000); // keeps "updated N min ago" fresh
+    return () => clearInterval(tick);
   }, [fetchSightings]);
 
   const onRefresh = useCallback(async () => {
@@ -873,62 +81,77 @@ export default function App() {
     setRefreshing(false);
   }, [fetchSightings]);
 
-  const toggleWeek = useCallback((weekKey: string) => {
-    setExpandedWeeks(prev => {
-      const next = new Set(prev);
-      if (next.has(weekKey)) next.delete(weekKey);
-      else next.add(weekKey);
-      return next;
-    });
-  }, []);
+  // ---- filters ----
+  const [period, setPeriod] = useState<Period>('week');
+  const [source, setSource] = useState<string | null>(null);
+  const [queryText, setQueryText] = useState('');
+  const [query, setQuery] = useState(''); // debounced, so the map isn't redrawn on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(queryText.trim()), 250);
+    return () => clearTimeout(t);
+  }, [queryText]);
+
+  // "Near me" needs the user's position
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearState, setNearState] = useState<'idle' | 'locating' | 'denied' | 'ready'>('idle');
+  const choosePeriod = useCallback(async (p: Period) => {
+    setPeriod(p);
+    if (p !== 'near' || userLoc) return;
+    setNearState('locating');
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { setNearState('denied'); return; }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      setNearState('ready');
+    } catch {
+      setNearState('denied');
+    }
+  }, [userLoc]);
 
   const sources = useMemo(
     () => [...new Set(sightings.map(s => s.source).filter(Boolean))] as string[],
-    [sightings]
+    [sightings],
   );
 
-  const filteredSightings = useMemo(
-    () => sourceFilter ? sightings.filter(s => s.source === sourceFilter) : sightings,
-    [sightings, sourceFilter]
+  const allBirds = useMemo(() => groupBirds(sightings, clusters), [sightings, clusters]);
+
+  const weekCount = useMemo(() => allBirds.filter(b => inPeriod(b, 'week')).length, [allBirds]);
+
+  const distanceOf = useCallback(
+    (b: Bird) => (period === 'near' && userLoc ? distanceTo(b, userLoc) : null),
+    [period, userLoc],
   );
 
-  const rawSections = useMemo(
-    () => groupByWeek(filteredSightings, currentWeekKey),
-    [filteredSightings, currentWeekKey]
-  );
-
-  // SectionList sections: collapsed sections get empty data array
-  const sections = useMemo(
-    () =>
-      rawSections.map(s => ({
-        ...s,
-        data: expandedWeeks.has(s.weekKey) ? s.data : [],
-      })),
-    [rawSections, expandedWeeks]
-  );
-
-  // One map pin per bird: sightings in the same cluster (same species within
-  // 300m — usually several observers' checklists) collapse into their most
-  // recent report, which opens the cluster's Refound/Dipped view.
-  const allPins: MapPin[] = useMemo(() => {
-    const groups = new Map<string, Sighting[]>();
-    for (const s of filteredSightings) {
-      const key = s.cluster_id != null ? `c${s.cluster_id}` : `s${s.id}`;
-      const group = groups.get(key);
-      if (group) group.push(s);
-      else groups.set(key, [s]);
+  // Birds shown in the sheet and on the map: first one is the hero card
+  const birds = useMemo(() => {
+    const visible = allBirds.filter(b =>
+      inPeriod(b, period) &&
+      (!source || b.reports.some(r => r.source === source)) &&
+      matchesQuery(b, query));
+    if (period === 'near' && userLoc) {
+      return visible.sort((a, b) => (distanceTo(a, userLoc) ?? Infinity) - (distanceTo(b, userLoc) ?? Infinity));
     }
-    return [...groups.values()].flatMap(group => {
-      const latest = group.reduce((a, b) => (b.observed_at > a.observed_at ? b : a));
-      const p = toPin(latest);
-      if (!p) return [];
-      const date = formatDate(latest.observed_at);
-      const sublabel = group.length > 1 ? `${group.length} reports · ${date}` : date;
-      return [{ ...p, id: latest.id, sublabel }];
-    });
-  }, [filteredSightings]);
+    // Rarest bird leads as the hero; the rest stay newest-first
+    const hero = [...visible].sort(byRarity)[0];
+    return hero ? [hero, ...visible.filter(b => b !== hero)] : visible;
+  }, [allBirds, period, source, query, userLoc]);
 
-  // All reports of the bird shown in the modal (same cluster), newest first
+  const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
+    const { lat, lng } = b.latest;
+    if (lat == null || lng == null) return [];
+    const date = formatDate(b.latest.observed_at);
+    return [{
+      lat, lng, id: b.latest.id,
+      label: b.latest.common_name,
+      sublabel: b.reports.length > 1 ? `${b.reports.length} reports · ${date}` : date,
+      color: b.tier.color,
+      tag: b.tier.rank === 3,
+    }];
+  }), [birds]);
+
+  // ---- detail modal ----
+  const [modalSighting, setModalSighting] = useState<Sighting | null>(null);
   const modalReports = useMemo(() => {
     if (!modalSighting) return [];
     if (modalSighting.cluster_id == null) return [modalSighting];
@@ -936,329 +159,131 @@ export default function App() {
       .filter(s => s.cluster_id === modalSighting.cluster_id)
       .sort((a, b) => (a.observed_at < b.observed_at ? 1 : -1));
   }, [sightings, modalSighting]);
-
   const openSightingById = useCallback(
     (id: number) => setModalSighting(sightings.find(s => s.id === id) ?? null),
-    [sightings]
+    [sightings],
   );
+  const [aboutOpen, setAboutOpen] = useState(false);
 
-  const statusBarHeight = Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0;
+  // ---- layout ----
+  const sheetRef = useRef<BottomSheetHandle>(null);
+  const searchBottom = insets.top + 8 + SEARCH_BAR_H;
+  const snapPoints = useMemo(() => [
+    Math.round(150 + insets.bottom),     // peek: header only
+    Math.round(height * 0.5),            // half: map + list
+    Math.round(height - searchBottom - 8), // full: list, search bar stays visible
+  ], [height, insets.bottom, searchBottom]);
+
+  // Android back: shrink the sheet / clear the search before leaving the app
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (sheetRef.current && sheetRef.current.getIndex() === 2) { sheetRef.current.snapTo(1); return true; }
+      if (queryText) { setQueryText(''); return true; }
+      return false;
+    });
+    return () => sub.remove();
+  }, [queryText]);
+
+  const mins = updatedAt ? Math.floor((now - updatedAt) / 60000) : null;
+  const updatedLabel = mins == null ? 'loading…' : mins < 1 ? 'updated just now' : `updated ${mins} min ago`;
+  const fitKey = `${loading ? 'loading' : 'ready'}|${period}|${source}|${query}`;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* SDK 57: Android is edge-to-edge only now (app.json already had edgeToEdgeEnabled),
-          so backgroundColor/translucent were dropped from StatusBarProps — the status bar
-          was already an overlay in practice; the header View's own green shows through it. */}
-      <StatusBar style="light" />
+    <View style={styles.root}>
+      <StatusBar style="dark" />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: (Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0) + 12 }]}>
-        <View style={styles.headerTitleRow}>
-          <View style={styles.headerBirdIcon}>
-            <Text style={styles.headerBirdEmoji}>🐦</Text>
-          </View>
-          <Text style={[styles.headerTitle, { flex: 1 }]} numberOfLines={1}>Birder's Best Friend</Text>
-          <TouchableOpacity style={styles.aboutBtn} onPress={() => setAboutOpen(true)} accessibilityLabel="About and data sources">
-            <Text style={styles.aboutBtnText}>About</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.headerSub}>LA & Orange County · Data from eBird & iNaturalist</Text>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'list' && styles.tabActive]}
-          onPress={() => setTab('list')}
-        >
-          <Text style={[styles.tabText, tab === 'list' && styles.tabTextActive]}>List</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'map' && styles.tabActive]}
-          onPress={() => setTab('map')}
-        >
-          <Text style={[styles.tabText, tab === 'map' && styles.tabTextActive]}>
-            {allPins.length > 0 ? 'Map (' + allPins.length + ')' : 'Map'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#2d6a4f" />
-        </View>
-      ) : error ? (
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={fetchSightings}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : tab === 'list' ? (
-        <View style={{ flex: 1 }}>
-          {sources.length > 1 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterBar}
-              contentContainerStyle={styles.filterBarContent}
-            >
-              <TouchableOpacity
-                style={[styles.filterChip, sourceFilter === null && styles.filterChipActive]}
-                onPress={() => setSourceFilter(null)}
-              >
-                <Text style={[styles.filterChipText, sourceFilter === null && styles.filterChipTextActive]}>All</Text>
-              </TouchableOpacity>
-              {sources.map(src => (
-                <TouchableOpacity
-                  key={src}
-                  style={[styles.filterChip, sourceFilter === src && (src === 'inaturalist' ? styles.filterChipActiveInat : styles.filterChipActive)]}
-                  onPress={() => setSourceFilter(sourceFilter === src ? null : src)}
-                >
-                  <Text style={[styles.filterChipText, sourceFilter === src && (src === 'inaturalist' ? styles.filterChipTextActiveInat : styles.filterChipTextActive)]}>
-                    {formatSource(src)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-          <SectionList
-          sections={sections}
-          keyExtractor={item => String(item.id)}
-          renderItem={({ item }) => (
-            <SightingCard item={item} cluster={item.cluster_id ? clusters.get(item.cluster_id) ?? null : null} onMapPress={() => setModalSighting(item)} />
-          )}
-          renderSectionHeader={({ section }) => (
-            <WeekHeader
-              section={section as WeekSection}
-              expanded={expandedWeeks.has((section as WeekSection).weekKey)}
-              onPress={() => toggleWeek((section as WeekSection).weekKey)}
-            />
-          )}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.centered}>
-              <Text style={styles.emptyText}>No sightings yet -- check back soon!</Text>
-            </View>
-          }
-          contentContainerStyle={filteredSightings.length === 0 ? styles.emptyContainer : styles.listContent}
-          stickySectionHeadersEnabled={true}
+      <View style={StyleSheet.absoluteFill}>
+        <LeafletMap
+          pins={pins}
+          onPinPress={openSightingById}
+          insets={{ top: searchBottom, bottom: snapPoints[1] }}
+          fitKey={fitKey}
         />
-        </View>
-      ) : (
-        <View style={{ flex: 1 }}>
-          {allPins.length === 0 ? (
-            <View style={styles.centered}>
-              <Text style={styles.emptyText}>No sightings with GPS coordinates yet.</Text>
-            </View>
-          ) : (
-            <LeafletMap pins={allPins} onPinPress={openSightingById} />
-          )}
-        </View>
-      )}
+      </View>
 
-      {/* Per-sighting map modal */}
+      {/* Floating search bar */}
+      <View style={[styles.topBar, { top: insets.top + 8 }]}>
+        <Pressable style={styles.logo} onPress={() => setAboutOpen(true)} accessibilityLabel="About and data sources">
+          <Text style={styles.logoGlyph}>🐦</Text>
+        </Pressable>
+        <View style={styles.search}>
+          <TextInput
+            value={queryText}
+            onChangeText={setQueryText}
+            onFocus={() => sheetRef.current?.snapTo(1)}
+            placeholder="Search species or places"
+            placeholderTextColor={colors.muted}
+            style={styles.searchInput}
+            returnKeyType="search"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+          {queryText ? (
+            <Pressable onPress={() => setQueryText('')} hitSlop={10} accessibilityLabel="Clear search">
+              <Text style={styles.clear}>✕</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
+      <BottomSheet
+        ref={sheetRef}
+        snapPoints={snapPoints}
+        initialIndex={1}
+        header={
+          <SheetHeader
+            updatedLabel={updatedLabel}
+            period={period}
+            onPeriod={choosePeriod}
+            weekCount={weekCount}
+            sources={sources}
+            source={source}
+            onSource={setSource}
+          />
+        }
+      >
+        {hidden => (
+          <SheetList
+            birds={birds}
+            period={period}
+            loading={loading}
+            error={error}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onRetry={() => { setLoading(true); fetchSightings().finally(() => setLoading(false)); }}
+            onSelect={b => setModalSighting(b.latest)}
+            distanceOf={distanceOf}
+            nearState={nearState}
+            bottomPadding={hidden + insets.bottom}
+          />
+        )}
+      </BottomSheet>
+
       <AboutModal visible={aboutOpen} onClose={() => setAboutOpen(false)} />
 
-      <MapModal
+      <SightingModal
         sighting={modalSighting}
         reports={modalReports}
         onSelectReport={setModalSighting}
         onClose={() => setModalSighting(null)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#2d6a4f' },
-  header: { backgroundColor: '#2d6a4f', paddingBottom: 14, paddingHorizontal: 20 },
-  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  aboutBtn: { backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  aboutBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  headerBirdIcon: {
-    width: 36, height: 36, borderRadius: 9,
-    backgroundColor: '#ecf4ed',
-    alignItems: 'center', justifyContent: 'center',
+  root: { flex: 1, backgroundColor: colors.bg },
+  topBar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', gap: 8, alignItems: 'center' },
+  logo: {
+    width: SEARCH_BAR_H, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: colors.accent,
+    alignItems: 'center', justifyContent: 'center', elevation: 6,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
   },
-  headerBirdEmoji: { fontSize: 20 },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: 13, color: '#b7e4c7', marginTop: 4 },
-
-  tabs: { flexDirection: 'row', backgroundColor: '#245a41' },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: '#fff' },
-  tabText: { color: '#8fc9a9', fontSize: 14, fontWeight: '600' },
-  tabTextActive: { color: '#fff' },
-
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  emptyContainer: { flexGrow: 1 },
-  listContent: { paddingBottom: 100 },
-
-  weekHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#e8f0eb',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#d0ddd4',
+  logoGlyph: { fontSize: 22 },
+  search: {
+    flex: 1, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: colors.card, flexDirection: 'row',
+    alignItems: 'center', paddingHorizontal: 14, elevation: 6,
+    shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
   },
-  weekTitle: { fontSize: 14, fontWeight: '700', color: '#1a3a2a' },
-  weekHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  weekBadge: {
-    backgroundColor: '#2d6a4f',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  weekBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
-  weekChevron: { fontSize: 22, color: '#2d6a4f', fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4 },
-
-  card: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 14,
-    marginTop: 8, marginHorizontal: 12,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 }, elevation: 2,
-  },
-  cardBody: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  cardContent: { flex: 1 },
-  photoWrapper: { width: 64, flexShrink: 0 },
-  photo: { width: 64, height: 64, borderRadius: 8 },
-  photoCredit: {
-    backgroundColor: 'rgba(0,0,0,0.52)',
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    marginTop: -14,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  photoCreditTwoLine: { marginTop: -24 },
-  photoCreditText: { fontSize: 8, color: '#fff', lineHeight: 10 },
-  photoPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: '#ecf4ed',
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoPlaceholderIcon: { fontSize: 26 },
-  photoPlaceholderLink: { fontSize: 9, color: '#4a7c59', fontWeight: '600', marginTop: 2 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
-  cardHeaderLeft: { flex: 1, flexDirection: 'column', gap: 4 },
-  commonName: { fontSize: 16, fontWeight: '600', color: '#1a3a2a' },
-  rarityBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  rarityBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
-  date: { fontSize: 12, color: '#888', marginTop: 2, minWidth: 52, flexShrink: 0, textAlign: 'right' },
-  sciName: { fontSize: 13, fontStyle: 'italic', color: '#555', marginTop: 3 },
-  clusterStatus: { fontSize: 11, fontWeight: '700', marginTop: 4 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8, flexWrap: 'wrap' },
-  cardFooterRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
-  location: { fontSize: 13, color: '#2d6a4f', flex: 1 },
-  // Tappable hotspot row (eBird only)
-  hotspotBtn: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 2 },
-  hotspotText: { fontSize: 13, color: '#2d6a4f', flex: 1, textDecorationLine: 'underline' },
-  hotspotChevron: { fontSize: 16, color: '#2d6a4f', fontWeight: '700' },
-  mapBtn: { backgroundColor: '#e8f5ee', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  mapBtnText: { fontSize: 12, color: '#2d6a4f', fontWeight: '600' },
-  // Observer notes
-  notesToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e8f0eb', marginTop: 6 },
-  notesToggleText: { fontSize: 12, color: '#4a7c59', fontWeight: '600' },
-  notesChevron: { fontSize: 10, color: '#4a7c59' },
-  notesBody: { paddingTop: 6, paddingBottom: 2 },
-  notesText: { fontSize: 13, color: '#374151', lineHeight: 19 },
-  sourceTag: { backgroundColor: '#e8f0ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  sourceTagText: { fontSize: 12, color: '#3b5bdb', fontWeight: '600' },
-  sourceTagInat: { backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  sourceTagTextInat: { fontSize: 12, color: '#92400e', fontWeight: '600' },
-
-  filterBar: { backgroundColor: '#f0f4f0', maxHeight: 44 },
-  filterBarContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
-  filterChip: { paddingHorizontal: 12, paddingVertical: 3, borderRadius: 14, borderWidth: 1, borderColor: '#2d6a4f' },
-  filterChipActive: { backgroundColor: '#2d6a4f' },
-  filterChipActiveInat: { backgroundColor: '#f59e0b', borderColor: '#f59e0b' },
-  filterChipText: { fontSize: 12, color: '#2d6a4f', fontWeight: '600' },
-  filterChipTextActive: { color: '#fff' },
-  filterChipTextActiveInat: { color: '#fff' },
-
-  errorText: { color: '#c0392b', fontSize: 15, textAlign: 'center', marginBottom: 16 },
-  retryButton: { backgroundColor: '#2d6a4f', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
-  retryText: { color: '#fff', fontWeight: '600' },
-  emptyText: { fontSize: 15, color: '#666', textAlign: 'center' },
-
-  modalHeader: {
-    backgroundColor: '#2d6a4f', flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingBottom: 12, gap: 12,
-  },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
-  modalSub: { fontSize: 13, color: '#b7e4c7', marginTop: 2 },
-  modalStatus: { fontSize: 12, fontWeight: '600', marginTop: 3 },
-  // Refound / Dipped bar
-  reportBar: { flexDirection: 'row', backgroundColor: '#1a3a2a', paddingHorizontal: 16, paddingVertical: 10, gap: 12 },
-  reportBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
-  refoundBtn: { backgroundColor: '#2d6a4f' },
-  dippedBtn:  { backgroundColor: '#7f1d1d' },
-  reportBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  // Confirmation sheet
-  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'flex-end' },
-  confirmSheet: { width: '100%', backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 12 },
-  confirmTitle: { fontSize: 20, fontWeight: '700', color: '#1a3a2a', textAlign: 'center' },
-  confirmBody:  { fontSize: 15, color: '#374151', textAlign: 'center', lineHeight: 22 },
-  confirmButtons: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  confirmCancel: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#f1f5f9', alignItems: 'center' },
-  confirmCancelText: { fontSize: 15, fontWeight: '600', color: '#64748b' },
-  confirmOk: { flex: 2, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  confirmOkGreen: { backgroundColor: '#2d6a4f' },
-  confirmOkRed:   { backgroundColor: '#b91c1c' },
-  confirmOkText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  confirmDistRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, marginTop: 4 },
-  confirmDistText: { fontSize: 13, color: '#475569' },
-  confirmDistWarning: { backgroundColor: '#fffbeb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 6 },
-  confirmDistWarningText: { fontSize: 13, color: '#b45309' },
-  closeBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-  closeBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  speciesLink: {
-    alignSelf: 'flex-start', marginTop: 6,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  speciesLinkText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  modalMapContainer: { flex: 2 },
-  // Comments panel
-  reportsBar: {
-    backgroundColor: '#f8fafc', paddingHorizontal: 16, paddingVertical: 10, gap: 8,
-    borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
-  },
-  reportsHeading: { fontSize: 12, color: '#64748b' },
-  reportChip: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#cbd5e1',
-  },
-  reportChipActive: { backgroundColor: '#2d6a4f', borderColor: '#2d6a4f' },
-  reportChipText: { fontSize: 13, fontWeight: '600', color: '#1e293b' },
-  reportChipSub: { fontSize: 11, color: '#64748b', marginTop: 1 },
-  reportChipTextActive: { color: '#fff' },
-  openMapsBtn: { paddingVertical: 2 },
-  openMapsText: { fontSize: 13, color: '#1d4ed8', fontWeight: '600' },
-  exactSpotText: { color: '#c2410c' },
-  commentsPanel: { flex: 1, backgroundColor: '#fff', minHeight: 0 },
-  commentsCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
-  commentsHint: { fontSize: 14, color: '#888', textAlign: 'center' },
-  commentsHeading: { fontSize: 13, fontWeight: '700', color: '#4a7c59', textTransform: 'uppercase', letterSpacing: 0.5 },
-  // Observer note block
-  commentNote: { backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: '#2d6a4f', borderRadius: 6, padding: 12 },
-  commentNoteLabel: { fontSize: 11, fontWeight: '700', color: '#2d6a4f', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 },
-  commentNoteText: { fontSize: 14, color: '#1a3a2a', lineHeight: 20 },
-  // Community comment rows
-  commentRow: { flexDirection: 'row', gap: 10 },
-  commentAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#2d6a4f', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  commentAvatarText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
-  commentAuthor: { fontSize: 13, fontWeight: '600', color: '#1a3a2a' },
-  commentDate: { fontSize: 11, color: '#888' },
-  commentText: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  searchInput: { flex: 1, fontSize: 14, fontWeight: '500', color: colors.text, paddingVertical: 0 },
+  clear: { fontSize: 15, color: colors.muted, paddingLeft: 8 },
 });
