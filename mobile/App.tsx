@@ -13,9 +13,9 @@ import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerForPushNotificationsAsync } from './src/notifications';
-import LeafletMap, { type MapPin } from './src/LeafletMap';
+import LeafletMap, { type MapFocus, type MapPin } from './src/LeafletMap';
 import AboutModal from './src/AboutModal';
-import SightingModal from './src/SightingModal';
+import { DetailBody, DetailHeader, useSightingDetail } from './src/SightingDetail';
 import BottomSheet, { type BottomSheetHandle } from './src/BottomSheet';
 import { SheetHeader, SheetList } from './src/RaritiesSheet';
 import { byRarity, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
@@ -116,6 +116,10 @@ function Main() {
 
   const allBirds = useMemo(() => groupBirds(sightings, clusters), [sightings, clusters]);
 
+  // Selected bird (its detail replaces the list in the sheet)
+  const sheetRef = useRef<BottomSheetHandle>(null);
+  const [selected, setSelected] = useState<{ key: string; sightingId: number } | null>(null);
+
   const weekCount = useMemo(() => allBirds.filter(b => inPeriod(b, 'week')).length, [allBirds]);
 
   const distanceOf = useCallback(
@@ -146,27 +150,44 @@ function Main() {
       label: b.latest.common_name,
       sublabel: b.reports.length > 1 ? `${b.reports.length} reports · ${date}` : date,
       color: b.tier.color,
-      tag: b.tier.rank === 3,
+      selected: b.key === selected?.key,
+      tag: b.tier.rank === 3 || b.key === selected?.key,
     }];
-  }), [birds]);
+  }), [birds, selected?.key]);
 
-  // ---- detail modal ----
-  const [modalSighting, setModalSighting] = useState<Sighting | null>(null);
-  const modalReports = useMemo(() => {
-    if (!modalSighting) return [];
-    if (modalSighting.cluster_id == null) return [modalSighting];
-    return sightings
-      .filter(s => s.cluster_id === modalSighting.cluster_id)
-      .sort((a, b) => (a.observed_at < b.observed_at ? 1 : -1));
-  }, [sightings, modalSighting]);
-  const openSightingById = useCallback(
-    (id: number) => setModalSighting(sightings.find(s => s.id === id) ?? null),
-    [sightings],
-  );
+  // ---- selected bird (detail view in the sheet) ----
+  const selectedBird = selected ? allBirds.find(b => b.key === selected.key) ?? null : null;
+  const selectedSighting = selectedBird
+    ? selectedBird.reports.find(r => r.id === selected!.sightingId) ?? selectedBird.latest
+    : null;
+  const detail = useSightingDetail(selectedSighting);
+
+  const selectBird = useCallback((bird: Bird, sighting?: Sighting) => {
+    Keyboard.dismiss();
+    setSelected({ key: bird.key, sightingId: (sighting ?? bird.latest).id });
+    sheetRef.current?.snapTo(1);
+  }, []);
+  const openSightingById = useCallback((id: number) => {
+    const bird = allBirds.find(b => b.reports.some(r => r.id === id));
+    if (bird) selectBird(bird, bird.reports.find(r => r.id === id));
+  }, [allBirds, selectBird]);
+  const closeDetail = useCallback(() => setSelected(null), []);
+
+  const focus: MapFocus | null = useMemo(() => {
+    if (!selectedSighting || selectedSighting.lat == null || selectedSighting.lng == null) return null;
+    const c = detail.cluster;
+    return {
+      lat: Number(selectedSighting.lat),
+      lng: Number(selectedSighting.lng),
+      circle: c ? { lat: c.center_lat, lng: c.center_lng, radiusM: c.radius_m } : null,
+      trail: (c?.sighting_pins ?? []).map(p => ({ lat: p.lat, lng: p.lng })),
+      exact: detail.exactSpot,
+    };
+  }, [selectedSighting, detail.cluster, detail.exactSpot]);
+
   const [aboutOpen, setAboutOpen] = useState(false);
 
   // ---- layout ----
-  const sheetRef = useRef<BottomSheetHandle>(null);
   const searchBottom = insets.top + 8 + SEARCH_BAR_H;
   const snapPoints = useMemo(() => [
     Math.round(150 + insets.bottom),     // peek: header only
@@ -177,12 +198,13 @@ function Main() {
   // Android back: shrink the sheet / clear the search before leaving the app
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (selected) { setSelected(null); return true; }
       if (sheetRef.current && sheetRef.current.getIndex() === 2) { sheetRef.current.snapTo(1); return true; }
       if (queryText) { setQueryText(''); return true; }
       return false;
     });
     return () => sub.remove();
-  }, [queryText]);
+  }, [queryText, selected]);
 
   const mins = updatedAt ? Math.floor((now - updatedAt) / 60000) : null;
   const updatedLabel = mins == null ? 'loading…' : mins < 1 ? 'updated just now' : `updated ${mins} min ago`;
@@ -198,6 +220,7 @@ function Main() {
           onPinPress={openSightingById}
           insets={{ top: searchBottom, bottom: snapPoints[1] }}
           fitKey={fitKey}
+          focus={focus}
         />
       </View>
 
@@ -229,7 +252,14 @@ function Main() {
         ref={sheetRef}
         snapPoints={snapPoints}
         initialIndex={1}
-        header={
+        header={selectedBird && selectedSighting ? (
+          <DetailHeader
+            bird={selectedBird}
+            sighting={selectedSighting}
+            distance={distanceOf(selectedBird)}
+            onClose={closeDetail}
+          />
+        ) : (
           <SheetHeader
             updatedLabel={updatedLabel}
             period={period}
@@ -239,9 +269,17 @@ function Main() {
             source={source}
             onSource={setSource}
           />
-        }
+        )}
       >
-        {hidden => (
+        {hidden => selectedBird && selectedSighting ? (
+          <DetailBody
+            detail={detail}
+            bird={selectedBird}
+            sighting={selectedSighting}
+            onSelectReport={r => setSelected({ key: selectedBird.key, sightingId: r.id })}
+            bottomPadding={hidden + insets.bottom}
+          />
+        ) : (
           <SheetList
             birds={birds}
             period={period}
@@ -250,7 +288,7 @@ function Main() {
             refreshing={refreshing}
             onRefresh={onRefresh}
             onRetry={() => { setLoading(true); fetchSightings().finally(() => setLoading(false)); }}
-            onSelect={b => setModalSighting(b.latest)}
+            onSelect={b => selectBird(b)}
             distanceOf={distanceOf}
             nearState={nearState}
             bottomPadding={hidden + insets.bottom}
@@ -259,13 +297,6 @@ function Main() {
       </BottomSheet>
 
       <AboutModal visible={aboutOpen} onClose={() => setAboutOpen(false)} />
-
-      <SightingModal
-        sighting={modalSighting}
-        reports={modalReports}
-        onSelectReport={setModalSighting}
-        onClose={() => setModalSighting(null)}
-      />
     </View>
   );
 }

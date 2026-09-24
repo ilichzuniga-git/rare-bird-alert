@@ -19,6 +19,17 @@ export interface MapPin {
   color?: string;
   /** Show the bird's name in a tag next to the pin */
   tag?: boolean;
+  /** Highlight as the currently selected bird */
+  selected?: boolean;
+}
+
+/** A bird shown in detail on the main map: stakeout circle, earlier reports, observer's spot. */
+export interface MapFocus {
+  lat: number;
+  lng: number;
+  circle?: ClusterCircle | null;
+  trail?: { lat: number; lng: number }[];
+  exact?: { lat: number; lng: number } | null;
 }
 
 export interface ClusterCircle {
@@ -45,6 +56,8 @@ interface Props {
   insets?: MapInsets;
   /** Pins are re-fitted into view whenever this changes (e.g. a new filter or search) */
   fitKey?: string;
+  /** Fly to and decorate this bird; null clears it (the view stays where it is) */
+  focus?: MapFocus | null;
 }
 
 // White bird silhouette from the design renders (renders/shared.js)
@@ -143,7 +156,7 @@ function buildHtml(
   function teardrop(pin) {
     return L.divIcon({
       className: '',
-      html: '<div style="position:relative"><div class="tp" style="background:' + esc(pin.color) + '">'
+      html: '<div style="position:relative"><div class="tp' + (pin.selected ? ' sel' : '') + '" style="background:' + esc(pin.color) + '">'
         + '<svg viewBox="0 0 64 64"><path fill="#fff" d="${BIRD_PATH}"/></svg></div>'
         + (pin.tag ? '<div class="tag">' + esc(pin.label) + '</div>' : '') + '</div>',
       // the rotated square's sharp corner sits ~36px below its top edge
@@ -152,6 +165,34 @@ function buildHtml(
   }
 
   var layer = L.layerGroup().addTo(map);
+  var focusLayer = L.layerGroup().addTo(map);
+
+  // Selected bird: stakeout circle, trail of earlier reports, observer's exact spot
+  function focus(f) {
+    focusLayer.clearLayers();
+    if (!f) return;
+    var pt = L.latLng(Number(f.lat), Number(f.lng));
+    var bounds = pt.toBounds(500);
+    if (f.circle) {
+      var c = L.circle([Number(f.circle.lat), Number(f.circle.lng)], {
+        radius: f.circle.radiusM, color: '#1f7a55', fillColor: '#52b788',
+        fillOpacity: 0.12, weight: 2, dashArray: '6 4', interactive: false,
+      }).addTo(focusLayer);
+      bounds = bounds.extend(c.getBounds());
+    }
+    (f.trail || []).forEach(function(t) {
+      L.marker([Number(t.lat), Number(t.lng)], { icon: trailIcon, interactive: false, zIndexOffset: -100 }).addTo(focusLayer);
+    });
+    if (f.exact) {
+      var ex = L.latLng(Number(f.exact.lat), Number(f.exact.lng));
+      L.marker(ex, { icon: exactIcon }).bindPopup("Observer's exact spot (from notes)").addTo(focusLayer);
+      bounds = bounds.extend(ex);
+    }
+    map.flyToBounds(bounds, insets
+      ? { paddingTopLeft: [30, insets.top + 20], paddingBottomRight: [30, insets.bottom + 20], maxZoom: 16, duration: 0.6 }
+      : { padding: [40, 40], maxZoom: 16 });
+  }
+  window.__focus = focus;
 
   function render(pins, fit) {
     layer.clearLayers();
@@ -213,7 +254,7 @@ function buildHtml(
 </html>`;
 }
 
-export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPress, insets, fitKey }: Props) {
+export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPress, insets, fitKey, focus }: Props) {
   const webRef = useRef<WebView>(null);
   const loaded = useRef(false);
   const sent = useRef({ pins: '', fitKey });
@@ -242,6 +283,15 @@ export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPre
 
   useEffect(pushPins, [pinsJson, fitKey]);
 
+  const focusJson = JSON.stringify(focus ?? null);
+  const sentFocus = useRef('null');
+  const pushFocus = () => {
+    if (!loaded.current || !webRef.current || sentFocus.current === focusJson) return;
+    sentFocus.current = focusJson;
+    webRef.current.injectJavaScript(`window.__focus && window.__focus(${focusJson}); true;`);
+  };
+  useEffect(pushFocus, [focusJson]);
+
   return (
     <WebView
       ref={webRef}
@@ -253,6 +303,8 @@ export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPre
       onLoadEnd={() => {
         loaded.current = true;
         pushPins(); // catch up on anything that changed while the page was loading
+        sentFocus.current = 'null';
+        pushFocus();
       }}
       onMessage={event => {
         if (!onPinPress) return;

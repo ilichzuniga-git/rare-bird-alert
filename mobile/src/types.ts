@@ -39,6 +39,15 @@ export interface ClusterData {
   last_dipped_at: string | null;
   sighting_pins: ClusterPin[] | null;
   status: { label: string; level: 'green' | 'amber' | 'red' | 'gray' };
+  /** Last 7 days, oldest first (single-cluster endpoint only) */
+  days?: ClusterDay[];
+}
+
+export interface ClusterDay {
+  date: string; // YYYY-MM-DD, Pacific
+  sightings: number;
+  refound: number;
+  dipped: number;
 }
 
 // ---- Map modal with lazy-loaded comments ----

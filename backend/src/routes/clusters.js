@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { CLUSTER_RADIUS_M } = require('../clustering');
+const { REGION_TIME_ZONE } = require('../time');
 
 // Abuse guards for anonymous refound/dipped reports, keyed by client IP.
 // In-memory is fine: the backend runs as a single replica, and a restart
@@ -119,6 +120,10 @@ router.get('/', async (req, res) => {
 
 // GET /api/clusters/:id  — single cluster with full sighting trail
 router.get('/:id', async (req, res) => {
+  const clusterId = Number(req.params.id);
+  if (!Number.isInteger(clusterId) || clusterId <= 0) {
+    return res.status(400).json({ error: 'Invalid cluster id' });
+  }
   try {
     const { rows } = await db.query(`
       SELECT c.*,
@@ -130,10 +135,35 @@ router.get('/:id', async (req, res) => {
       LEFT JOIN sightings s ON s.cluster_id = c.id
       WHERE c.id = $1
       GROUP BY c.id
-    `, [req.params.id]);
+    `, [clusterId]);
 
     if (!rows.length) return res.status(404).json({ error: 'Cluster not found' });
-    res.json({ cluster: { ...rows[0], status: clusterStatus(rows[0]), radius_m: CLUSTER_RADIUS_M } });
+
+    // Last 7 days (Pacific dates, oldest first) for the app's seen/dipped strip:
+    // sightings from eBird/iNaturalist plus user refound/dipped reports per day.
+    let days = [];
+    try {
+      ({ rows: days } = await db.query(`
+      WITH d AS (
+        SELECT generate_series(
+          (NOW() AT TIME ZONE $2)::date - 6, (NOW() AT TIME ZONE $2)::date, INTERVAL '1 day'
+        )::date AS day
+      )
+      SELECT to_char(d.day, 'YYYY-MM-DD') AS date,
+        (SELECT COUNT(*) FROM sightings s
+          WHERE s.cluster_id = $1 AND (s.observed_at AT TIME ZONE $2)::date = d.day)::int AS sightings,
+        (SELECT COUNT(*) FROM cluster_reports r
+          WHERE r.cluster_id = $1 AND r.type = 'refound' AND (r.created_at AT TIME ZONE $2)::date = d.day)::int AS refound,
+        (SELECT COUNT(*) FROM cluster_reports r
+          WHERE r.cluster_id = $1 AND r.type = 'dipped' AND (r.created_at AT TIME ZONE $2)::date = d.day)::int AS dipped
+      FROM d ORDER BY d.day
+    `, [clusterId, REGION_TIME_ZONE]));
+    } catch (err) {
+      // The strip is a nice-to-have; never let it break the bird's detail view
+      console.error('[GET /api/clusters/:id] days query failed:', err.message);
+    }
+
+    res.json({ cluster: { ...rows[0], status: clusterStatus(rows[0]), radius_m: CLUSTER_RADIUS_M, days } });
   } catch (err) {
     console.error('[GET /api/clusters/:id]', err.message);
     res.status(500).json({ error: 'Internal server error' });
