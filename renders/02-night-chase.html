@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Concept 2 · Live Chase</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="shared.js"></script>
+<style>
+  :root {
+    --bg: #0b100e; --surface: #141c19; --surface-2: #1c2622; --line: #26332e; --text: #eef3ef; --muted: #8b9a93;
+    --lime: #b8f36b; --exc: #ff5d73; --vr: #ffa24c; --rare: #ffd84d;
+    --green: #57d68d; --amber: #ffb547; --red: #ff6b6b; --gray: #7d8a85;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #050706; font-family: 'Space Grotesk', system-ui, sans-serif; color: var(--text);
+    display: flex; flex-direction: column; align-items: center; padding: 40px 16px; gap: 28px; }
+  .caption { text-align: center; max-width: 820px; }
+  .caption h1 { font-size: 30px; font-weight: 700; letter-spacing: -.5px; }
+  .caption h1 span { color: var(--lime); }
+  .caption p { color: #9aa8a1; margin-top: 8px; font-size: 14px; line-height: 1.5; }
+  .phones { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; }
+  .phone { width: 390px; height: 844px; border-radius: 48px; overflow: hidden; position: relative; background: var(--bg);
+    box-shadow: 0 30px 80px rgba(184,243,107,.08), 0 0 0 10px #1d1f1e, 0 0 0 11px #333; }
+  .label { text-align: center; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #6d7a74; margin-top: 22px; font-weight: 600; }
+  .status-bar { height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 28px; font-size: 14px; font-weight: 600; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ---- List ---- */
+  .top { padding: 4px 18px 0; }
+  .brand { display: flex; align-items: center; justify-content: space-between; }
+  .brand h2 { font-size: 22px; font-weight: 700; letter-spacing: -.4px; }
+  .live { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--lime); background: rgba(184,243,107,.1); padding: 6px 10px; border-radius: 20px; }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 4px rgba(184,243,107,.25); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .stats div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+  .stats b { font-size: 22px; display: block; }
+  .stats span { font-size: 11px; color: var(--muted); }
+  .chips { display: flex; gap: 8px; margin: 14px 0 4px; }
+  .chip { font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 20px; border: 1px solid var(--line); color: var(--muted); display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .chip.on { background: var(--lime); border-color: var(--lime); color: #0b100e; }
+  .chip i { width: 7px; height: 7px; border-radius: 50%; }
+  .feed { padding: 8px 18px 0; display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+  .banner { height: 104px; position: relative; display: flex; align-items: flex-end; padding: 12px 14px; }
+  .banner svg { position: absolute; right: 8px; top: 6px; width: 110px; height: 96px; opacity: .95; }
+  .banner .tier { position: absolute; top: 12px; left: 14px; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 8px; border-radius: 8px; color: #0b100e; }
+  .banner h3 { font-size: 20px; font-weight: 700; letter-spacing: -.3px; position: relative; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
+  .banner .sci { font-size: 12px; color: rgba(255,255,255,.7); font-style: italic; position: relative; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
+  .row .st { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+  .row .st i { width: 8px; height: 8px; border-radius: 50%; }
+  .row .st i.pulse { box-shadow: 0 0 0 4px rgba(87,214,141,.2); }
+  .compact { display: flex; gap: 12px; align-items: center; padding: 12px 14px; }
+  .compact .thumb { width: 46px; height: 46px; border-radius: 12px; padding: 6px; flex-shrink: 0; }
+  .compact h4 { font-size: 15px; font-weight: 600; }
+  .compact .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .compact .right { margin-left: auto; text-align: right; font-size: 11px; color: var(--muted); }
+  .navpill { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); background: rgba(28,38,34,.85); backdrop-filter: blur(16px);
+    border: 1px solid var(--line); border-radius: 30px; display: flex; padding: 5px; gap: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .navpill div { padding: 10px 18px; border-radius: 24px; font-size: 13px; font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .navpill div.on { background: var(--lime); color: #0b100e; }
+  .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(transparent, var(--bg)); }
+
+  /* ---- Map ---- */
+  .map { position: absolute; inset: 0; }
+  .map-svg { width: 100%; height: 100%; display: block; }
+  .glass { background: rgba(20,28,25,.78); backdrop-filter: blur(14px); border: 1px solid var(--line); }
+  .mtop { position: absolute; top: 50px; left: 14px; right: 14px; display: flex; gap: 8px; }
+  .mtop .search { flex: 1; border-radius: 16px; padding: 12px 14px; font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+  .mtop .sq { width: 46px; border-radius: 16px; display: grid; place-items: center; font-size: 18px; }
+  .mchips { position: absolute; top: 106px; left: 14px; display: flex; gap: 6px; }
+  .mchips .chip:not(.on) { background: rgba(20,28,25,.78); backdrop-filter: blur(14px); }
+  .pin { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; }
+  .pin::before { content: ''; position: absolute; inset: -10px; border-radius: 50%; background: currentColor; opacity: .18; }
+  .pin.live::after { content: ''; position: absolute; inset: -20px; border-radius: 50%; border: 1.5px solid currentColor; opacity: .35; }
+  .pin span { display: block; border-radius: 50%; background: currentColor; box-shadow: 0 0 16px currentColor; border: 2px solid #0b100e; }
+  .pin .n { position: absolute; top: -12px; left: 12px; background: #0b100e; color: var(--text); border: 1px solid var(--line); font-size: 10px; padding: 1px 6px; border-radius: 8px; font-weight: 700; white-space: nowrap; box-shadow: none; }
+  .pin.sel span { border-color: #fff; }
+  .me { position: absolute; left: 228px; top: 250px; width: 16px; height: 16px; border-radius: 50%; background: #5aa9ff; border: 3px solid #fff; box-shadow: 0 0 0 10px rgba(90,169,255,.2); }
+  .fabs { position: absolute; right: 14px; top: 320px; display: flex; flex-direction: column; gap: 8px; }
+  .fabs div { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 17px; }
+  .carousel { position: absolute; left: 0; right: 0; bottom: 96px; display: flex; gap: 10px; padding: 0 14px; }
+  .ccard { flex: 0 0 300px; border-radius: 20px; padding: 14px; }
+  .ccard + .ccard { opacity: .6; }
+  .ccard .hd { display: flex; gap: 12px; align-items: center; }
+  .ccard .thumb { width: 54px; height: 54px; border-radius: 14px; padding: 7px; }
+  .ccard h4 { font-size: 17px; font-weight: 700; }
+  .ccard .sub { font-size: 12px; color: var(--muted); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr 46px; gap: 8px; margin-top: 12px; }
+  .actions div { border-radius: 12px; padding: 10px; text-align: center; font-size: 13px; font-weight: 700; }
+  .a1 { background: var(--lime); color: #0b100e; } .a2 { background: rgba(255,107,107,.14); color: var(--red); } .a3 { background: var(--surface-2); }
+</style>
+</head>
+<body>
+  <div class="caption">
+    <h1>Concept 2 — <span>Live Chase</span></h1>
+    <p>Built for the moment a birder is chasing: dark UI (easy on the eyes at dawn), a live "updated" pulse, and a stat strip
+      answering "what's hot right now". Rarity is color-coded glow on both screens; the freshest exceptional birds get big banner
+      cards, older ones collapse to compact rows. The map is full-bleed with a floating pill nav, your location, pulsing
+      pins for continuing birds, and a swipeable card carousel with one-tap Refound / Dipped.</p>
+  </div>
+  <div class="phones">
+    <div><div class="phone" id="list"></div><div class="label">List</div></div>
+    <div><div class="phone" id="map"></div><div class="label">Map</div></div>
+  </div>
+
+<script>
+  const tierColor = { Exceptional: 'var(--exc)', 'Very Rare': 'var(--vr)', Rare: 'var(--rare)' };
+  const tierHex = { Exceptional: '#ff5d73', 'Very Rare': '#ffa24c', Rare: '#ffd84d' };
+  const stColor = { green: 'var(--green)', amber: 'var(--amber)', red: 'var(--red)', gray: 'var(--gray)' };
+  const statusBar = `<div class="status-bar"><span>9:41</span><span>●●● ▮</span></div>`;
+  const thumbBg = (b) => `background: radial-gradient(circle at 70% 30%, hsl(${b.hue} 45% 34%), hsl(${b.hue} 35% 14%))`;
+  const navpill = (on) => `<div class="navpill">
+    <div class="${on === 'list' ? 'on' : ''}">☰ Feed</div><div class="${on === 'map' ? 'on' : ''}">◎ Map</div><div>ⓘ</div></div>`;
+
+  const big = BIRDS.slice(0, 2), small = BIRDS.slice(2, 6);
+  document.getElementById('list').innerHTML = statusBar + `
+    <div class="top">
+      <div class="brand"><h2>Birder's Best Friend</h2><div class="live mono"><i></i>4 MIN AGO</div></div>
+      <div class="stats">
+        <div><b>7</b><span>active rarities</span></div>
+        <div><b style="color:var(--exc)">2</b><span>exceptional</span></div>
+        <div><b style="color:var(--green)">3</b><span>continuing</span></div>
+      </div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip"><i style="background:var(--exc)"></i>Exceptional</div>
+        <div class="chip">Continuing</div>
+        <div class="chip">eBird</div>
+        <div class="chip">iNat</div>
+      </div>
+    </div>
+    <div class="feed">` +
+    big.map(b => `
+      <div class="card">
+        <div class="banner" style="${thumbBg(b)}">
+          <span class="tier" style="background:${tierColor[b.tier]}">${b.tier}</span>
+          ${birdSilhouette('rgba(255,255,255,.14)')}
+          <div><h3>${b.name}</h3><div class="sci">${b.sci}</div></div>
+        </div>
+        <div class="row">
+          <span class="st" style="color:${stColor[b.status]}"><i class="pulse" style="background:${stColor[b.status]}"></i>${b.statusLabel}</span>
+          <span class="mono">${b.reports} reports</span>
+        </div>
+        <div class="row" style="border-top:none;padding-top:0">
+          <span>📍 ${b.loc}</span><span class="mono">${b.dist}</span>
+        </div>
+      </div>`).join('') +
+    `<div class="card">` + small.map((b, i) => `
+      <div class="compact" style="${i ? 'border-top:1px solid var(--line)' : ''}">
+        <div class="thumb" style="${thumbBg(b)}">${birdSilhouette(tierHex[b.tier])}</div>
+        <div><h4>${b.count > 1 ? b.count + '× ' : ''}${b.name}</h4>
+          <div class="sub" style="color:${stColor[b.status]}">● ${b.statusLabel}</div>
+          <div class="sub">${b.loc}</div></div>
+        <div class="right"><div style="color:${tierColor[b.tier]};font-weight:700">${b.tier}</div><div class="mono">${b.ago}</div></div>
+      </div>`).join('') + `</div>
+    </div><div class="fade"></div>` + navpill('list');
+
+  const sel = BIRDS[4];
+  document.getElementById('map').innerHTML = `<div class="map">${mapSvg({
+      land: '#121a17', water: '#070b0a', waterLine: '', park: '#16241d', road: '#223029', roadW: 2,
+      minor: '#18221e', label: '#3f524a', font: 'Space Grotesk' })}</div>` +
+    `<div class="me"></div>` +
+    BIRDS.map(b => {
+      const size = { Exceptional: 18, 'Very Rare': 14, Rare: 11 }[b.tier];
+      return `<div class="pin ${b.status === 'green' ? 'live' : ''} ${b === sel ? 'sel' : ''}" style="left:${b.x}px;top:${b.y}px;color:${tierHex[b.tier]}">
+        <span style="width:${size}px;height:${size}px"></span>${b.tier === 'Exceptional' ? `<span class="n">${b.name}</span>` : ''}</div>`;
+    }).join('') +
+    `<div style="position:absolute;top:0;left:0;right:0">${statusBar}</div>
+     <div class="mtop"><div class="search glass">⌕ Search birds, hotspots</div><div class="sq glass">⚙</div></div>
+     <div class="mchips"><div class="chip on">7 birds</div><div class="chip">Last 24 h</div><div class="chip">Near me</div></div>
+     <div class="fabs"><div class="glass">➤</div><div class="glass">▦</div></div>
+     <div class="carousel">` +
+    [sel, BIRDS[0]].map(b => `
+       <div class="ccard glass">
+         <div class="hd"><div class="thumb" style="${thumbBg(b)}">${birdSilhouette(tierHex[b.tier])}</div>
+           <div><div style="font-size:10px;font-weight:700;letter-spacing:1.2px;color:${tierColor[b.tier]};text-transform:uppercase">${b.tier} · ${b.dist}</div>
+             <h4>${b.count > 1 ? b.count + '× ' : ''}${b.name}</h4>
+             <div class="sub">${b.loc}</div>
+             <div class="sub" style="color:${stColor[b.status]};font-weight:600">● ${b.statusLabel}</div></div></div>
+         <div class="actions"><div class="a1">✓ Refound</div><div class="a2">✗ Dipped</div><div class="a3">➤</div></div>
+       </div>`).join('') +
+    `</div>` + navpill('map');
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Style 2 "Hero": the hero card's teal gradient, bird with a rarity alert dot -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f5c7a"/><stop offset="1" stop-color="#1f8fa8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#g)"/>
+  <path transform="translate(500 530) scale(8.4) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/>
+  <circle cx="712" cy="318" r="62" fill="#e0364f" stroke="#fff" stroke-width="22"/>
+</svg>

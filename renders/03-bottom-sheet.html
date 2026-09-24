@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Concept 3 · Map + Sheet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="shared.js"></script>
+<style>
+  :root {
+    --bg: #f3f5f2; --card: #ffffff; --text: #101a15; --muted: #6b766f; --line: #e6ebe7;
+    --accent: #1f7a55; --accent-soft: #e3f2ea;
+    --exc: #e0364f; --exc-soft: #fde8eb; --vr: #e8701a; --vr-soft: #fdeede; --rare: #c99a06; --rare-soft: #fbf3d6;
+    --green: #1f9d5c; --amber: #d98a07; --red: #d64545; --gray: #98a29c;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #e4e8e4; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--text);
+    display: flex; flex-direction: column; align-items: center; padding: 40px 16px; gap: 28px; }
+  .caption { text-align: center; max-width: 820px; }
+  .caption h1 { font-size: 30px; font-weight: 800; letter-spacing: -.8px; }
+  .caption p { color: #55605a; margin-top: 8px; font-size: 14px; line-height: 1.5; }
+  .phones { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; }
+  .phone { width: 390px; height: 844px; border-radius: 48px; overflow: hidden; position: relative; background: var(--bg);
+    box-shadow: 0 30px 60px rgba(20,40,30,.18), 0 0 0 10px #fff, 0 0 0 11px #cfd6d1; }
+  .label { text-align: center; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #6b766f; margin-top: 22px; font-weight: 700; }
+  .status-bar { height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 28px; font-size: 14px; font-weight: 700; }
+  .map { position: absolute; inset: 0; }
+  .map-svg { width: 100%; height: 100%; display: block; }
+
+  .pin { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; }
+  .pin .head { width: 38px; height: 38px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg); display: grid; place-items: center; box-shadow: 0 6px 14px rgba(0,0,0,.2); border: 3px solid #fff; }
+  .pin .head svg { width: 20px; height: 20px; transform: rotate(45deg); }
+  .pin .tag { position: absolute; left: 34px; top: 4px; background: #fff; border-radius: 10px; padding: 3px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+  .pin.small .head { width: 28px; height: 28px; border-width: 2px; }
+  .pin.small .head svg { width: 14px; height: 14px; }
+
+  .floating { position: absolute; top: 52px; left: 16px; right: 16px; display: flex; gap: 8px; align-items: center; }
+  .avatar { width: 44px; height: 44px; border-radius: 14px; background: var(--accent); display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+  .avatar svg { width: 26px; height: 26px; }
+  .search { flex: 1; background: #fff; border-radius: 14px; padding: 13px 14px; color: var(--muted); font-size: 14px; font-weight: 500; box-shadow: 0 6px 16px rgba(0,0,0,.1); }
+  .round { width: 44px; height: 44px; border-radius: 14px; background: #fff; display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.1); font-size: 16px; }
+
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 28px 28px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,.12); }
+  .grab { width: 40px; height: 5px; border-radius: 3px; background: #d4dad6; margin: 8px auto 4px; }
+  .sheet-hd { padding: 6px 20px 10px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .sheet-hd h2 { font-size: 26px; font-weight: 800; letter-spacing: -.8px; }
+  .sheet-hd .sub { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .seg { display: flex; background: var(--bg); border-radius: 12px; padding: 3px; margin: 0 20px 12px; }
+  .seg div { flex: 1; text-align: center; padding: 8px; font-size: 13px; font-weight: 700; color: var(--muted); border-radius: 10px; }
+  .seg div.on { background: #fff; color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+  .pills { display: flex; gap: 8px; padding: 0 20px 12px; }
+  .pills div { font-size: 12px; font-weight: 700; padding: 6px 11px; border-radius: 10px; background: var(--bg); color: var(--muted); }
+  .pills div.on { background: var(--accent-soft); color: var(--accent); }
+
+  .hero { margin: 0 16px 14px; border-radius: 22px; overflow: hidden; position: relative; height: 176px; padding: 16px; display: flex; flex-direction: column; justify-content: flex-end; color: #fff; }
+  .hero svg { position: absolute; right: -6px; top: -4px; width: 170px; height: 160px; }
+  .hero .kicker { position: absolute; top: 14px; left: 16px; display: flex; gap: 6px; }
+  .hero .kicker span { font-size: 11px; font-weight: 800; background: rgba(255,255,255,.22); backdrop-filter: blur(6px); padding: 5px 9px; border-radius: 8px; }
+  .hero h3 { font-size: 24px; font-weight: 800; letter-spacing: -.5px; position: relative; }
+  .hero .meta { font-size: 13px; opacity: .9; position: relative; }
+
+  .group-title { padding: 4px 20px 6px; font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+  .rows { margin: 0 16px; background: var(--card); border-radius: 18px; border: 1px solid var(--line); overflow: hidden; }
+  .r { display: flex; align-items: center; gap: 12px; padding: 11px 14px; }
+  .r + .r { border-top: 1px solid var(--line); }
+  .ava { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; position: relative; }
+  .ava svg { width: 28px; height: 28px; }
+  .ava i { position: absolute; bottom: 0; right: 0; width: 13px; height: 13px; border-radius: 50%; border: 2.5px solid #fff; }
+  .r h4 { font-size: 15px; font-weight: 700; }
+  .r .l { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+  .r .end { margin-left: auto; text-align: right; flex-shrink: 0; }
+  .badge { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 7px; display: inline-block; }
+  .r .t { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 600; }
+
+  .detail { padding: 2px 20px 0; }
+  .detail .hdr { display: flex; gap: 14px; align-items: center; }
+  .detail .ava { width: 60px; height: 60px; }
+  .detail h3 { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
+  .timeline { display: flex; gap: 6px; margin: 14px 0 12px; }
+  .timeline div { flex: 1; height: 26px; border-radius: 6px; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+  .cta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cta div { border-radius: 14px; padding: 14px; text-align: center; font-weight: 800; font-size: 14px; }
+  .cta .y { background: var(--accent); color: #fff; } .cta .n { background: #fdecec; color: var(--red); }
+  .links { display: flex; gap: 16px; margin-top: 12px; font-size: 13px; font-weight: 700; color: var(--accent); }
+</style>
+</head>
+<body>
+  <div class="caption">
+    <h1>Concept 3 — Map + Sheet</h1>
+    <p>One screen instead of two tabs, like Apple / Google Maps: the map is always underneath and the list lives in a draggable
+      bottom sheet. Pull it up for the full list (left) or tap a pin and it snaps to that bird's detail (right). A hero card spotlights
+      the rarest bird; the rest are tidy grouped rows with photo avatars, a status dot, and a soft rarity badge. The
+      sheet also shows a per-day "seen / dipped" strip so you can judge a chase at a glance.</p>
+  </div>
+  <div class="phones">
+    <div><div class="phone" id="list"></div><div class="label">Sheet pulled up · list</div></div>
+    <div><div class="phone" id="map"></div><div class="label">Sheet at half · pin selected</div></div>
+  </div>
+
+<script>
+  const tier = {
+    Exceptional: { c: 'var(--exc)', s: 'var(--exc-soft)', hex: '#e0364f' },
+    'Very Rare': { c: 'var(--vr)',  s: 'var(--vr-soft)',  hex: '#e8701a' },
+    Rare:        { c: 'var(--rare)', s: 'var(--rare-soft)', hex: '#c99a06' },
+  };
+  const st = { green: 'var(--green)', amber: 'var(--amber)', red: 'var(--red)', gray: 'var(--gray)' };
+  const statusBar = `<div class="status-bar"><span>9:41</span><span>●●● ▮</span></div>`;
+  const mapTheme = { land: '#eef0ea', water: '#bfdcec', waterLine: '', park: '#cfe8cf', road: '#ffffff', roadW: 3.5,
+    minor: '#e3e6df', label: '#8c978f', font: 'Plus Jakarta Sans' };
+  const ava = (b) => `<div class="ava" style="background:${tier[b.tier].s}">${birdSilhouette(tier[b.tier].hex)}<i style="background:${st[b.status]}"></i></div>`;
+  const pins = (selId) => BIRDS.map(b => `
+    <div class="pin ${b.tier === 'Rare' ? 'small' : ''}" style="left:${b.x}px;top:${b.y}px">
+      <div class="head" style="background:${tier[b.tier].hex}${b.id === selId ? ';outline:5px solid rgba(224,54,79,.25)' : ''}">${birdSilhouette('#fff')}</div>
+      ${b.id === selId || b.tier === 'Exceptional' ? `<div class="tag">${b.name}</div>` : ''}
+    </div>`).join('');
+  const floating = `<div class="floating"><div class="avatar">${birdSilhouette('#fff')}</div><div class="search">Search species or places</div><div class="round">≡</div></div>`;
+
+  // ---- List: sheet pulled up to ~85% ----
+  const hero = BIRDS[0];
+  document.getElementById('list').innerHTML = `<div class="map">${mapSvg(mapTheme)}</div>${pins()}
+    <div style="position:absolute;top:0;left:0;right:0">${statusBar}</div>
+    <div class="sheet" style="top:112px">
+      <div class="grab"></div>
+      <div class="sheet-hd"><div><h2>Rarities</h2><div class="sub">LA &amp; Orange County · updated 4 min ago</div></div><div class="round" style="box-shadow:none;background:var(--bg)">⇅</div></div>
+      <div class="seg"><div class="on">This week · 7</div><div>Last 30 days</div><div>Near me</div></div>
+      <div class="hero" style="background:linear-gradient(135deg, #0f5c7a, #1f8fa8)">
+        <div class="kicker"><span>★ EXCEPTIONAL</span><span>● Refound 38 min ago</span></div>
+        ${birdSilhouette('rgba(255,255,255,.22)')}
+        <h3>${hero.name}</h3>
+        <div class="meta">${hero.loc} · ${hero.reports} reports · ${hero.dist}</div>
+      </div>
+      <div class="group-title"><span>Also this week</span><span style="color:var(--accent)">See all</span></div>
+      <div class="rows">` + BIRDS.slice(1, 6).map(b => `
+        <div class="r">${ava(b)}
+          <div style="min-width:0"><h4>${b.count > 1 ? b.count + '× ' : ''}${b.name}</h4><div class="l">${b.loc}</div></div>
+          <div class="end"><span class="badge" style="background:${tier[b.tier].s};color:${tier[b.tier].c}">${b.tier}</span><div class="t">${b.ago}</div></div>
+        </div>`).join('') + `</div>
+    </div>`;
+
+  // ---- Map: sheet at half with selected bird ----
+  const sel = BIRDS[1];
+  const days = [['Sep 17', 'g'], ['Sep 18', 'g'], ['Sep 19', 'x'], ['Sep 20', 'g'], ['Sep 21', 'd'], ['Sep 22', 'g'], ['Today', 'g']];
+  document.getElementById('map').innerHTML = `<div class="map">${mapSvg(mapTheme)}</div>${pins(sel.id)}
+    <div style="position:absolute;top:0;left:0;right:0">${statusBar}</div>${floating}
+    <div class="sheet" style="height:330px">
+      <div class="grab"></div>
+      <div class="detail">
+        <div class="hdr">${ava(sel)}
+          <div style="flex:1"><span class="badge" style="background:${tier[sel.tier].s};color:${tier[sel.tier].c}">${sel.tier}</span>
+            <h3>${sel.name}</h3>
+            <div class="l" style="font-size:13px;color:var(--muted)">${sel.loc} · ${sel.dist}</div></div>
+          <div class="round" style="box-shadow:none;background:var(--bg);align-self:flex-start">✕</div>
+        </div>
+        <div class="timeline">` + days.map(([d, k]) => `<div style="background:${k === 'g' ? 'var(--accent-soft)' : k === 'd' ? '#fdecec' : 'var(--bg)'};color:${k === 'g' ? 'var(--green)' : k === 'd' ? 'var(--red)' : 'var(--gray)'}">${d.replace('Sep ', '')}</div>`).join('') + `</div>
+        <div style="font-size:13px;font-weight:600;color:var(--green);margin:-4px 0 12px">● ${sel.statusLabel} · ${sel.reports} reports this week</div>
+        <div class="cta"><div class="y">✓ I refound it</div><div class="n">✗ I dipped</div></div>
+        <div class="links"><span>➤ Directions</span><span>Notes (3)</span><span>eBird ↗</span></div>
+      </div>
+    </div>`;
+</script>
+</body>
+</html>

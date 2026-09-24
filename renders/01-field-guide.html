@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Concept 1 · Field Guide</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="shared.js"></script>
+<style>
+  :root {
+    --paper: #f4efe4; --paper-2: #ebe4d4; --card: #fbf8f1; --ink: #1f2a24; --ink-2: #5b6259;
+    --rule: #d9cfbb; --forest: #2d6a4f; --rust: #b4532a; --ochre: #c07f1e; --moss: #6b7f3a;
+    --green: #2d6a4f; --amber: #b7791f; --red: #a33a2a; --gray: #8a8a80;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #d8d2c4; font-family: Inter, system-ui, sans-serif; color: var(--ink);
+    display: flex; flex-direction: column; align-items: center; padding: 40px 16px; gap: 28px; }
+  .caption { font-family: Fraunces, serif; text-align: center; max-width: 820px; }
+  .caption h1 { font-size: 30px; font-weight: 650; }
+  .caption p { font-family: Inter; color: #4a4a40; margin-top: 8px; font-size: 14px; line-height: 1.5; }
+  .phones { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; }
+  .phone { width: 390px; height: 844px; border-radius: 48px; overflow: hidden; position: relative;
+    background: var(--paper); box-shadow: 0 30px 60px rgba(40,30,10,.25), 0 0 0 10px #1c1c1a; }
+  .label { text-align: center; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #5a5448; margin-top: 22px; font-weight: 600; }
+  .status-bar { height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 28px; font-size: 14px; font-weight: 600; }
+
+  /* ---- List ---- */
+  .masthead { padding: 6px 22px 12px; border-bottom: 1px solid var(--rule); }
+  .eyebrow { font-size: 11px; letter-spacing: 2.2px; text-transform: uppercase; color: var(--forest); font-weight: 700; display: flex; justify-content: space-between; }
+  .masthead h2 { font-family: Fraunces, serif; font-weight: 650; font-size: 32px; line-height: 1.05; margin-top: 6px; letter-spacing: -.5px; }
+  .masthead h2 em { font-weight: 400; color: var(--rust); }
+  .filters { display: flex; gap: 18px; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .filters span.on { color: var(--ink); border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+  .scroll { height: calc(844px - 44px - 150px - 84px); overflow: hidden; padding: 0 22px; }
+  .day { display: flex; align-items: center; gap: 10px; margin: 16px 0 6px; font-family: Fraunces, serif; font-style: italic; font-size: 15px; color: var(--ink-2); }
+  .day::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+  .entry { display: grid; grid-template-columns: 76px 1fr; gap: 14px; padding: 12px 0; border-bottom: 1px dashed var(--rule); }
+  .plate { width: 76px; height: 76px; border-radius: 6px; position: relative; padding: 10px; background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--rule); }
+  .plate svg { width: 100%; height: 100%; }
+  .plate .no { position: absolute; top: 4px; left: 6px; font-family: Fraunces; font-size: 10px; color: var(--ink-2); }
+  .entry h3 { font-family: Fraunces, serif; font-size: 19px; font-weight: 650; letter-spacing: -.2px; }
+  .sci { font-family: Fraunces, serif; font-style: italic; font-size: 13px; color: var(--ink-2); }
+  .meta { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; font-size: 12px; color: var(--ink-2); }
+  .tier { font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; font-weight: 700; }
+  .tier.Exceptional { color: var(--rust); } .tier.Very\ Rare { color: var(--ochre); } .tier.Rare { color: var(--moss); }
+  .stat { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: 5px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .loc { font-size: 12px; color: var(--ink); margin-top: 3px; }
+  .loc b { font-weight: 600; }
+
+  .tabbar { position: absolute; bottom: 0; left: 0; right: 0; height: 84px; background: var(--card); border-top: 1px solid var(--rule);
+    display: grid; grid-template-columns: repeat(3, 1fr); padding: 10px 20px 24px; }
+  .tabbar div { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--ink-2); }
+  .tabbar div.on { color: var(--forest); }
+  .tabbar svg { width: 22px; height: 22px; }
+
+  /* ---- Map ---- */
+  .map { position: absolute; inset: 0; }
+  .map-svg { width: 100%; height: 100%; display: block; }
+  .search { position: absolute; top: 54px; left: 16px; right: 16px; background: var(--card); border-radius: 12px; padding: 12px 14px;
+    box-shadow: 0 6px 20px rgba(60,40,0,.15), inset 0 0 0 1px var(--rule); display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); }
+  .search b { font-family: Fraunces; font-size: 16px; color: var(--ink); font-weight: 650; }
+  .search .count { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--forest); letter-spacing: 1px; }
+  .legend { position: absolute; top: 112px; left: 16px; display: flex; gap: 6px; }
+  .legend span { background: var(--card); border-radius: 20px; padding: 5px 10px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; box-shadow: inset 0 0 0 1px var(--rule); }
+  .medal { position: absolute; width: 40px; height: 40px; border-radius: 50%; background: var(--card); transform: translate(-50%, -50%);
+    border: 3px solid var(--moss); padding: 6px; box-shadow: 0 4px 10px rgba(40,30,0,.3); }
+  .medal svg { width: 100%; height: 100%; }
+  .medal.Exceptional { border-color: var(--rust); width: 50px; height: 50px; }
+  .medal.Very\ Rare { border-color: var(--ochre); width: 44px; height: 44px; }
+  .medal.sel { box-shadow: 0 0 0 6px rgba(180,83,42,.25), 0 6px 14px rgba(40,30,0,.35); }
+  .medal .n { position: absolute; top: -6px; right: -8px; background: var(--ink); color: var(--paper); font-size: 10px; font-weight: 700; border-radius: 10px; padding: 1px 6px; }
+  .sheet { position: absolute; left: 12px; right: 12px; bottom: 96px; background: var(--card); border-radius: 16px; padding: 16px;
+    box-shadow: 0 12px 30px rgba(40,30,0,.25), inset 0 0 0 1px var(--rule); }
+  .sheet .top { display: grid; grid-template-columns: 64px 1fr; gap: 12px; }
+  .sheet .plate { width: 64px; height: 64px; }
+  .sheet h3 { font-family: Fraunces; font-size: 21px; font-weight: 650; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 14px; }
+  .btn { border-radius: 10px; padding: 11px; text-align: center; font-size: 13px; font-weight: 700; }
+  .btn.g { background: var(--forest); color: #fff; } .btn.r { background: transparent; color: var(--red); box-shadow: inset 0 0 0 1.5px var(--red); }
+  .btn.o { box-shadow: inset 0 0 0 1.5px var(--rule); color: var(--ink); padding: 11px 14px; }
+</style>
+</head>
+<body>
+  <div class="caption">
+    <h1>Concept 1 — Field Guide</h1>
+    <p>Leans into birding heritage: warm paper tones, a serif species name like a printed guide, and "plates" for each bird.
+      Rarity is typographic (small caps in rust / ochre / moss) instead of pill badges. Status reads as a colored dot + plain sentence.
+      The map uses a muted atlas style with photo medallions ringed by rarity, and a preview card with Refound / Dipped right on the map.</p>
+  </div>
+  <div class="phones">
+    <div><div class="phone" id="list"></div><div class="label">List</div></div>
+    <div><div class="phone" id="map"></div><div class="label">Map</div></div>
+  </div>
+
+<script>
+  const tierFill = { Exceptional: '#b4532a', 'Very Rare': '#c07f1e', Rare: '#6b7f3a' };
+  const statusColor = { green: 'var(--green)', amber: 'var(--amber)', red: 'var(--red)', gray: 'var(--gray)' };
+  const statusBar = `<div class="status-bar"><span>9:41</span><span>●●● ▮</span></div>`;
+  const tabbar = (on) => `<div class="tabbar">
+    <div class="${on === 'list' ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Sightings</div>
+    <div class="${on === 'map' ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>Atlas</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>About</div>
+  </div>`;
+  const plate = (b, i) => `<div class="plate"><span class="no">${String(i).padStart(2, '0')}</span>${birdSilhouette(tierFill[b.tier])}</div>`;
+
+  let byDay = {};
+  BIRDS.forEach(b => (byDay[b.day] ??= []).push(b));
+  let n = 0;
+  document.getElementById('list').innerHTML = statusBar + `
+    <div class="masthead">
+      <div class="eyebrow"><span>Birder's Best Friend</span><span>LA · OC</span></div>
+      <h2>Seven rarities<br><em>on the wire this week</em></h2>
+      <div class="filters"><span class="on">All</span><span>eBird</span><span>iNaturalist</span><span>Exceptional only</span></div>
+    </div>
+    <div class="scroll">` +
+    Object.entries(byDay).map(([day, list]) => `<div class="day">${day}</div>` + list.map(b => `
+      <div class="entry">${plate(b, ++n)}
+        <div>
+          <div class="meta" style="margin-top:0"><span class="tier ${b.tier}">${b.tier}</span><span>${b.time}</span></div>
+          <h3>${b.count > 1 ? b.count + '× ' : ''}${b.name}</h3>
+          <div class="sci">${b.sci}</div>
+          <div class="loc">📍 <b>${b.loc}</b> · ${b.dist}</div>
+          <div class="stat" style="color:${statusColor[b.status]}"><span class="dot" style="background:${statusColor[b.status]}"></span>${b.statusLabel}</div>
+        </div>
+      </div>`).join('')).join('') +
+    `</div>` + tabbar('list');
+
+  const sel = BIRDS[0];
+  document.getElementById('map').innerHTML = `<div class="map">${mapSvg({
+      land: '#efe7d4', water: '#c9d8cf', waterLine: '#b3c7bb', park: '#d5dcb8', road: '#fbf8f1', roadW: 2.5,
+      minor: '#e6dcc6', label: '#8a7f68', font: 'Fraunces' })}</div>` +
+    BIRDS.map(b => `<div class="medal ${b.tier} ${b === sel ? 'sel' : ''}" style="left:${b.x}px;top:${b.y}px">${birdSilhouette(tierFill[b.tier])}${b.reports > 1 ? `<span class="n">${b.reports}</span>` : ''}</div>`).join('') +
+    `<div style="position:absolute;top:0;left:0;right:0">${statusBar}</div>
+     <div class="search">🔍 <b>Atlas</b> Search species or hotspot<span class="count">7 BIRDS</span></div>
+     <div class="legend"><span><i class="dot" style="background:var(--rust)"></i>Exceptional</span><span><i class="dot" style="background:var(--ochre)"></i>Very rare</span><span><i class="dot" style="background:var(--moss)"></i>Rare</span></div>
+     <div class="sheet">
+       <div class="top">${plate(sel, 1)}
+         <div>
+           <div class="meta" style="margin-top:0"><span class="tier Exceptional">Exceptional</span><span>${sel.reports} reports</span></div>
+           <h3>${sel.name}</h3>
+           <div class="sci">${sel.sci} · ${sel.loc}</div>
+           <div class="stat" style="color:var(--green)"><span class="dot" style="background:var(--green)"></span>${sel.statusLabel}</div>
+         </div>
+       </div>
+       <div class="btns"><div class="btn g">✓ Refound</div><div class="btn r">✗ Dipped</div><div class="btn o">Directions</div></div>
+     </div>` + tabbar('map');
+</script>
+</body>
+</html>

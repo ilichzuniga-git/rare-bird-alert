@@ -1,0 +1,31 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+  body { margin: 0; }
+  .fg { width: 1024px; height: 500px; position: relative; overflow: hidden;
+        background: linear-gradient(135deg, #0f5c7a, #1f8fa8); font-family: 'Segoe UI', system-ui, sans-serif; }
+  svg { position: absolute; inset: 0; }
+  .txt { position: absolute; left: 400px; top: 150px; color: #fff; }
+  h1 { margin: 0; font-size: 60px; font-weight: 700; letter-spacing: -1px; line-height: 1.05; }
+  p { margin: 16px 0 0; font-size: 26px; font-weight: 500; opacity: .9; max-width: 540px; line-height: 1.3; }
+</style></head><body><div class="fg">
+<svg viewBox="0 0 1024 500" width="1024" height="500">
+  <!-- faint map roads -->
+  <g fill="none" stroke="#fff" stroke-opacity=".07" stroke-width="10" stroke-linecap="round">
+    <path d="M-20 120 C200 90 330 190 520 150 S850 60 1050 110"/>
+    <path d="M-20 420 C180 380 300 460 520 400 S860 330 1050 380"/>
+    <path d="M140 -20 C170 150 110 320 170 520"/>
+    <path d="M880 -20 C850 160 930 330 870 520"/>
+  </g>
+  <g stroke="#fff" stroke-opacity=".05" stroke-width="3" fill="none">
+    <path d="M-20 260 C250 230 520 300 1050 250"/><path d="M620 -20 C650 200 600 330 640 520"/>
+  </g>
+  <!-- tier pins scattered like the map -->
+  <g transform="translate(925 95) scale(.075)"><path transform="rotate(-45)" d="M-220 220V0A220 220 0 0 1 0-220A220 220 0 0 1 220 0A220 220 0 0 1 0 220Z" fill="#e0364f" stroke="#fff" stroke-width="30" stroke-linejoin="round"/><path transform="scale(6.3) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/></g>
+  <g transform="translate(975 300) scale(.06)"><path transform="rotate(-45)" d="M-220 220V0A220 220 0 0 1 0-220A220 220 0 0 1 220 0A220 220 0 0 1 0 220Z" fill="#e8701a" stroke="#fff" stroke-width="30" stroke-linejoin="round"/><path transform="scale(6.3) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/></g>
+  <g transform="translate(60 70) scale(.055)"><path transform="rotate(-45)" d="M-220 220V0A220 220 0 0 1 0-220A220 220 0 0 1 220 0A220 220 0 0 1 0 220Z" fill="#c99a06" stroke="#fff" stroke-width="30" stroke-linejoin="round"/><path transform="scale(6.3) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/></g>
+  <g transform="translate(90 430) scale(.05)"><path transform="rotate(-45)" d="M-220 220V0A220 220 0 0 1 0-220A220 220 0 0 1 220 0A220 220 0 0 1 0 220Z" fill="#5f6b64" stroke="#fff" stroke-width="30" stroke-linejoin="round"/><path transform="scale(6.3) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/></g>
+  <!-- hero pin -->
+  <ellipse cx="220" cy="398" rx="46" ry="10" fill="#062e3d" opacity=".35"/>
+  <g transform="translate(220 242) scale(.45)"><path transform="rotate(-45)" d="M-220 220V0A220 220 0 0 1 0-220A220 220 0 0 1 220 0A220 220 0 0 1 0 220Z" fill="#1f7a55" stroke="#fff" stroke-width="30" stroke-linejoin="round"/><path transform="scale(6.3) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/></g>
+</svg>
+<div class="txt"><h1>Birder's Best Friend</h1><p>Rare birds near you, live on a map, with fresh refound and dipped reports.</p></div>
+</div></body></html>

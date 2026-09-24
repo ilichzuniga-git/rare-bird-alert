@@ -18,7 +18,8 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundImage": "./assets/adaptive-background.png",
+        "backgroundColor": "#0f5c7a"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -51,7 +52,7 @@
         {
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0f5c7a"
         }
       ]
     ]

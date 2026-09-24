@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Style 3 "Scope": dark ink, the bird in a spotting-scope ring; the red arc is the rarity -->
+  <rect width="1024" height="1024" fill="#101a15"/>
+  <circle cx="512" cy="512" r="262" fill="none" stroke="#24332b" stroke-width="30"/>
+  <path d="M512 250A262 262 0 0 1 739 381" fill="none" stroke="#e0364f" stroke-width="30" stroke-linecap="round"/>
+  <path transform="translate(512 520) scale(6.2) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/>
+</svg>
