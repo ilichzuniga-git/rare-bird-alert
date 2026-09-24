@@ -129,7 +129,9 @@ router.get('/:id/comments', async (req, res) => {
         const observer_note = obs?.comments?.trim() || null;
 
         const submitterName = data.userDisplayName || 'Observer';
-        const clComments = (data.comments || [])
+        // Checklist comments come back as a single string (sometimes an array)
+        const rawComments = Array.isArray(data.comments) ? data.comments : [data.comments];
+        const clComments = rawComments
           .filter(c => typeof c === 'string' && c.trim())
           .map(text => ({ author: submitterName, text: text.trim(), created_at: null }));
 
