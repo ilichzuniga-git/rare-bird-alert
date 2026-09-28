@@ -519,3 +519,31 @@ The Refound/Dipped view fetches live observer notes and community comments from 
 - **iNaturalist:** retrieves the observation's description and community comment thread.
 
 Comments are fetched on demand and never stored in the local database.
+
+## Roadmap
+
+### Planned
+
+**Trip drawer: save birds for a day trip.** Saved birds stay on the phone only: no accounts, nothing sent to the server, no change to the Data safety form.
+- [ ] "Save for trip" bookmark button on the bird detail card
+- [ ] **Saved · N** option next to This week / Last 30 days / Near me
+- [ ] Saved birds refresh from the live feed, so their status is current ("Refound today", "Dipped yesterday")
+- [ ] Keep a snapshot of each saved bird (species, location, coordinates, last seen) so it still shows after it leaves the 30-day window, marked "no recent reports"
+- [ ] Map shows only the saved birds; list sorted by distance from you
+- [ ] **Directions** button that opens Google Maps with every saved bird as a waypoint (plain link, no API key)
+- [ ] Swipe to remove a bird; "Clear trip" button
+- [ ] Vet and add `@react-native-async-storage/async-storage` for on-device storage (pin and vet it per the workspace `security.md` process before installing)
+
+**BirdWeather corroboration.** Permission granted 2026-09-28; stay within the scope in [docs/SOURCES.MD](docs/SOURCES.MD#birdweather-permission-granted-not-yet-integrated).
+- [ ] Backend job: for each active rare-bird report, query BirdWeather for high-confidence detections of that species within ~300 m on the same days, a few times an hour
+- [ ] Only count a match with ≥2 detections (single rare detections are often misidentifications)
+- [ ] Store only the match (station, species, date, confidence), never audio
+- [ ] "Also heard by a BirdWeather station" tag in the bird detail view, crediting BirdWeather and BirdNET and linking to the station page
+- [ ] Detections never create alerts or reports on their own
+- [ ] Let Tim at BirdWeather know when it ships
+
+### Ideas worth exploring
+
+Not committed to. Each needs more thought before it's built.
+- [ ] **Push alerts for saved birds** ("your saved Pinyon Jay was refound"). Would mean storing the saved list on the server next to the anonymous push token: still account-free, but the Data safety form and privacy page would need updating.
+- [ ] **Share a trip** with a friend via a link that carries the saved list, no accounts needed.
