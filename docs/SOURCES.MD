@@ -59,7 +59,14 @@ Photos are the photographers' work, each under its own license.
 ## Expo push notification service
 - `backend/src/notifications.js` sends pushes via `exp.host`. Tokens are anonymous; tokens Expo reports as `DeviceNotRegistered` are deleted.
 
-## BirdWeather (evaluated, not integrated)
+## BirdWeather (permission granted, not yet integrated)
 - GraphQL API at `app.birdweather.com/graphql`: acoustic BirdNET detections from ~100 LA/OC stations, with eBird species codes, confidence scores and community votes. Open without a key as of 2026-09-23.
 - No rarity flag, and unverified machine IDs of rare species are mostly false positives, so it isn't suitable as a rarity source. It could work as corroboration (a nearby station hearing a known rare bird).
-- Terms/licensing are **not stated** in the API docs. Email support@birdweather.com before integrating.
+- BirdWeather's ToS (2022) allows personal, non-commercial use only and bars automated access, storage and redistribution, so we asked for written permission.
+- **Permission granted 2026-09-28** by Tim, founder of BirdWeather, by email in reply to our 2026-09-24 request (sent from ILICHZUNIGA@protonmail.com): *"Given the non-commercial nature and the credit you're planning to provide, I'm happy to give you the green light to use the API for this."* The grant rests on what that request committed to, so stay within it:
+  - Corroboration only: show "Also heard by a BirdWeather station" on a bird a person already reported. Detections never create alerts or reports.
+  - Query a small number of species near active rare-bird reports, a few times an hour. No bulk collection.
+  - Store only the match result (station, species, date, confidence). No audio.
+  - Credit BirdWeather and BirdNET and link to the station's BirdWeather page.
+  - App stays free: no ads, fees, resale or subscriptions.
+- Anything beyond that scope (alerts from detections, storing audio, a paid tier) needs a new ask. Tim asked to be kept posted, so let him know when it ships.
