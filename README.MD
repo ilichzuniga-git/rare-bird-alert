@@ -524,15 +524,15 @@ Comments are fetched on demand and never stored in the local database.
 
 ### Planned
 
-**Trip drawer: save birds for a day trip.** Saved birds stay on the phone only: no accounts, nothing sent to the server, no change to the Data safety form.
-- [ ] "Save for trip" bookmark button on the bird detail card
-- [ ] **Saved · N** option next to This week / Last 30 days / Near me
-- [ ] Saved birds refresh from the live feed, so their status is current ("Refound today", "Dipped yesterday")
-- [ ] Keep a snapshot of each saved bird (species, location, coordinates, last seen) so it still shows after it leaves the 30-day window, marked "no recent reports"
-- [ ] Map shows only the saved birds; list sorted by distance from you
-- [ ] **Directions** button that opens Google Maps with every saved bird as a waypoint (plain link, no API key)
-- [ ] Swipe to remove a bird; "Clear trip" button
-- [ ] Vet and add `@react-native-async-storage/async-storage` for on-device storage (pin and vet it per the workspace `security.md` process before installing)
+**Trip drawer: save birds for a day trip.** Saved birds stay on the phone only: no accounts, nothing sent to the server, no change to the Data safety form. Code: `mobile/src/trip.ts`, `TripSheet.tsx`, `CarIcon.tsx`.
+- [x] Car button on the bird detail card saves it to the trip (turns green with a check)
+- [x] Car button next to the search bar opens the trip, with a count badge
+- [x] Saved birds refresh from the live feed, so their status is current ("Refound today", "Continuing")
+- [x] Each saved bird keeps a snapshot (its latest report), so it still shows after it leaves the feed, marked "No recent reports"
+- [x] Map shows only the saved birds, numbered in driving order from you (nearest stop next); your spot is a car pin
+- [x] **Directions** button opens Google Maps with every stop as a waypoint (plain link, no API key). Google caps it at 10 stops, so the trip header counts "N of 10 stops" and flags anything past 10 as "Not in directions"
+- [x] Swipe a bird sideways to remove it; two-tap "Clear"
+- [x] On-device storage via `expo-file-system` (a JSON file in the app's private documents folder). It was already in the lockfile as a dependency of `expo`, so no new third-party package was needed
 
 **BirdWeather corroboration.** Permission granted 2026-09-28; stay within the scope in [docs/SOURCES.MD](docs/SOURCES.MD#birdweather-permission-granted-not-yet-integrated).
 - [ ] Backend job: for each active rare-bird report, query BirdWeather for high-confidence detections of that species within ~300 m on the same days, a few times an hour

@@ -12,6 +12,7 @@ import {
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 import BirdPhoto from './BirdPhoto';
+import CarIcon from './CarIcon';
 import { refoundLabel, statusWord, type Bird } from './birds';
 import { colors, radius, STATUS_DOT } from './theme';
 import {
@@ -138,11 +139,14 @@ export type SightingDetailState = ReturnType<typeof useSightingDetail>;
 // Header (the sheet's draggable part)
 // ---------------------------------------------------------------------------
 
-export function DetailHeader({ bird, sighting, distance, onClose }: {
+export function DetailHeader({ bird, sighting, distance, onClose, onTrip, onToggleTrip }: {
   bird: Bird;
   sighting: Sighting;
   distance: number | null;
   onClose: () => void;
+  /** Saved to the trip drawer */
+  onTrip: boolean;
+  onToggleTrip: () => void;
 }) {
   const place = [sighting.location_name ?? sighting.region_name, distance != null ? formatDistance(distance) : null]
     .filter(Boolean).join(' · ');
@@ -162,9 +166,21 @@ export function DetailHeader({ bird, sighting, distance, onClose }: {
         </Text>
         <Text style={styles.place} numberOfLines={1}>{place}</Text>
       </View>
-      <Pressable style={styles.close} onPress={onClose} hitSlop={8} accessibilityLabel="Back to the list">
-        <Text style={styles.closeText}>✕</Text>
-      </Pressable>
+      <View style={styles.hdrBtns}>
+        <Pressable
+          style={[styles.close, onTrip && styles.tripOn]}
+          onPress={onToggleTrip}
+          hitSlop={8}
+          accessibilityLabel={onTrip ? 'Remove from trip' : 'Save to trip'}
+          accessibilityState={{ selected: onTrip }}
+        >
+          <CarIcon size={22} color={onTrip ? '#fff' : colors.text} cut={onTrip ? colors.accent : colors.bg} />
+          {onTrip ? <Text style={styles.tripCheck}>✓</Text> : null}
+        </Pressable>
+        <Pressable style={styles.close} onPress={onClose} hitSlop={8} accessibilityLabel="Back to the list">
+          <Text style={styles.closeText}>✕</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -374,6 +390,12 @@ const styles = StyleSheet.create({
   badge: { alignSelf: 'flex-start', fontSize: 10.5, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.badge, overflow: 'hidden' },
   name: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.5, marginTop: 3 },
   place: { fontSize: 13, color: colors.muted, fontWeight: '500', marginTop: 1 },
+  hdrBtns: { alignSelf: 'flex-start', flexDirection: 'row', gap: 8 },
+  tripOn: { backgroundColor: colors.accent },
+  tripCheck: {
+    position: 'absolute', right: -4, top: -4, width: 17, height: 17, borderRadius: 9, backgroundColor: colors.text,
+    color: '#fff', fontSize: 10, fontWeight: '900', textAlign: 'center', lineHeight: 16, overflow: 'hidden',
+  },
   close: { alignSelf: 'flex-start', width: 40, height: 40, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   closeText: { fontSize: 16, color: colors.text },
 

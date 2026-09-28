@@ -14,7 +14,8 @@ export interface Bird {
   count: number | null;
 }
 
-export type Period = 'week' | 'month' | 'near';
+/** 'trip' shows the saved birds (the trip drawer) instead of a time window */
+export type Period = 'week' | 'month' | 'near' | 'trip';
 
 export function groupBirds(sightings: Sighting[], clusters: Map<number, ClusterData>): Bird[] {
   const groups = new Map<string, Sighting[]>();

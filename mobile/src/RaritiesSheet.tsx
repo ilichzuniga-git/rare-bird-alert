@@ -206,18 +206,24 @@ function Hero({ bird, distance, onPress }: { bird: Bird; distance: number | null
   );
 }
 
-const BirdRow = memo(function BirdRow({
+export const BirdRow = memo(function BirdRow({
   bird,
   first,
   last,
   distance,
   onPress,
+  stop,
+  stale,
 }: {
   bird: Bird;
   first: boolean;
   last: boolean;
   distance: number | null;
   onPress: () => void;
+  /** Trip stop number, shown on the avatar */
+  stop?: number;
+  /** Saved bird that has dropped out of the live feed */
+  stale?: boolean;
 }) {
   const s = bird.latest;
   const photo = usePhoto(s.photo_url, s.photo_attribution, s.scientific_name);
@@ -226,7 +232,7 @@ const BirdRow = memo(function BirdRow({
   const sub = [
     distance != null ? formatDistance(distance) : null,
     place,
-    bird.reports.length > 1 ? `${bird.reports.length} reports` : null,
+    stale ? 'No recent reports' : bird.reports.length > 1 ? `${bird.reports.length} reports` : null,
   ].filter(Boolean).join(' · ');
 
   return (
@@ -241,7 +247,8 @@ const BirdRow = memo(function BirdRow({
         ) : (
           <Text style={styles.avaGlyph}>🐦</Text>
         )}
-        <View style={[styles.dot, { backgroundColor: dot }]} />
+        {stale ? null : <View style={[styles.dot, { backgroundColor: dot }]} />}
+        {stop != null ? <Text style={styles.stop}>{stop}</Text> : null}
       </View>
       <View style={styles.rowMain}>
         <Text style={styles.rowName} numberOfLines={1}>
@@ -311,6 +318,11 @@ const styles = StyleSheet.create({
   avaImg: { width: 48, height: 48, borderRadius: 24 },
   avaGlyph: { fontSize: 24 },
   dot: { position: 'absolute', right: 0, bottom: 0, width: 13, height: 13, borderRadius: 7, borderWidth: 2.5, borderColor: '#fff' },
+  stop: {
+    position: 'absolute', left: -4, top: -4, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5,
+    backgroundColor: colors.text, color: '#fff', fontSize: 11, fontWeight: '800', textAlign: 'center',
+    lineHeight: 17, borderWidth: 1.5, borderColor: '#fff', overflow: 'hidden',
+  },
   rowMain: { flex: 1, minWidth: 0 },
   rowName: { fontSize: 15, fontWeight: '700', color: colors.text },
   rowSub: { fontSize: 12, color: colors.muted, marginTop: 2, fontWeight: '500' },

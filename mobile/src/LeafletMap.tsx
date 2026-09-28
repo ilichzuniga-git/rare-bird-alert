@@ -37,6 +37,8 @@ export interface UserSpot {
   lat: number;
   lng: number;
   accuracyM?: number | null;
+  /** Glyph in the pin: binoculars ("Near me") or a car (trip) */
+  icon?: 'binoculars' | 'car';
 }
 
 export interface ClusterCircle {
@@ -77,6 +79,16 @@ const BINOCULARS_SVG =
   + '<rect x="9" y="9" width="6" height="4" rx="1"/>'
   + '<circle cx="7" cy="15" r="5"/><circle cx="17" cy="15" r="5"/></g>'
   + '<g fill="#101a15"><circle cx="7" cy="15" r="2.4"/><circle cx="17" cy="15" r="2.4"/></g></svg>';
+
+// White car for the user's pin on a trip (same 24×24 grid as CarIcon.tsx)
+const CAR_SVG =
+  '<svg viewBox="0 0 24 24"><g fill="#fff">'
+  + '<path d="M6 12V7.5A3.5 3.5 0 0 1 9.5 4h5A3.5 3.5 0 0 1 18 7.5V12z"/>'
+  + '<rect x="2" y="10.5" width="20" height="7" rx="2.5"/></g>'
+  + '<g fill="#101a15"><rect x="8" y="6" width="3.5" height="4" rx=".5"/><rect x="12.5" y="6" width="3.5" height="4" rx=".5"/>'
+  + '<circle cx="7" cy="17.5" r="3.8"/><circle cx="17" cy="17.5" r="3.8"/></g>'
+  + '<g fill="#fff"><circle cx="7" cy="17.5" r="2.9"/><circle cx="17" cy="17.5" r="2.9"/></g>'
+  + '<g fill="#101a15"><circle cx="7" cy="17.5" r="1.2"/><circle cx="17" cy="17.5" r="1.2"/></g></svg>';
 
 const BIRD_PATH =
   'M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z';
@@ -186,11 +198,13 @@ function buildHtml(
     });
   }
 
-  var meIcon = L.divIcon({
-    className: '',
-    html: '<div class="me">${BINOCULARS_SVG}</div>',
-    iconSize: [34, 34], iconAnchor: [17, 41], popupAnchor: [0, -38],
-  });
+  function meIcon(glyph) {
+    return L.divIcon({
+      className: '',
+      html: '<div class="me">' + (glyph === 'car' ? '${CAR_SVG}' : '${BINOCULARS_SVG}') + '</div>',
+      iconSize: [34, 34], iconAnchor: [17, 41], popupAnchor: [0, -38],
+    });
+  }
 
   var meLayer = L.layerGroup().addTo(map);
   var layer = L.layerGroup().addTo(map);
@@ -202,12 +216,17 @@ function buildHtml(
     var bounds = pins.map(function(p) { return [Number(p.lat), Number(p.lng)]; });
     if (me) bounds.push([me.lat, me.lng]);
     if (center || bounds.length === 0) return;
+    // Jump rather than animate: a fit that lands mid-animation (e.g. the user's
+    // location arriving just after the pins) would otherwise be dropped.
+    map.stop();
     if (bounds.length === 1) {
-      map.setView(bounds[0], me && pins.length === 0 ? 13 : zoom);
+      map.setView(bounds[0], me && pins.length === 0 ? 13 : zoom, { animate: false });
     } else {
+      // name tags sit to the right of their pins, so leave room for them
+      var right = pins.some(function(p) { return p.tag; }) ? 130 : 30;
       map.fitBounds(bounds, insets
-        ? { paddingTopLeft: [30, insets.top + 30], paddingBottomRight: [30, insets.bottom + 30] }
-        : { padding: [40, 40] });
+        ? { paddingTopLeft: [30, insets.top + 30], paddingBottomRight: [right, insets.bottom + 30], animate: false }
+        : { padding: [40, 40], animate: false });
     }
   }
 
@@ -221,7 +240,7 @@ function buildHtml(
       radius: Math.max(Number(m.accuracyM) || 0, 150), color: '#101a15', weight: 1,
       opacity: 0.25, fillColor: '#101a15', fillOpacity: 0.07, interactive: false,
     }).addTo(meLayer);
-    L.marker([me.lat, me.lng], { icon: meIcon, zIndexOffset: 1000 })
+    L.marker([me.lat, me.lng], { icon: meIcon(m.icon), zIndexOffset: 1000 })
       .bindPopup('You are about here').addTo(meLayer);
     if (!wasShown) fitAll(lastPins);
   }

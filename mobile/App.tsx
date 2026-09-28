@@ -19,6 +19,9 @@ import AboutModal from './src/AboutModal';
 import { DetailBody, DetailHeader, useSightingDetail } from './src/SightingDetail';
 import BottomSheet, { type BottomSheetHandle } from './src/BottomSheet';
 import { SheetHeader, SheetList } from './src/RaritiesSheet';
+import { TripHeader, TripList } from './src/TripSheet';
+import CarIcon from './src/CarIcon';
+import { MAX_STOPS, openTripDirections, routeOrder, useTrip } from './src/trip';
 import { byRarity, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
 import { colors } from './src/theme';
 import { API_BASE, formatDate } from './src/util';
@@ -92,12 +95,14 @@ function Main() {
     return () => clearTimeout(t);
   }, [queryText]);
 
-  // "Near me" needs the user's position
+  // "Near me" and the trip's driving order need the user's position
   const [userLoc, setUserLoc] = useState<UserSpot | null>(null);
   const [nearState, setNearState] = useState<'idle' | 'locating' | 'denied' | 'ready'>('idle');
+  const lastList = useRef<Period>('week'); // where closing the trip returns to
   const choosePeriod = useCallback(async (p: Period) => {
+    if (p !== 'trip') lastList.current = p;
     setPeriod(p);
-    if (p !== 'near' || userLoc) return;
+    if ((p !== 'near' && p !== 'trip') || userLoc || nearState === 'locating') return;
     setNearState('locating');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -108,7 +113,8 @@ function Main() {
     } catch {
       setNearState('denied');
     }
-  }, [userLoc]);
+  }, [userLoc, nearState]);
+  const closeTrip = useCallback(() => setPeriod(lastList.current), []);
 
   const sources = useMemo(
     () => [...new Set(sightings.map(s => s.source).filter(Boolean))] as string[],
@@ -117,6 +123,24 @@ function Main() {
 
   const allBirds = useMemo(() => groupBirds(sightings, clusters), [sightings, clusters]);
 
+  // ---- trip drawer (saved on this phone only) ----
+  const trip = useTrip(allBirds);
+  const route = useMemo(() => routeOrder(trip.birds, userLoc), [trip.birds, userLoc]);
+  const stopOf = useMemo(() => new Map(route.map((t, i) => [t.bird.key, i + 1])), [route]);
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2200);
+    return () => clearTimeout(t);
+  }, [toast]);
+  const toggleTrip = useCallback((bird: Bird) => {
+    const added = trip.toggle(bird);
+    const n = trip.count + (added ? 1 : -1);
+    setToast(!added ? 'Removed from your trip'
+      : n > MAX_STOPS ? `Saved · ${n} birds (directions cover ${MAX_STOPS} stops)`
+      : `Saved to your trip · ${n} of ${MAX_STOPS} stops`);
+  }, [trip]);
+
   // Selected bird (its detail replaces the list in the sheet)
   const sheetRef = useRef<BottomSheetHandle>(null);
   const [selected, setSelected] = useState<{ key: string; sightingId: number } | null>(null);
@@ -124,12 +148,13 @@ function Main() {
   const weekCount = useMemo(() => allBirds.filter(b => inPeriod(b, 'week')).length, [allBirds]);
 
   const distanceOf = useCallback(
-    (b: Bird) => (period === 'near' && userLoc ? distanceTo(b, userLoc) : null),
+    (b: Bird) => ((period === 'near' || period === 'trip') && userLoc ? distanceTo(b, userLoc) : null),
     [period, userLoc],
   );
 
   // Birds shown in the sheet and on the map: first one is the hero card
   const birds = useMemo(() => {
+    if (period === 'trip') return route.map(t => t.bird).filter(b => matchesQuery(b, query));
     const visible = allBirds.filter(b =>
       inPeriod(b, period) &&
       (!source || b.reports.some(r => r.source === source)) &&
@@ -140,24 +165,28 @@ function Main() {
     // Rarest bird leads as the hero; the rest stay newest-first
     const hero = [...visible].sort(byRarity)[0];
     return hero ? [hero, ...visible.filter(b => b !== hero)] : visible;
-  }, [allBirds, period, source, query, userLoc]);
+  }, [allBirds, period, source, query, userLoc, route]);
 
   const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
     const { lat, lng } = b.latest;
     if (lat == null || lng == null) return [];
     const date = formatDate(b.latest.observed_at);
+    const stop = period === 'trip' ? stopOf.get(b.key) : undefined;
     return [{
       lat, lng, id: b.latest.id,
-      label: b.latest.common_name,
+      label: stop ? `${stop}. ${b.latest.common_name}` : b.latest.common_name,
       sublabel: b.reports.length > 1 ? `${b.reports.length} reports · ${date}` : date,
       color: b.tier.color,
       selected: b.key === selected?.key,
-      tag: b.tier.rank === 3 || b.key === selected?.key,
+      tag: stop != null || b.tier.rank === 3 || b.key === selected?.key,
     }];
-  }), [birds, selected?.key]);
+  }), [birds, selected?.key, period, stopOf]);
 
   // ---- selected bird (detail view in the sheet) ----
-  const selectedBird = selected ? allBirds.find(b => b.key === selected.key) ?? null : null;
+  // A saved bird may have dropped out of the feed; then it only exists in the trip
+  const selectedBird = selected
+    ? allBirds.find(b => b.key === selected.key) ?? trip.birds.find(t => t.bird.key === selected.key)?.bird ?? null
+    : null;
   const selectedSighting = selectedBird
     ? selectedBird.reports.find(r => r.id === selected!.sightingId) ?? selectedBird.latest
     : null;
@@ -169,10 +198,16 @@ function Main() {
     sheetRef.current?.snapTo(1);
   }, []);
   const openSightingById = useCallback((id: number) => {
-    const bird = allBirds.find(b => b.reports.some(r => r.id === id));
+    const bird = [...birds, ...allBirds].find(b => b.reports.some(r => r.id === id));
     if (bird) selectBird(bird, bird.reports.find(r => r.id === id));
-  }, [allBirds, selectBird]);
+  }, [birds, allBirds, selectBird]);
   const closeDetail = useCallback(() => setSelected(null), []);
+  const openOrCloseTrip = useCallback(() => {
+    if (period === 'trip' && !selected) { closeTrip(); return; }
+    setSelected(null);
+    choosePeriod('trip');
+    sheetRef.current?.snapTo(1);
+  }, [period, selected, closeTrip, choosePeriod]);
 
   const focus: MapFocus | null = useMemo(() => {
     if (!selectedSighting || selectedSighting.lat == null || selectedSighting.lng == null) return null;
@@ -200,16 +235,20 @@ function Main() {
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (selected) { setSelected(null); return true; }
+      if (period === 'trip') { closeTrip(); return true; }
       if (sheetRef.current && sheetRef.current.getIndex() === 2) { sheetRef.current.snapTo(1); return true; }
       if (queryText) { setQueryText(''); return true; }
       return false;
     });
     return () => sub.remove();
-  }, [queryText, selected]);
+  }, [queryText, selected, period, closeTrip]);
 
   const mins = updatedAt ? Math.floor((now - updatedAt) / 60000) : null;
   const updatedLabel = mins == null ? 'loading…' : mins < 1 ? 'updated just now' : `updated ${mins} min ago`;
-  const fitKey = `${loading ? 'loading' : 'ready'}|${period}|${source}|${query}`;
+  const fitKey = `${loading ? 'loading' : 'ready'}|${period}|${source}|${query}|${period === 'trip' ? trip.count : ''}`;
+  const me: UserSpot | null = (period === 'near' || period === 'trip') && userLoc
+    ? { ...userLoc, icon: period === 'trip' ? 'car' : 'binoculars' }
+    : null;
 
   return (
     <View style={styles.root}>
@@ -222,7 +261,7 @@ function Main() {
           insets={{ top: searchBottom, bottom: snapPoints[1] }}
           fitKey={fitKey}
           focus={focus}
-          me={period === 'near' ? userLoc : null}
+          me={me}
         />
       </View>
 
@@ -248,7 +287,21 @@ function Main() {
             </Pressable>
           ) : null}
         </View>
+        <Pressable
+          style={[styles.tripBtn, period === 'trip' && styles.tripBtnOn]}
+          onPress={openOrCloseTrip}
+          accessibilityLabel={`Trip, ${trip.count} saved bird${trip.count === 1 ? '' : 's'}`}
+        >
+          <CarIcon size={26} cut={period === 'trip' ? colors.accent : colors.text} />
+          {trip.count ? <Text style={styles.tripCount}>{trip.count}</Text> : null}
+        </Pressable>
       </View>
+
+      {toast ? (
+        <View style={[styles.toast, { top: searchBottom + 10 }]} pointerEvents="none">
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      ) : null}
 
       <BottomSheet
         ref={sheetRef}
@@ -260,6 +313,17 @@ function Main() {
             sighting={selectedSighting}
             distance={distanceOf(selectedBird)}
             onClose={closeDetail}
+            onTrip={trip.has(selectedBird.key)}
+            onToggleTrip={() => toggleTrip(selectedBird)}
+          />
+        ) : period === 'trip' ? (
+          <TripHeader
+            count={trip.count}
+            stops={route.filter(t => t.bird.latest.lat != null && t.bird.latest.lng != null).length}
+            fromYou={!!userLoc}
+            onDirections={() => openTripDirections(route)}
+            onClear={trip.clear}
+            onClose={closeTrip}
           />
         ) : (
           <SheetHeader
@@ -279,6 +343,14 @@ function Main() {
             bird={selectedBird}
             sighting={selectedSighting}
             onSelectReport={r => setSelected({ key: selectedBird.key, sightingId: r.id })}
+            bottomPadding={hidden + insets.bottom}
+          />
+        ) : period === 'trip' ? (
+          <TripList
+            route={query ? route.filter(t => matchesQuery(t.bird, query)) : route}
+            distanceOf={distanceOf}
+            onSelect={b => selectBird(b)}
+            onRemove={trip.remove}
             bottomPadding={hidden + insets.bottom}
           />
         ) : (
@@ -320,4 +392,20 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, fontWeight: '500', color: colors.text, paddingVertical: 0 },
   clear: { fontSize: 15, color: colors.muted, paddingLeft: 8 },
+  tripBtn: {
+    width: SEARCH_BAR_H, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: colors.text,
+    alignItems: 'center', justifyContent: 'center', elevation: 6,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+  },
+  tripBtnOn: { backgroundColor: colors.accent },
+  tripCount: {
+    position: 'absolute', right: -5, top: -5, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5,
+    backgroundColor: colors.accent, color: '#fff', fontSize: 11, fontWeight: '800', textAlign: 'center',
+    lineHeight: 17, borderWidth: 1.5, borderColor: '#fff', overflow: 'hidden',
+  },
+  toast: {
+    position: 'absolute', alignSelf: 'center', backgroundColor: colors.text, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 9, elevation: 8,
+  },
+  toastText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
