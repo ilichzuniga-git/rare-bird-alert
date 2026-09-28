@@ -19,11 +19,11 @@ One-time setup (installing `adb`, the Samsung USB driver, USB debugging, `npm in
    adb reverse tcp:8081 tcp:8081
    ```
 4. **Start Metro from the `mobile` folder** (same terminal):
-   ```bash
+   ```powershell
    cd C:\claude\rba-app\mobile
-   npx expo start
+   $env:REACT_NATIVE_PACKAGER_HOSTNAME="127.0.0.1"; npx expo start
    ```
-   Use plain `npx expo start`, **not** `--localhost` (see the note below). Ignore the `exp://192.168…` address and QR code it prints; the work network blocks that route. Wait for "Logs for your project will appear below".
+   Setting `REACT_NATIVE_PACKAGER_HOSTNAME` makes Metro advertise `exp://127.0.0.1:8081` (in the terminal, the QR code, and Expo Go's "recently opened" list) instead of the laptop's `exp://192.168…` Wi-Fi address, which the work network blocks. Metro still listens on every address, so the USB route keeps working. In Git Bash, use `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo start`. Do **not** use `--localhost` to get the same effect (see the note below). Wait for "Logs for your project will appear below".
 5. **On the phone**, open **Expo Go** → **Enter URL** → `exp://127.0.0.1:8081` → **Connect**. The first load takes a while because Metro builds the bundle; after that it's quick.
 6. **Edit code on the laptop:** saving reloads the app on the phone automatically. Press `r` in the Metro terminal to force a reload.
 7. **Stop:** press `Ctrl+C` in the Metro terminal.
@@ -39,6 +39,7 @@ The app talks to the **production backend** by default, so you don't need Postgr
 | Problem | Fix |
 |---|---|
 | "Something went wrong" / "failed to download remote update" | Metro was started with `--localhost`, or `adb reverse` was lost (it resets when you replug or restart adb). Restart Metro with plain `npx expo start`, re-run `adb reverse tcp:8081 tcp:8081`, reopen `exp://127.0.0.1:8081` |
+| Expo Go opens `exp://192.168…` and can't load | Metro was started without `REACT_NATIVE_PACKAGER_HOSTNAME`, so it advertised the Wi-Fi address. Enter `exp://127.0.0.1:8081` manually, or restart Metro as in step 4 |
 | `adb devices` lists nothing | Try another cable or USB port; on a Samsung, check the Samsung USB driver is installed (see [Troubleshooting](#troubleshooting)) |
 | `ConfigError: … package.json does not exist` | You're in the repo root — `cd mobile` first |
 | Port 8081 already in use | An old Metro is still running: close that terminal, or run `npx kill-port 8081` |
@@ -142,12 +143,12 @@ adb reverse tcp:8081 tcp:8081   # re-run after replugging the phone
 
 ### 2. Start Metro — from `mobile/`, not the repo root
 
-```bash
+```powershell
 cd mobile
-npx expo start
+$env:REACT_NATIVE_PACKAGER_HOSTNAME="127.0.0.1"; npx expo start
 ```
 
-Not `--localhost`: on SDK 57 that binds Metro to IPv6 `[::1]` only, which `adb reverse` can't reach (see the note in [Starting the app in Expo Go](#starting-the-app-in-expo-go-every-session)). `--tunnel` also works, without USB.
+The env var makes Metro advertise `exp://127.0.0.1:8081` instead of the laptop's Wi-Fi IP (which the phone can't reach on isolated networks). Not `--localhost`: on SDK 57 that binds Metro to IPv6 `[::1]` only, which `adb reverse` can't reach (see the note in [Starting the app in Expo Go](#starting-the-app-in-expo-go-every-session)). `--tunnel` also works, without USB.
 
 ### 3. Open in Expo Go
 

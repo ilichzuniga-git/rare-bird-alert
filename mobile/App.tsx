@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
+  Image,
   Keyboard,
   Pressable,
   StyleSheet,
@@ -228,7 +229,7 @@ function Main() {
       {/* Floating search bar */}
       <View style={[styles.topBar, { top: insets.top + 8 }]}>
         <Pressable style={styles.logo} onPress={() => setAboutOpen(true)} accessibilityLabel="About and data sources">
-          <Text style={styles.logoGlyph}>🐦</Text>
+          <Image source={require('./assets/icon.png')} style={styles.logoImage} />
         </Pressable>
         <View style={styles.search}>
           <TextInput
@@ -306,11 +307,12 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   topBar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', gap: 8, alignItems: 'center' },
   logo: {
-    width: SEARCH_BAR_H, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: colors.accent,
-    alignItems: 'center', justifyContent: 'center', elevation: 6,
+    width: SEARCH_BAR_H, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: '#1a7392',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden', elevation: 6,
     shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
   },
-  logoGlyph: { fontSize: 22 },
+  // The app icon has wide padding around the pin; oversize it so the pin fills the button.
+  logoImage: { width: SEARCH_BAR_H * 1.5, height: SEARCH_BAR_H * 1.5 },
   search: {
     flex: 1, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: colors.card, flexDirection: 'row',
     alignItems: 'center', paddingHorizontal: 14, elevation: 6,
