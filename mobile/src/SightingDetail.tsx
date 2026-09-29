@@ -273,10 +273,10 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
         {sighting.cluster_id ? (
           <View style={styles.cta}>
             <Pressable style={[styles.ctaBtn, styles.ctaYes]} onPress={() => detail.openConfirm('refound')} disabled={detail.reporting}>
-              <Text style={styles.ctaYesText}>✓ I refound it</Text>
+              <Text style={styles.ctaYesText}>✓ Refound</Text>
             </Pressable>
             <Pressable style={[styles.ctaBtn, styles.ctaNo]} onPress={() => detail.openConfirm('dipped')} disabled={detail.reporting}>
-              <Text style={styles.ctaNoText}>✗ I dipped</Text>
+              <Text style={styles.ctaNoText}>✗ Dipped</Text>
             </Pressable>
           </View>
         ) : null}
@@ -285,18 +285,30 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
 
         <View style={styles.links}>
           {target ? (
-            <Pressable onPress={() => openInMaps(target.lat, target.lng, exactSpot ? `${sighting.common_name} (observer's spot)` : sighting.common_name)}>
-              <Text style={styles.link}>➤ Directions</Text>
+            <Pressable
+              onPress={() => openInMaps(target.lat, target.lng, exactSpot ? `${sighting.common_name} (observer's spot)` : sighting.common_name)}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.pill, styles.pillDirections, pressed && styles.pillPressed]}
+            >
+              <Text style={[styles.pillText, styles.pillDirectionsText]}>➤ Directions</Text>
             </Pressable>
           ) : null}
           {noteCount ? (
-            <Pressable onPress={() => scrollRef.current?.scrollTo({ y: notesY.current, animated: true })}>
-              <Text style={styles.link}>Notes ({noteCount})</Text>
+            <Pressable
+              onPress={() => scrollRef.current?.scrollTo({ y: notesY.current, animated: true })}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.pill, styles.pillNotes, pressed && styles.pillPressed]}
+            >
+              <Text style={[styles.pillText, styles.pillNotesText]}>Notes ({noteCount})</Text>
             </Pressable>
           ) : null}
           {sighting.species_code ? (
-            <Pressable onPress={() => Linking.openURL(`https://ebird.org/species/${encodeURIComponent(sighting.species_code!)}`)}>
-              <Text style={styles.link}>eBird ↗</Text>
+            <Pressable
+              onPress={() => Linking.openURL(`https://ebird.org/species/${encodeURIComponent(sighting.species_code!)}`)}
+              accessibilityRole="link"
+              style={({ pressed }) => [styles.pill, styles.pillEbird, pressed && styles.pillPressed]}
+            >
+              <Text style={[styles.pillText, styles.pillEbirdText]}>eBird ↗</Text>
             </Pressable>
           ) : null}
         </View>
@@ -444,8 +456,16 @@ const styles = StyleSheet.create({
   ctaNo: { backgroundColor: colors.dippedSoft },
   ctaYesText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   ctaNoText: { color: colors.red, fontWeight: '800', fontSize: 14 },
-  links: { flexDirection: 'row', gap: 18, marginTop: 14, marginBottom: 6 },
-  link: { fontSize: 13, fontWeight: '700', color: colors.accent },
+  links: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14, marginBottom: 6 },
+  pill: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
+  pillPressed: { opacity: 0.7 },
+  pillText: { fontSize: 13, fontWeight: '700' },
+  pillDirections: { backgroundColor: colors.accentSoft },
+  pillDirectionsText: { color: colors.accent },
+  pillNotes: { backgroundColor: '#e8effd' },
+  pillNotesText: { color: '#1d4ed8' },
+  pillEbird: { backgroundColor: '#e3eff4' },
+  pillEbirdText: { color: colors.heroFrom },
 
   // BirdWeather corroboration
   bwCard: { marginTop: 12, backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12, gap: 4 },
