@@ -4,26 +4,29 @@ A mobile app for LA & Orange County birders that shows rare bird sightings from 
 
 ## Starting the app in Expo Go (every session)
 
-**Where this runs:** every command below runs in a terminal **on your laptop** (Command Prompt or PowerShell), inside the `mobile` folder: never on the phone, and never from the repo root (`C:\claude\rba-app` itself has no `package.json`). The phone only comes in at step 5, where you type a URL into the **Expo Go app**.
+**Where this runs:** every command below runs in a terminal **on your laptop** (Command Prompt), inside the `mobile` folder: never on the phone, and never from the repo root (`C:\claude\rba-app` itself has no `package.json`). The phone only comes in at step 5, where you type a URL into the **Expo Go app**.
 
 One-time setup (installing `adb`, the Samsung USB driver, USB debugging, `npm install` in `mobile/`) is covered in [Running the app on your phone](#running-the-app-on-your-phone). After that:
 
 1. **Plug the phone into the laptop over USB** and unlock it.
 2. **Open a terminal on the laptop** and check the phone is connected:
-   ```bash
+   ```bat
    adb devices
    ```
    You should see the phone's serial followed by `device`. If it says `unauthorized`, tap **Allow** on the phone's "Allow USB debugging?" prompt.
 3. **Forward Metro's port to the phone** (same terminal):
-   ```bash
+   ```bat
    adb reverse tcp:8081 tcp:8081
    ```
 4. **Start Metro from the `mobile` folder** (same terminal):
-   ```powershell
+   ```bat
    cd C:\claude\rba-app\mobile
-   $env:REACT_NATIVE_PACKAGER_HOSTNAME="127.0.0.1"; npx expo start
+   set REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1
+   npx expo start
    ```
-   Setting `REACT_NATIVE_PACKAGER_HOSTNAME` makes Metro advertise `exp://127.0.0.1:8081` (in the terminal, the QR code, and Expo Go's "recently opened" list) instead of the laptop's `exp://192.168…` Wi-Fi address, which the work network blocks. Metro still listens on every address, so the USB route keeps working. In Git Bash, use `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo start`. Do **not** use `--localhost` to get the same effect (see the note below). Wait for "Logs for your project will appear below".
+   Type the `set` line exactly, with no spaces around `=`: Command Prompt would keep a space as part of the value. The setting only lasts for this terminal window, so run it again in any new window.
+
+   Setting `REACT_NATIVE_PACKAGER_HOSTNAME` makes Metro advertise `exp://127.0.0.1:8081` (in the terminal, the QR code, and Expo Go's "recently opened" list) instead of the laptop's `exp://192.168…` Wi-Fi address, which the work network blocks. Metro still listens on every address, so the USB route keeps working. In PowerShell, use `$env:REACT_NATIVE_PACKAGER_HOSTNAME="127.0.0.1"; npx expo start` instead; in Git Bash, `REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1 npx expo start`. Do **not** use `--localhost` to get the same effect (see the note below). Wait for "Logs for your project will appear below".
 5. **On the phone**, open **Expo Go** → **Enter URL** → `exp://127.0.0.1:8081` → **Connect**. The first load takes a while because Metro builds the bundle; after that it's quick.
 6. **Edit code on the laptop:** saving reloads the app on the phone automatically. Press `r` in the Metro terminal to force a reload.
 7. **Stop:** press `Ctrl+C` in the Metro terminal.
@@ -146,9 +149,10 @@ adb reverse tcp:8081 tcp:8081   # re-run after replugging the phone
 
 ### 2. Start Metro — from `mobile/`, not the repo root
 
-```powershell
+```bat
 cd mobile
-$env:REACT_NATIVE_PACKAGER_HOSTNAME="127.0.0.1"; npx expo start
+set REACT_NATIVE_PACKAGER_HOSTNAME=127.0.0.1
+npx expo start
 ```
 
 The env var makes Metro advertise `exp://127.0.0.1:8081` instead of the laptop's Wi-Fi IP (which the phone can't reach on isolated networks). Not `--localhost`: on SDK 57 that binds Metro to IPv6 `[::1]` only, which `adb reverse` can't reach (see the note in [Starting the app in Expo Go](#starting-the-app-in-expo-go-every-session)). `--tunnel` also works, without USB.
