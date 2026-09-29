@@ -225,14 +225,11 @@ function BirdWeatherCard({ matches }: { matches: BirdWeatherMatch[] }) {
     <View style={styles.bwCard}>
       <Text style={styles.bwTitle}>🎧 Also heard by a BirdWeather station</Text>
       {shown.map(m => (
-        <View key={`${m.station_id}-${m.date}`} style={styles.bwRow}>
-          <Text style={styles.bwLink} onPress={() => Linking.openURL(m.station_url)} numberOfLines={1}>
-            {m.station_name} ↗
-          </Text>
-          <Text style={styles.bwMeta}>
-            {' · '}{formatCalendarDate(m.date)}{' · '}{m.detections} detection{m.detections === 1 ? '' : 's'}
-          </Text>
-        </View>
+        // One Text with nested runs, so a long station name wraps instead of clipping the rest
+        <Text key={`${m.station_id}-${m.date}`} style={styles.bwMeta}>
+          <Text style={styles.bwLink} onPress={() => Linking.openURL(m.station_url)}>{m.station_name} ↗</Text>
+          {' · '}{formatCalendarDate(m.date)}{' · '}{m.detections} detection{m.detections === 1 ? '' : 's'}
+        </Text>
       ))}
       <Text style={styles.bwCredit}>
         Acoustic ID by{' '}
@@ -453,7 +450,6 @@ const styles = StyleSheet.create({
   // BirdWeather corroboration
   bwCard: { marginTop: 12, backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12, gap: 4 },
   bwTitle: { fontSize: 13, fontWeight: '800', color: colors.accent, marginBottom: 2 },
-  bwRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
   bwLink: { fontSize: 13, fontWeight: '700', color: '#1d4ed8' },
   bwMeta: { fontSize: 12, color: colors.muted },
   bwCredit: { fontSize: 11, color: colors.muted, marginTop: 6, lineHeight: 15 },
