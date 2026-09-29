@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const { CLUSTER_RADIUS_M } = require('../clustering');
 const { REGION_TIME_ZONE } = require('../time');
+const { STATION_URL_BASE } = require('../birdweather');
 
 // Abuse guards for anonymous refound/dipped reports, keyed by client IP.
 // In-memory is fine: the backend runs as a single replica, and a restart
@@ -163,7 +164,42 @@ router.get('/:id', async (req, res) => {
       console.error('[GET /api/clusters/:id] days query failed:', err.message);
     }
 
-    res.json({ cluster: { ...rows[0], status: clusterStatus(rows[0]), radius_m: CLUSTER_RADIUS_M, days } });
+    // BirdWeather corroboration: small set of nearby stations that also heard
+    // this species on a day the cluster was reported. Best-effort; never break
+    // the detail view if the table or query is missing.
+    let birdweather = [];
+    try {
+      const { rows: bw } = await db.query(
+        `SELECT station_id, station_name, species_name,
+                to_char(detected_on, 'YYYY-MM-DD') AS date,
+                detection_count, max_confidence
+           FROM birdweather_matches
+          WHERE cluster_id = $1
+          ORDER BY detected_on DESC, max_confidence DESC
+          LIMIT 5`,
+        [clusterId]
+      );
+      birdweather = bw.map(m => ({
+        station_id:     m.station_id,
+        station_name:   m.station_name,
+        station_url:    `${STATION_URL_BASE}${m.station_id}`,
+        date:           m.date,
+        detections:     m.detection_count,
+        max_confidence: Number(m.max_confidence),
+      }));
+    } catch (err) {
+      console.error('[GET /api/clusters/:id] birdweather query failed:', err.message);
+    }
+
+    res.json({
+      cluster: {
+        ...rows[0],
+        status: clusterStatus(rows[0]),
+        radius_m: CLUSTER_RADIUS_M,
+        days,
+        birdweather,
+      }
+    });
   } catch (err) {
     console.error('[GET /api/clusters/:id]', err.message);
     res.status(500).json({ error: 'Internal server error' });

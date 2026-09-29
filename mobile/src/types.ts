@@ -24,6 +24,15 @@ export interface Sighting {
 // ---- Cluster types ----
 export interface ClusterPin { lat: number; lng: number; observed_at: string; source: string; }
 
+export interface BirdWeatherMatch {
+  station_id: string;
+  station_name: string;
+  station_url: string;
+  date: string; // YYYY-MM-DD, Pacific
+  detections: number;
+  max_confidence: number;
+}
+
 export interface ClusterData {
   id: number;
   center_lat: number;
@@ -41,6 +50,8 @@ export interface ClusterData {
   status: { label: string; level: 'green' | 'amber' | 'red' | 'gray' };
   /** Last 7 days, oldest first (single-cluster endpoint only) */
   days?: ClusterDay[];
+  /** BirdWeather corroboration (single-cluster endpoint only) */
+  birdweather?: BirdWeatherMatch[];
 }
 
 export interface ClusterDay {

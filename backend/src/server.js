@@ -6,6 +6,7 @@ const sightingsRouter = require('./routes/sightings');
 const devicesRouter  = require('./routes/devices');
 const clustersRouter = require('./routes/clusters');
 const { startPoller } = require('./poller');
+const { startBirdWeatherJob } = require('./birdweather');
 const { ensureLoaded: loadTaxonomy } = require('./ebirdTaxonomy');
 const { warm: warmRarity } = require('./rarity');
 
@@ -33,6 +34,7 @@ app.use('/api/clusters', clustersRouter);
 app.listen(config.port, () => {
   console.log(`RBA backend listening on port ${config.port}`);
   startPoller();
+  startBirdWeatherJob();
   loadTaxonomy(); // warm the caches so the first /api/sightings isn't slowed by them
   warmRarity();
 });

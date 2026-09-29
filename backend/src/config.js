@@ -16,4 +16,11 @@ module.exports = {
     // How many days back to search for recent observations.
     lookbackDays:     parseInt(process.env.INAT_LOOKBACK_DAYS || '30', 10),
   },
+  birdweather: {
+    enabled:        process.env.BIRDWEATHER_ENABLED === 'true',
+    // BirdNET confidence threshold; single rare detections are often misIDs.
+    minConfidence:  parseFloat(process.env.BIRDWEATHER_MIN_CONFIDENCE || '0.7'),
+    // Cap how many active clusters one run will check against BirdWeather.
+    maxClustersPerRun: parseInt(process.env.BIRDWEATHER_MAX_CLUSTERS || '25', 10),
+  },
 };

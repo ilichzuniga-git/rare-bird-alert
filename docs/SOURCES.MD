@@ -59,7 +59,7 @@ Photos are the photographers' work, each under its own license.
 ## Expo push notification service
 - `backend/src/notifications.js` sends pushes via `exp.host`. Tokens are anonymous; tokens Expo reports as `DeviceNotRegistered` are deleted.
 
-## BirdWeather (permission granted, not yet integrated)
+## BirdWeather (integrated)
 - GraphQL API at `app.birdweather.com/graphql`: acoustic BirdNET detections from ~100 LA/OC stations, with eBird species codes, confidence scores and community votes. Open without a key as of 2026-09-23.
 - No rarity flag, and unverified machine IDs of rare species are mostly false positives, so it isn't suitable as a rarity source. It could work as corroboration (a nearby station hearing a known rare bird).
 - BirdWeather's ToS (2022) allows personal, non-commercial use only and bars automated access, storage and redistribution, so we asked for written permission.
@@ -69,4 +69,5 @@ Photos are the photographers' work, each under its own license.
   - Store only the match result (station, species, date, confidence). No audio.
   - Credit BirdWeather and BirdNET and link to the station's BirdWeather page.
   - App stays free: no ads, fees, resale or subscriptions.
+- **Integration (2026-09-29):** `backend/src/birdweather.js` (job, 3×/hour, up to 25 active clusters, sequential calls), table `birdweather_matches` (migration 016), shown in the bird detail view by `mobile/src/SightingDetail.tsx` and credited in `AboutModal.tsx`. Off unless `BIRDWEATHER_ENABLED=true`. Match rule: ≥2 detections at ≥0.7 confidence from one station on one Pacific day the bird was also reported, detection within 300 m of the cluster centre, stations with location privacy skipped. Stores station id/name, species name, date, count and max confidence only; matches are purged after 28 days.
 - Anything beyond that scope (alerts from detections, storing audio, a paid tier) needs a new ask. Tim asked to be kept posted, so let him know when it ships.

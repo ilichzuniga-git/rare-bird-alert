@@ -73,6 +73,19 @@ export default function AboutModal({ visible, onClose }: { visible: boolean; onC
             </Text>
           </Section>
 
+          <Section title="BirdWeather & BirdNET">
+            <Text style={styles.p}>
+              On rare birds that birders have already reported, the app may show "Also heard by a
+              BirdWeather station" — acoustic detections from nearby{' '}
+              <Link url="https://www.birdweather.com">BirdWeather</Link> stations that picked up the
+              same species on the same day. BirdWeather audio is processed by{' '}
+              <Link url="https://birdnet.cornell.edu">BirdNET</Link> (Cornell Lab of Ornithology and
+              Chemnitz University of Technology). Used with BirdWeather's permission, only to support a
+              report that people already made. These detections never create sightings, clusters,
+              alerts, or push notifications on their own, and no audio is stored.
+            </Text>
+          </Section>
+
           <Section title="Photos">
             <Text style={styles.p}>
               Bird photos belong to the photographers who shared them on iNaturalist under Creative Commons

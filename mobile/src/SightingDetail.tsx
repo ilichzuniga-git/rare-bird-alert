@@ -18,7 +18,7 @@ import { colors, radius, STATUS_DOT } from './theme';
 import {
   API_BASE, distanceMetres, findNoteCoordinates, formatDate, formatDateTime, formatDistance, formatSource, openInMaps,
 } from './util';
-import type { ClusterData, ClusterDay, CommentsPayload, Sighting } from './types';
+import type { BirdWeatherMatch, ClusterData, ClusterDay, CommentsPayload, Sighting } from './types';
 
 /** Play the bundled bird chirp sound. */
 async function playChirp() {
@@ -36,6 +36,12 @@ async function playChirp() {
   } catch {
     // Sound is best-effort — never block the UI
   }
+}
+
+/** 'YYYY-MM-DD' as 'Sep 29'. A bare date parses as UTC midnight (the day before, in
+ *  California), so parse it as local midnight instead. */
+function formatCalendarDate(yyyyMmDd: string): string {
+  return formatDate(`${yyyyMmDd}T00:00:00`);
 }
 
 type ReportType = 'refound' | 'dipped';
@@ -212,6 +218,33 @@ function DayStrip({ days }: { days: ClusterDay[] }) {
   );
 }
 
+function BirdWeatherCard({ matches }: { matches: BirdWeatherMatch[] }) {
+  if (!matches.length) return null;
+  const shown = matches.slice(0, 3);
+  return (
+    <View style={styles.bwCard}>
+      <Text style={styles.bwTitle}>🎧 Also heard by a BirdWeather station</Text>
+      {shown.map(m => (
+        <View key={`${m.station_id}-${m.date}`} style={styles.bwRow}>
+          <Text style={styles.bwLink} onPress={() => Linking.openURL(m.station_url)} numberOfLines={1}>
+            {m.station_name} ↗
+          </Text>
+          <Text style={styles.bwMeta}>
+            {' · '}{formatCalendarDate(m.date)}{' · '}{m.detections} detection{m.detections === 1 ? '' : 's'}
+          </Text>
+        </View>
+      ))}
+      <Text style={styles.bwCredit}>
+        Acoustic ID by{' '}
+        <Text style={styles.bwCreditLink} onPress={() => Linking.openURL('https://birdnet.cornell.edu')}>BirdNET</Text>
+        , via{' '}
+        <Text style={styles.bwCreditLink} onPress={() => Linking.openURL('https://www.birdweather.com')}>BirdWeather</Text>
+        . Machine IDs; not a confirmed sighting.
+      </Text>
+    </View>
+  );
+}
+
 export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPadding }: {
   detail: SightingDetailState;
   bird: Bird;
@@ -250,6 +283,8 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
             </Pressable>
           </View>
         ) : null}
+
+        {cluster?.birdweather?.length ? <BirdWeatherCard matches={cluster.birdweather} /> : null}
 
         <View style={styles.links}>
           {target ? (
@@ -414,6 +449,15 @@ const styles = StyleSheet.create({
   ctaNoText: { color: colors.red, fontWeight: '800', fontSize: 14 },
   links: { flexDirection: 'row', gap: 18, marginTop: 14, marginBottom: 6 },
   link: { fontSize: 13, fontWeight: '700', color: colors.accent },
+
+  // BirdWeather corroboration
+  bwCard: { marginTop: 12, backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12, gap: 4 },
+  bwTitle: { fontSize: 13, fontWeight: '800', color: colors.accent, marginBottom: 2 },
+  bwRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
+  bwLink: { fontSize: 13, fontWeight: '700', color: '#1d4ed8' },
+  bwMeta: { fontSize: 12, color: colors.muted },
+  bwCredit: { fontSize: 11, color: colors.muted, marginTop: 6, lineHeight: 15 },
+  bwCreditLink: { color: '#1d4ed8', textDecorationLine: 'underline' },
 
   // reports
   section: { fontSize: 12, fontWeight: '700', color: colors.muted, marginTop: 14, marginBottom: 8 },

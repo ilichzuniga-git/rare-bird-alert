@@ -97,6 +97,9 @@ INAT_ENABLED=true
 INAT_RARITY_THRESHOLD=50
 INAT_LOOKBACK_DAYS=30
 
+# BirdWeather corroboration (no API key required; off unless true)
+BIRDWEATHER_ENABLED=true
+
 PORT=3000
 ```
 
@@ -247,6 +250,7 @@ EBIRD_ENABLED=true
 INAT_ENABLED=true
 INAT_RARITY_THRESHOLD=20
 INAT_LOOKBACK_DAYS=30
+BIRDWEATHER_ENABLED=true
 ```
 
 If you need to run database migrations on the production server, open the **Docker Terminal** in the Dokploy app service and run:
@@ -534,12 +538,13 @@ Comments are fetched on demand and never stored in the local database.
 - [x] Swipe a bird sideways to remove it; two-tap "Clear"
 - [x] On-device storage via `expo-file-system` (a JSON file in the app's private documents folder). It was already in the lockfile as a dependency of `expo`, so no new third-party package was needed
 
-**BirdWeather corroboration.** Permission granted 2026-09-28; stay within the scope in [docs/SOURCES.MD](docs/SOURCES.MD#birdweather-permission-granted-not-yet-integrated).
-- [ ] Backend job: for each active rare-bird report, query BirdWeather for high-confidence detections of that species within ~300 m on the same days, a few times an hour
-- [ ] Only count a match with ≥2 detections (single rare detections are often misidentifications)
-- [ ] Store only the match (station, species, date, confidence), never audio
-- [ ] "Also heard by a BirdWeather station" tag in the bird detail view, crediting BirdWeather and BirdNET and linking to the station page
-- [ ] Detections never create alerts or reports on their own
+**BirdWeather corroboration.** Permission granted 2026-09-28; stay within the scope in [docs/SOURCES.MD](docs/SOURCES.MD#birdweather-integrated).
+- [x] Backend job: for each active rare-bird report, query BirdWeather for high-confidence detections of that species within ~300 m on the same days, a few times an hour
+- [x] Only count a match with ≥2 detections (single rare detections are often misidentifications)
+- [x] Store only the match (station, species, date, confidence), never audio
+- [x] "Also heard by a BirdWeather station" tag in the bird detail view, crediting BirdWeather and BirdNET and linking to the station page
+- [x] Detections never create alerts or reports on their own
+- [x] Off unless `BIRDWEATHER_ENABLED=true`. Code: `backend/src/birdweather.js`, migration 016, `SightingDetail.tsx`; plan in [docs/BIRDWEATHER_PLAN.md](docs/BIRDWEATHER_PLAN.md)
 - [ ] Let Tim at BirdWeather know when it ships
 
 ### Ideas worth exploring
