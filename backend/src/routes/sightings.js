@@ -59,6 +59,7 @@ router.get('/', async (req, res) => {
         s.source, s.source_id,
         s.common_name, s.scientific_name, s.species_code,
         s.lat, s.lng, s.location_name, s.location_id,
+        s.location_accuracy_m, s.location_obscured,
         s.observed_at, s.how_many, s.rarity_count, s.photo_url, s.photo_attribution,
         s.notes, s.cluster_id, s.created_at
       FROM sightings s

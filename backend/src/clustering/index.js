@@ -54,7 +54,10 @@ async function recomputeCentroid(clusterId) {
  *   4. Recompute centroids for every touched cluster.
  */
 async function clusterSightings() {
-  // Fetch unclustered sightings that have coordinates
+  // Fetch unclustered sightings that have coordinates.
+  // Exclude iNaturalist obscured sightings: their public lat/lng is a randomised
+  // point that could be kilometres away, so including it would warp cluster centroids
+  // (which are an AVG of all member coordinates) and pull real sightings towards it.
   const { rows: unclustered } = await db.query(`
     SELECT id,
            COALESCE(scientific_name, common_name) AS species_key,
@@ -62,6 +65,7 @@ async function clusterSightings() {
            lat, lng, observed_at, source_id
     FROM sightings
     WHERE cluster_id IS NULL AND lat IS NOT NULL AND lng IS NOT NULL
+      AND NOT location_obscured
     ORDER BY observed_at ASC
   `);
 

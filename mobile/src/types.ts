@@ -17,6 +17,11 @@ export interface Sighting {
   photo_url: string | null;
   photo_attribution: string | null;
   location_id: string | null;
+  // iNaturalist public_positional_accuracy in metres; null for unknown/older backend rows
+  location_accuracy_m: number | null;
+  // True when iNaturalist (or a sensitive species) has hidden the true location;
+  // the public lat/lng is then a randomised point within ±location_accuracy_m
+  location_obscured: boolean;
   notes: string | null;
   cluster_id: number | null;
 }

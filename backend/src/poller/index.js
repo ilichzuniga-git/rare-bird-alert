@@ -39,14 +39,17 @@ async function pollAll() {
             `INSERT INTO sightings
                (region_code, source, source_id, species_code, common_name, scientific_name,
                 lat, lng, location_name, location_id, observed_at, how_many, rarity_count,
-                photo_url, photo_attribution, notes)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+                photo_url, photo_attribution, notes,
+                location_accuracy_m, location_obscured)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
              ON CONFLICT (source, source_id, COALESCE(species_code, '')) DO UPDATE SET
-               location_id       = COALESCE(sightings.location_id, EXCLUDED.location_id),
-               photo_url         = COALESCE(sightings.photo_url, EXCLUDED.photo_url),
-               photo_attribution = COALESCE(sightings.photo_attribution, EXCLUDED.photo_attribution),
-               notes             = COALESCE(sightings.notes, EXCLUDED.notes),
-               observed_at       = EXCLUDED.observed_at
+               location_id         = COALESCE(sightings.location_id, EXCLUDED.location_id),
+               photo_url           = COALESCE(sightings.photo_url, EXCLUDED.photo_url),
+               photo_attribution   = COALESCE(sightings.photo_attribution, EXCLUDED.photo_attribution),
+               notes               = COALESCE(sightings.notes, EXCLUDED.notes),
+               observed_at         = EXCLUDED.observed_at,
+               location_accuracy_m = EXCLUDED.location_accuracy_m,
+               location_obscured   = EXCLUDED.location_obscured
              RETURNING (xmax = 0) AS inserted`,
             [
               s.region_code, s.source, s.source_id, s.species_code,
@@ -54,6 +57,7 @@ async function pollAll() {
               s.lat, s.lng, s.location_name, s.location_id ?? null,
               s.observed_at, s.how_many, s.rarity_count ?? null,
               s.photo_url ?? null, s.photo_attribution ?? null, s.notes ?? null,
+              s.location_accuracy_m ?? null, s.location_obscured === true,
             ]
           );
           if (result.rows[0]?.inserted) newCount++;

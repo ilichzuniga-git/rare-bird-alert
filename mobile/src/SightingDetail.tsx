@@ -242,6 +242,32 @@ function BirdWeatherCard({ matches }: { matches: BirdWeatherMatch[] }) {
   );
 }
 
+/** The report's own location, labelled by what it means for its source: an eBird
+ *  location is often a hotspot for the whole site, an iNaturalist one carries an
+ *  accuracy, and a hidden iNaturalist one is a random point that must not open Maps. */
+function ReportLocationLabel({ sighting, point }: { sighting: Sighting; point: { lat: number; lng: number } | null }) {
+  if (!point) return null;
+  const accuracy = sighting.location_accuracy_m;
+  if (sighting.location_obscured === true) {
+    return (
+      <View style={styles.mapsRow}>
+        <Text style={styles.mapsTextApprox}>
+          📍 Approximate location, hidden by iNaturalist{accuracy != null ? ` (within ~${formatDistance(accuracy)})` : ''}
+        </Text>
+      </View>
+    );
+  }
+  const coords = `(${point.lat.toFixed(5)}, ${point.lng.toFixed(5)})`;
+  const label = sighting.source === 'ebird'
+    ? `eBird location${sighting.location_name ? `: ${sighting.location_name}` : ` ${coords}`}`
+    : `${formatSource(sighting.source)} location ${coords}${accuracy != null ? ` · ±${formatDistance(accuracy)}` : ''}`;
+  return (
+    <Pressable style={styles.mapsRow} onPress={() => openInMaps(point.lat, point.lng, sighting.common_name)}>
+      <Text style={styles.mapsText}>📍 {label}</Text>
+    </Pressable>
+  );
+}
+
 export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPadding }: {
   detail: SightingDetailState;
   bird: Bird;
@@ -257,7 +283,10 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
   const level = cluster?.status.level ?? bird.cluster?.status.level ?? 'gray';
   const weekReports = cluster?.days?.reduce((n, d) => n + d.sightings, 0);
   const noteCount = (payload?.observer_note ? 1 : 0) + comments.length;
-  const target = exactSpot ?? reportPoint;
+  // For an obscured iNaturalist location we must never offer Directions to the
+  // randomised point — only to the observer's exact spot if the notes include one.
+  const obscured = sighting.location_obscured === true;
+  const target = exactSpot ?? (obscured ? null : reportPoint);
 
   return (
     <>
@@ -331,18 +360,12 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
           </>
         ) : null}
 
-        {reportPoint ? (
-          <Pressable style={styles.mapsRow} onPress={() => openInMaps(reportPoint.lat, reportPoint.lng, sighting.common_name)}>
-            <Text style={styles.mapsText}>
-              📍 This report's location ({reportPoint.lat.toFixed(5)}, {reportPoint.lng.toFixed(5)})
-            </Text>
-          </Pressable>
-        ) : null}
+        <ReportLocationLabel sighting={sighting} point={reportPoint} />
         {exactSpot && reportPoint ? (
           <Pressable style={styles.mapsRow} onPress={() => openInMaps(exactSpot.lat, exactSpot.lng, `${sighting.common_name} (observer's spot)`)}>
             <Text style={[styles.mapsText, styles.exactText]}>
               🎯 Observer's exact spot ({exactSpot.lat.toFixed(5)}, {exactSpot.lng.toFixed(5)}) · ~
-              {formatDistance(distanceMetres(exactSpot.lat, exactSpot.lng, reportPoint.lat, reportPoint.lng))} from the report pin
+              {formatDistance(distanceMetres(exactSpot.lat, exactSpot.lng, reportPoint.lat, reportPoint.lng))} from the {formatSource(sighting.source)} location
             </Text>
           </Pressable>
         ) : null}
@@ -484,6 +507,7 @@ const styles = StyleSheet.create({
   chipTextOn: { color: '#fff' },
   mapsRow: { marginTop: 10 },
   mapsText: { fontSize: 13, fontWeight: '600', color: '#1d4ed8' },
+  mapsTextApprox: { fontSize: 13, fontWeight: '600', color: colors.amber },
   exactText: { color: '#c2410c' },
 
   // notes

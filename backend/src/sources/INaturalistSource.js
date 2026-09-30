@@ -172,6 +172,11 @@ class INaturalistSource extends SightingSource {
       photo_url:         photoUsable ? (defaultPhoto?.square_url ?? null) : null,
       photo_attribution: photoUsable ? (defaultPhoto?.attribution ?? null) : null,
       notes:             obs.description || null,
+      // Use public_positional_accuracy, never positional_accuracy — the latter is the
+      // observer's private accuracy and is unrelated to the randomised public point
+      // when the location is obscured.
+      location_accuracy_m: Number.isFinite(obs.public_positional_accuracy) ? Math.round(obs.public_positional_accuracy) : null,
+      location_obscured:   obs.obscured === true,
     };
   }
 

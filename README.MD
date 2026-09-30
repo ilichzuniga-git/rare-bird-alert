@@ -422,7 +422,7 @@ The app is **free and non-commercial**. That's what lets it use eBird's API unde
 
 **eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key. Notable sightings can include reports not yet confirmed by eBird reviewers.
 
-**iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. No API key required. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
+**iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. Each sighting stores iNaturalist's public location accuracy (`location_accuracy_m`) and whether the location is hidden (`location_obscured`, migration 017). No API key required. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
 
 **eBird species codes for iNaturalist sightings** — iNaturalist has no eBird codes, so the backend downloads eBird's taxonomy once a day (`backend/src/ebirdTaxonomy.js`) and fills in `species_code` by scientific name in `/api/sightings` responses. Only the response is changed. The database column stays `NULL` for iNaturalist rows, because it is part of the sightings dedupe key.
 
@@ -476,7 +476,7 @@ Each bird gets a color-coded rarity tier from the species' **all-time research-g
 
 ### Continuing bird clusters
 
-After each poll the backend runs a spatial clustering pass. Sightings of the same species within 300m of each other are grouped into a **cluster** representing a single continuing individual. Each cluster tracks:
+After each poll the backend runs a spatial clustering pass. Sightings of the same species within 300m of each other are grouped into a **cluster** representing a single continuing individual. iNaturalist sightings with a hidden location are left out, since their random point would pull the cluster's centre away. Each cluster tracks:
 
 - First and last sighting date
 - Number of distinct observer checklists
@@ -501,12 +501,17 @@ The status label shown on each card and in the map modal is derived from these v
 
 Opened by tapping a map pin, or the **location address** on any sighting card. It shows:
 
-- **Header:** the bird's name, location and continuing status, plus an **eBird species page ↗** link.
+- **Header:** the bird's name, location and continuing status.
 - **Map:** the report's location with a dashed green circle for the 300m cluster stakeout zone, and trail dots for the other sightings of the same individual.
 - **✓ Refound** and **✗ Dipped** buttons.
+- **Link pills:** **➤ Directions** (green; to the observer's exact spot when the notes have one, otherwise the report's location, and hidden for a location iNaturalist has hidden), **Notes (N)** (blue; scrolls to the notes) and **eBird ↗** (teal; the species page).
+- **🎧 Also heard by a BirdWeather station**, when a nearby station corroborates the bird (see [Roadmap](#roadmap)).
 - **Report chips**, when the bird has several reports: one chip per report (date, time, source). Selecting a chip switches the map, coordinates and observer notes to that report.
-- **📍 Open this report's location in Maps:** opens the phone's maps app at the report's exact coordinates for directions.
-- **🎯 Open observer's exact spot in Maps:** shown when the observer typed coordinates into their notes, which birders often do because hotspot reports all share the hotspot's pin. Decimal (`34.15575° N, 118.28397° W`, `34.15575, -118.28397`) and degree-minute-second (`34°09'20.7"N 118°17'02.3"W`) formats are recognised. Only coordinates within 25km of the report are accepted. The spot also gets an orange target marker on the map, with its distance from the report pin.
+- **📍 The report's location**, labelled by source because it means different things, and opens the phone's maps app when tapped:
+  - **eBird location: Ballona Lagoon**: the location the observer chose in eBird, often a hotspot pin for the whole site.
+  - **iNaturalist location (lat, lng) · ±450 m**: where the observation was made, with iNaturalist's public accuracy.
+  - **Approximate location, hidden by iNaturalist (within ~29 km)**, in amber and not tappable: iNaturalist hides the true spot for sensitive species or when the observer turns on location privacy, and publishes a random point instead.
+- **🎯 Open observer's exact spot in Maps:** shown when the observer typed coordinates into their notes, which birders often do because hotspot reports all share the hotspot's pin. Decimal (`34.15575° N, 118.28397° W`, `34.15575, -118.28397`) and degree-minute-second (`34°09'20.7"N 118°17'02.3"W`) formats are recognised. Only coordinates within 25km of the report are accepted. The spot also gets an orange target marker on the map, with its distance from the report's location ("~270 m from the eBird location").
 - **Observer notes and comments** for the selected report.
 
 Tapping Refound or Dipped shows a confirmation sheet. The app requests foreground GPS permission and displays your distance from the cluster centre (e.g. "You are ~120m from this spot"). If you appear to be more than 1km away, an amber warning is shown.

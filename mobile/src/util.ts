@@ -34,6 +34,7 @@ export function openAllAboutBirds(commonName: string) {
 export function formatSource(source: string | null): string {
   if (!source) return 'Unknown';
   if (source.toLowerCase() === 'ebird') return 'eBird';
+  if (source.toLowerCase() === 'inaturalist') return 'iNaturalist';
   return source.charAt(0).toUpperCase() + source.slice(1);
 }
 
