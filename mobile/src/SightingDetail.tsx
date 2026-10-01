@@ -103,8 +103,8 @@ export function useSightingDetail(sighting: Sighting | null) {
     if (clusterId == null) return;
     setReporting(true);
     try {
-      const body: Record<string, unknown> = { type };
-      if (userLocation) { body.lat = userLocation.lat; body.lng = userLocation.lng; }
+      // Location stays on the phone (it only drives the distance check); the report is just its type
+      const body = { type };
       const res = await fetch(`${API_BASE}/api/clusters/${clusterId}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

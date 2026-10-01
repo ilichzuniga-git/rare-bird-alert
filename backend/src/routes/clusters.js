@@ -207,9 +207,10 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/clusters/:id/report
-// Body: { type: 'refound' | 'dipped', device_id?: string, lat?: number, lng?: number }
+// Body: { type: 'refound' | 'dipped' }
+// Older app builds also send device_id / lat / lng; they are ignored and never stored.
 router.post('/:id/report', async (req, res) => {
-  const { type, device_id, lat, lng } = req.body || {};
+  const { type } = req.body || {};
   if (!['refound', 'dipped'].includes(type)) {
     return res.status(400).json({ error: 'type must be "refound" or "dipped"' });
   }
@@ -237,9 +238,8 @@ router.post('/:id/report', async (req, res) => {
 
     // Insert report
     await db.query(
-      `INSERT INTO cluster_reports (cluster_id, type, device_id, lat, lng)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [clusterId, type, device_id || null, lat || null, lng || null]
+      `INSERT INTO cluster_reports (cluster_id, type) VALUES ($1, $2)`,
+      [clusterId, type]
     );
 
     // Update cluster aggregate stats

@@ -263,6 +263,16 @@ If you need to run database migrations on the production server, open the **Dock
 node src/db/migrate.js
 ```
 
+### Security
+
+- **Database:** the `rba-db` Postgres service has no external port (only the backend reaches it, over Dokploy's internal network), a long random password, and scheduled backups to Cloudflare. Every query is parameterized.
+- **Backend:** `helmet` security headers; JSON bodies capped at 10 KB; IP rate limits (`trust proxy` is set, so these see the real client IP behind Traefik):
+  - all `/api` routes: 600 requests per 15 minutes
+  - `POST /api/devices/register`: 20 per hour, Expo push tokens only
+  - `POST /api/clusters/:id/report`: 10 per 15 minutes, plus the one-per-hour duplicate rule
+- **Dependencies:** pinned to exact versions and vetted before install (publish age plus `npm audit`); see the workspace `security.md`.
+- **Stored personal data:** push tokens and anonymous Refound/Dipped reports (bird, type, time). No accounts, locations or IPs are stored. Keep `backend/src/privacy.html` and the Play Data safety form in step with any change here.
+
 ---
 
 ## Updating the app
@@ -362,6 +372,8 @@ The app is distributed to beta testers via Google Play's Internal Testing track.
 4. Click **Create new release**
 5. Upload the `.aab` file, add release notes, and click **Save and publish**
 6. Testers receive the update automatically through the Play Store within a few minutes
+
+To put a build that's already uploaded on another track (Internal and Closed testing, say), click **Create new release → Add from library** and pick it. Uploading the same `.aab` again fails with "Version code N has already been used", and a rebuild would give the tracks different version codes.
 
 ### Adding new testers
 
@@ -519,7 +531,8 @@ Tapping Refound or Dipped shows a confirmation sheet. The app requests foregroun
 On confirming a Refound:
 - the cluster's `last_refound_at` is updated immediately for all users
 - a short bird chirp plays
-- your GPS coordinates (if available) are stored with the report
+
+Your GPS position stays on the phone: it only drives the distance check. A report stores just the bird, Refound or Dipped, and the time. Builds up to 1.3.0 still send coordinates and a device id; the backend ignores them, and migration 018 dropped the columns that used to hold them.
 
 Reports are anonymous (no account required). To limit abuse, the backend:
 - accepts at most 10 reports per IP per 15 minutes

@@ -17,7 +17,7 @@
 <body>
 <main>
 <h1>Privacy Policy</h1>
-<p class="muted">Birder's Best Friend · last updated September 24, 2026</p>
+<p class="muted">Birder's Best Friend · last updated October 1, 2026</p>
 
 <p>Birder's Best Friend is a free, non-commercial Android app that shows rare bird sightings in
 Los Angeles and Orange Counties. It has no accounts, no ads, and no analytics or tracking. This
@@ -25,9 +25,9 @@ page explains the little data the app does handle.</p>
 
 <h2>What the app collects</h2>
 <ul>
-  <li><strong>Location, only when you send a report.</strong> When you tap "Refound" or
-    "Dipped" and have allowed location access, your phone's coordinates are sent with the
-    report and stored on our server. Reports work without location if you decline.</li>
+  <li><strong>Refound and dipped reports.</strong> When you tap "Refound" or "Dipped", the server
+    stores only which bird it was, which button you tapped, and when. It does not store your
+    location or any identifier for your phone.</li>
   <li><strong>A push notification token.</strong> If you allow notifications, the app registers
     a token (issued by Expo and Google Firebase Cloud Messaging) with our server so it can send
     rare-bird alerts. The token identifies the app install for delivery, not you.</li>
@@ -36,12 +36,16 @@ page explains the little data the app does handle.</p>
 them.</p>
 
 <h2>What stays on your phone</h2>
-<p>The "Near me" view uses your location only on your device, to sort birds by distance and show
-your spot on the map. That location is not sent to our server.</p>
+<p>The app uses your location only on your device: to sort birds by distance and show your spot
+on the map in the "Near me" view, and to show how far you are from a bird when you report it. That
+location is not sent to our server.</p>
+<p>Earlier versions of the app sent your coordinates with each report. Since October 1, 2026 the
+server discards them if an older version still sends them, and the locations that earlier reports
+had stored have been deleted.</p>
 
 <h2>How it's used</h2>
-<p>Only to run the app: report locations help show whether a bird is still being seen, and push
-tokens are used to deliver alerts. We do not sell, rent, or share this data, and we don't use it
+<p>Only to run the app: reports help show whether a bird is still being seen, and push tokens are
+used to deliver alerts. We do not sell, rent, or share this data, and we don't use it
 for advertising.</p>
 
 <h2>Services the app talks to</h2>
@@ -59,7 +63,7 @@ those services.</p>
 
 <h2>Security and retention</h2>
 <p>All data is sent over encrypted HTTPS connections. Our server briefly keeps IP addresses in
-memory to limit report spam; they are not stored. Push tokens are deleted when they stop working
+memory (for at most an hour) to limit spam and abuse; the app never saves them to its database. Push tokens are deleted when they stop working
 (for example, after you uninstall the app). Reports are kept to show each bird's history.</p>
 
 <h2>Your choices</h2>
