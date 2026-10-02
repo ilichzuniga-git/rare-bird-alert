@@ -45,6 +45,8 @@ There's no `adb reverse` on iOS, so the phone reaches Metro over the network.
 - **Same Wi-Fi, no client isolation (home):** `npx expo start`, then scan the QR code with the iPhone's Camera app.
 - **Work Wi-Fi or any network that blocks device-to-device traffic:** `npx expo start --tunnel` and scan that QR code. The first time, if it asks for `@expo/ngrok`, run `npm install --no-save @expo/ngrok@4.1.3` and retry.
 
+**Testing on someone else's iPhone** (no Apple Developer account needed): they install Expo Go from the App Store, you run `npx expo start --tunnel` on the Mac, and send them the `exp://….exp.direct` address (or a screenshot of the QR code). It only works while Metro is running on the Mac. Installing a standalone build on their phone, through TestFlight or otherwise, needs the Apple Developer account.
+
 Expo Go only runs the one SDK it ships with (currently 57). If it says "Project is incompatible with this version of Expo Go", see the README.
 
 ---
@@ -70,10 +72,10 @@ The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Androi
 - [x] Location permission: only the "while using" prompt (no "Always" prompts, which App Review rejects for apps that don't use them)
 - [x] About screen header clears the status bar / Dynamic Island
 - [ ] Install Xcode and run the app in the Simulator; check every screen
-- [ ] Test on a real iPhone via Expo Go
+- [ ] Test on a real iPhone via Expo Go (no iPhone on hand; possibly a family member's, see section 3)
 - [ ] Apple Developer Program membership
 - [ ] App Store Connect app record, first TestFlight build, push notifications tested
-- [ ] iPad: `supportsTablet` is `true`, which means App Store review on iPad and iPad screenshots. Set it to `false` for iPhone-only
+- [x] iPad: decided to keep iPad support (`supportsTablet: true`). Test iPad layouts in an iPad Simulator; the App Store listing needs iPad screenshots (13" iPad) too
 - [ ] App Store listing: screenshots (6.9" iPhone), privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), App Privacy answers matching the Play Data safety form
 
 ## 6. Troubleshooting
