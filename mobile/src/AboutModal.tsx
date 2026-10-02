@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Tappable inline link. */
 function Link({ url, children }: { url: string; children: string }) {
@@ -34,10 +35,12 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
  * credit and photo-license terms here are what those sources require.
  */
 export default function AboutModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  // iOS full-screen modals draw under the status bar / Dynamic Island, so pad by the safe-area inset
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: '#2d6a4f' }}>
-        <View style={[styles.header, { paddingTop: (Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : 0) + 12 }]}>
+        <View style={[styles.header, { paddingTop: (Platform.OS === 'android' ? (RNStatusBar.currentHeight ?? 0) : insets.top) + 12 }]}>
           <Text style={styles.headerTitle}>About</Text>
           <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
             <Text style={styles.doneText}>Done</Text>
