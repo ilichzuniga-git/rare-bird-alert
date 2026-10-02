@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking } from 'react-native';
+import { ActionSheetIOS, Linking, Platform } from 'react-native';
 import { File, Paths } from 'expo-file-system';
 import type { Bird } from './birds';
 import { tierFor } from './theme';
@@ -134,17 +134,29 @@ export function routeOrder(trip: TripBird[], start: Point | null): TripBird[] {
   return [...route, ...trip.filter(t => !pointOf(t.bird))];
 }
 
-/** Google Maps links take at most 9 waypoints plus the destination. */
+/** Google Maps links take at most 9 waypoints plus the destination; Apple Maps is held to the same. */
 export const MAX_STOPS = 10;
 
-/** Open Google Maps with driving directions from the user's location through every stop. */
+/**
+ * Driving directions from the user's location through every stop. Android opens Google Maps;
+ * iOS asks Apple Maps or Google Maps (the Google link opens its app when installed, else Safari).
+ */
 export function openTripDirections(route: TripBird[]) {
   const pts = route.map(t => pointOf(t.bird)).filter((p): p is Point => !!p).slice(0, MAX_STOPS)
     .map(p => `${p.lat},${p.lng}`);
   if (!pts.length) return;
   const destination = pts[pts.length - 1];
   const waypoints = pts.slice(0, -1);
-  let url = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(destination)}`;
-  if (waypoints.length) url += `&waypoints=${encodeURIComponent(waypoints.join('|'))}`;
-  Linking.openURL(url);
+
+  let google = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(destination)}`;
+  if (waypoints.length) google += `&waypoints=${encodeURIComponent(waypoints.join('|'))}`;
+  if (Platform.OS !== 'ios') { Linking.openURL(google); return; }
+
+  // Unified Maps URL (iOS 18.4+): one `waypoint` per stop, no source = from the user's location
+  const apple = `https://maps.apple.com/directions?mode=driving&destination=${encodeURIComponent(destination)}`
+    + waypoints.map(w => `&waypoint=${encodeURIComponent(w)}`).join('');
+  ActionSheetIOS.showActionSheetWithOptions(
+    { title: 'Directions', options: ['Apple Maps', 'Google Maps', 'Cancel'], cancelButtonIndex: 2 },
+    i => { if (i === 0) Linking.openURL(apple); else if (i === 1) Linking.openURL(google); },
+  );
 }

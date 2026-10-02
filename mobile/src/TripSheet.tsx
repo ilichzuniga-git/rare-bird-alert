@@ -62,7 +62,7 @@ export function TripHeader({ count, stops, fromYou, onDirections, onClear, onClo
       ) : null}
       {stops > MAX_STOPS ? (
         <Text style={styles.over}>
-          Google Maps directions take up to {MAX_STOPS} stops, so {stops === MAX_STOPS + 1 ? `stop ${stops} is` : `stops ${MAX_STOPS + 1}–${stops} are`} left out.
+          Directions take up to {MAX_STOPS} stops, so {stops === MAX_STOPS + 1 ? `stop ${stops} is` : `stops ${MAX_STOPS + 1}–${stops} are`} left out.
           Swipe some birds away to fit them in.
         </Text>
       ) : null}
