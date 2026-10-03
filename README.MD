@@ -271,7 +271,7 @@ node src/db/migrate.js
   - `POST /api/devices/register`: 20 per hour, Expo push tokens only
   - `POST /api/clusters/:id/report`: 10 per 15 minutes, plus the one-per-hour duplicate rule
 - **Dependencies:** pinned to exact versions and vetted before install (publish age plus `npm audit`); see the workspace `security.md`.
-- **Stored personal data:** push tokens and anonymous Refound/Dipped reports (bird, type, time). No accounts, locations or IPs are stored. Keep `backend/src/privacy.html` and the Play Data safety form in step with any change here.
+- **Stored personal data:** push tokens and anonymous Refound/Dipped reports (bird, type, time). No accounts, locations or IPs are stored. Keep `backend/src/privacy.html`, the Play Data safety form and the App Store privacy answers (App Privacy in App Store Connect) in step with any change here.
 
 ---
 
@@ -549,7 +549,7 @@ On confirming a Refound:
 - the cluster's `last_refound_at` is updated immediately for all users
 - a short bird chirp plays
 
-Your GPS position stays on the phone: it only drives the distance check. A report stores just the bird, Refound or Dipped, and the time. Builds up to 1.3.0 still send coordinates and a device id; the backend ignores them, and migration 018 dropped the columns that used to hold them.
+Your GPS position stays on the phone: it only drives the distance check. A report stores just the bird, Refound or Dipped, and the time. Android builds up to 1.3.0 still send coordinates and a device id (the iOS builds never have); the backend ignores them, and migration 018 dropped the columns that used to hold them.
 
 Reports are anonymous (no account required). To limit abuse, the backend:
 - accepts at most 10 reports per IP per 15 minutes
@@ -567,7 +567,7 @@ Comments are fetched on demand and never stored in the local database.
 
 ### Planned
 
-**Trip drawer: save birds for a day trip.** Saved birds stay on the phone only: no accounts, nothing sent to the server, no change to the Data safety form. Code: `mobile/src/trip.ts`, `TripSheet.tsx`, `CarIcon.tsx`.
+**Trip drawer: save birds for a day trip.** Saved birds stay on the phone only: no accounts, nothing sent to the server, no change to the Data safety form or App Store privacy answers. Code: `mobile/src/trip.ts`, `TripSheet.tsx`, `CarIcon.tsx`.
 - [x] Car button on the bird detail card saves it to the trip (turns green with a check)
 - [x] Car button next to the search bar opens the trip, with a count badge
 - [x] Saved birds refresh from the live feed, so their status is current ("Refound today", "Continuing")
@@ -576,6 +576,22 @@ Comments are fetched on demand and never stored in the local database.
 - [x] **Directions** button opens Google Maps with every stop as a waypoint (plain link, no API key). Google caps it at 10 stops, so the trip header counts "N of 10 stops" and flags anything past 10 as "Not in directions"
 - [x] Swipe a bird sideways to remove it; two-tap "Clear"
 - [x] On-device storage via `expo-file-system` (a JSON file in the app's private documents folder). It was already in the lockfile as a dependency of `expo`, so no new third-party package was needed
+
+**iOS version.** Same codebase as Android; built and tested on a Mac (see [`MAC_SETUP.md`](MAC_SETUP.md)). Started 2026-10-02.
+- [x] iOS config: bundle id `com.ilichzuniga.rarebirdalert`, export-compliance flag, "while using" location prompt only
+- [x] About screen header clears the status bar / Dynamic Island
+- [x] Trip **Directions** offers Apple Maps or Google Maps on iOS (Apple Maps takes the same 10 stops)
+- [x] iPad support: split hero card on wide screens; tested on iPhone and iPad simulators, portrait and landscape
+- [x] Apple Developer Program, EAS credentials (certificate, provisioning profile, APNs push key; renew by 2027-10-03)
+- [x] First TestFlight build (1.3.0 build 3); App Store Connect app "Birder's Best Friend"
+- [ ] TestFlight on a real iPhone (a family member): every screen, plus **push notifications**, untested on iOS so far
+- [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), description, App Privacy answers matching the Play Data safety form, privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`)
+- [ ] Submit for App Store review
+
+**Both apps**
+- [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
+- [ ] Next Android upload: picks up the About text fix, the search box AutoFill change and the iOS-only code (no Android behavior change otherwise)
+- [ ] Bump `expo.version` (e.g. 1.4.0) for the next release on either store, so testers can tell builds without the location-sending code apart
 
 **BirdWeather corroboration.** Permission granted 2026-09-28; stay within the scope in [docs/SOURCES.MD](docs/SOURCES.MD#birdweather-integrated).
 - [x] Backend job: for each active rare-bird report, query BirdWeather for high-confidence detections of that species within ~300 m on the same days, a few times an hour
@@ -589,5 +605,5 @@ Comments are fetched on demand and never stored in the local database.
 ### Ideas worth exploring
 
 Not committed to. Each needs more thought before it's built.
-- [ ] **Push alerts for saved birds** ("your saved Pinyon Jay was refound"). Would mean storing the saved list on the server next to the anonymous push token: still account-free, but the Data safety form and privacy page would need updating.
+- [ ] **Push alerts for saved birds** ("your saved Pinyon Jay was refound"). Would mean storing the saved list on the server next to the anonymous push token: still account-free, but the Data safety form, App Store privacy answers and privacy page would need updating.
 - [ ] **Share a trip** with a friend via a link that carries the saved list, no accounts needed.

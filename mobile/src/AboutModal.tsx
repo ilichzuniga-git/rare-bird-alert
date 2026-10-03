@@ -117,9 +117,9 @@ export default function AboutModal({ visible, onClose }: { visible: boolean; onC
 
           <Section title="Your data">
             <Text style={styles.p}>
-              There are no accounts. Refound and Dipped reports are anonymous; if you allow location access,
-              your position at the time of the report is sent with it so others can judge how close you
-              were. Push notifications use an anonymous device token.
+              There are no accounts. Refound and Dipped reports are anonymous: they record only the bird,
+              which button you tapped, and when. Your location stays on your phone, where it sorts birds by
+              distance and shows how far you are from a bird. Push notifications use an anonymous device token.
             </Text>
           </Section>
         </ScrollView>

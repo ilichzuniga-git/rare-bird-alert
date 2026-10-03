@@ -116,11 +116,14 @@ The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Androi
 - [x] Install Xcode and run the app in the Simulator; iPhone and iPad (portrait + landscape) passes done 2026-10-03
 - [x] iPad: hero card split into text + photo panel (the full-bleed photo cropped to a thin strip)
 - [x] Trip directions on iOS offer Apple Maps or Google Maps
-- [ ] Test on a real iPhone via Expo Go (no iPhone on hand; possibly a family member's, see section 3)
-- [ ] Apple Developer Program membership
-- [ ] App Store Connect app record, first TestFlight build, push notifications tested
+- [x] Apple Developer Program membership (active 2026-10-02)
+- [x] App Store Connect app record and first TestFlight build (1.3.0 build 3, 2026-10-03)
+- [ ] TestFlight on a real iPhone, including push notifications
 - [x] iPad: decided to keep iPad support (`supportsTablet: true`). Test iPad layouts in an iPad Simulator; the App Store listing needs iPad screenshots (13" iPad) too
-- [ ] App Store listing: screenshots (6.9" iPhone), privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), App Privacy answers matching the Play Data safety form
+- [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), App Privacy answers matching the Play Data safety form
+- [ ] Submit for App Store review
+
+The README Roadmap ("iOS version" and "Both apps") tracks the same items alongside Android work.
 
 ## 6. Troubleshooting
 
