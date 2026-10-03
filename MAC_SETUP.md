@@ -32,10 +32,16 @@ cd ~/Documents/rba-app-mac/mobile
 npx expo start
 ```
 
-Press **`i`** in the Metro terminal. Expo installs Expo Go into the Simulator and opens the app. Saving a file reloads it; press `r` to force a reload, `Ctrl+C` to stop.
+Press **`i`** in the Metro terminal. Expo installs Expo Go into the Simulator and opens the app.
+
+**Xcode 27 renamed the Simulator app to DeviceHub** (`/Applications/Xcode.app/Contents/Applications/DeviceHub.app`). If no phone window appears, open DeviceHub from there or Spotlight. The `xcrun simctl` commands are unchanged. Saving a file reloads it; press `r` to force a reload, `Ctrl+C` to stop.
 
 Simulator tips:
-- **Location:** the Simulator has no GPS. Use Features → Location → Custom Location (e.g. `34.0522`, `-118.2437` for LA) to test "Near me" and the Refound/Dipped distance check.
+- **Location:** the Simulator has no GPS. Set one from the terminal with `xcrun simctl location booted set 34.0522,-118.2437` (downtown LA) to test "Near me" and the Refound/Dipped distance check.
+- **iPad:** boot one with `xcrun simctl boot "iPad Pro 13-inch (M5)"` (names: `xcrun simctl list devices available`), then open the app on it the same way. Layouts wider than 700pt use the iPad variants (e.g. the split hero card).
+- **Keyboard:** the Simulator treats the Mac keyboard as a hardware keyboard, so iPad hides the on-screen one; type on the Mac, or press ⌘K to show it.
+- **iPad rotates:** Apple requires iPad apps to support every orientation, so the iPad build rotates even though iPhone is portrait-only. Check layouts in landscape too (⌘← / ⌘→).
+- The blue ⚙️ floating button is Expo Go's developer menu, not part of the app; drag it aside if it covers something.
 - **Push notifications** don't work in Expo Go, so test them in a TestFlight build (section 4).
 
 ## 3. Everyday: run the app on a real iPhone (Expo Go)
@@ -71,7 +77,9 @@ The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Androi
 - [x] Bundle identifier, export-compliance flag (`usesNonExemptEncryption: false`), simulator build profile
 - [x] Location permission: only the "while using" prompt (no "Always" prompts, which App Review rejects for apps that don't use them)
 - [x] About screen header clears the status bar / Dynamic Island
-- [ ] Install Xcode and run the app in the Simulator; check every screen
+- [x] Install Xcode and run the app in the Simulator; iPhone pass done 2026-10-03 (no issues)
+- [x] iPad: hero card split into text + photo panel (the full-bleed photo cropped to a thin strip)
+- [x] Trip directions on iOS offer Apple Maps or Google Maps
 - [ ] Test on a real iPhone via Expo Go (no iPhone on hand; possibly a family member's, see section 3)
 - [ ] Apple Developer Program membership
 - [ ] App Store Connect app record, first TestFlight build, push notifications tested

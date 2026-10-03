@@ -7,6 +7,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { parseCredit, usePhoto } from './BirdPhoto';
@@ -168,7 +169,12 @@ export function SheetList({
   );
 }
 
+/** Wider than this (iPad), the hero splits into text + a photo panel instead of a cropped full-bleed photo */
+const WIDE_HERO = 700;
+const HERO_PANEL_W = 330;
+
 function Hero({ bird, distance, onPress }: { bird: Bird; distance: number | null; onPress: () => void }) {
+  const wide = useWindowDimensions().width >= WIDE_HERO;
   const s = bird.latest;
   const photo = usePhoto(s.photo_url, s.photo_attribution, s.scientific_name);
   const credit = photo.url ? parseCredit(photo.attribution) : null;
@@ -180,8 +186,11 @@ function Hero({ bird, distance, onPress }: { bird: Bird; distance: number | null
   ].filter(Boolean).join(' · ');
 
   return (
-    <Pressable style={styles.hero} onPress={onPress}>
-      {photo.url ? (
+    <Pressable style={[styles.hero, wide && styles.heroWide, wide && photo.url ? styles.heroWideText : null]} onPress={onPress}>
+      {photo.url && wide ? (
+        // 3:2 panel on the right, so the whole bird shows instead of a thin crop across the card
+        <Image source={{ uri: photo.url.replace(/\/square\.(\w+)$/, '/large.$1') }} style={styles.heroPanel} resizeMode="cover" />
+      ) : photo.url ? (
         <>
           {/* the stored photo is iNaturalist's 75px square; the hero needs the larger size */}
           <Image source={{ uri: photo.url.replace(/\/square\.(\w+)$/, '/medium.$1') }} style={StyleSheet.absoluteFill} resizeMode="cover" />
@@ -197,7 +206,7 @@ function Hero({ bird, distance, onPress }: { bird: Bird; distance: number | null
       <Text style={styles.heroName} numberOfLines={1}>{bird.count && bird.count > 1 ? `${bird.count}× ` : ''}{s.common_name}</Text>
       <Text style={styles.heroMeta} numberOfLines={1}>{meta}</Text>
       {credit ? (
-        <Text style={styles.heroCredit} numberOfLines={1}>
+        <Text style={[styles.heroCredit, wide && styles.heroCreditWide]} numberOfLines={1}>
           {/* license first: CC terms need it visible, and a long name then truncates harmlessly */}
           {credit.license ? `${credit.license} · ` : ''}{credit.credit}
         </Text>
@@ -291,6 +300,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 16, marginBottom: 14, height: 176, borderRadius: radius.hero, overflow: 'hidden',
     padding: 16, justifyContent: 'flex-end', backgroundColor: colors.heroFrom,
   },
+  heroWide: { height: 220 },
+  heroWideText: { paddingRight: HERO_PANEL_W + 16 },
+  heroPanel: { position: 'absolute', top: 0, right: 0, bottom: 0, width: HERO_PANEL_W },
   heroShade: { backgroundColor: 'rgba(8,30,40,0.45)' },
   heroGhost: { position: 'absolute', right: 6, top: -10, fontSize: 120, opacity: 0.22 },
   kicker: { position: 'absolute', top: 14, left: 16, flexDirection: 'row', gap: 6 },
@@ -300,6 +312,10 @@ const styles = StyleSheet.create({
   },
   heroName: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
   heroMeta: { fontSize: 13, color: '#fff', opacity: 0.9, marginTop: 2 },
+  heroCreditWide: {
+    maxWidth: HERO_PANEL_W - 20, backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden',
+  },
   heroCredit: { position: 'absolute', right: 10, bottom: 6, fontSize: 9, color: '#fff', opacity: 0.85, maxWidth: '70%' },
 
   // rows

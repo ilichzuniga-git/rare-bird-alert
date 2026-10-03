@@ -279,6 +279,9 @@ function Main() {
             placeholderTextColor={colors.muted}
             style={styles.searchInput}
             returnKeyType="search"
+            // no contacts/password AutoFill offers on a bird search
+            autoComplete="off"
+            textContentType="none"
             onSubmitEditing={() => Keyboard.dismiss()}
           />
           {queryText ? (
