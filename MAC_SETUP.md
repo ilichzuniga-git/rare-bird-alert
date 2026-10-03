@@ -15,7 +15,7 @@ The app talks to the **production backend**, so the Mac needs no Postgres, local
 | Xcode | iOS Simulator; needed for any iOS testing on the Mac | Mac App Store (large download), open it once to finish installing components, then `sudo xcode-select -s /Applications/Xcode.app` |
 | iOS Simulator runtime | the simulated iPhone | Xcode → Settings → Components → install the latest iOS |
 | Node.js 22 LTS | Expo tooling | `brew install node@22` (Node 26 currently on this Mac works for bundling, but Expo only supports LTS releases) |
-| eas-cli 23.2.0 | cloud builds, TestFlight | `npm install -g eas-cli@23.2.0`, then `eas login` |
+| eas-cli 24.5.0 | cloud builds, TestFlight | `npm install -g eas-cli@24.5.0`, then `eas login`. Versions before 24.4.1 can't log in to Apple ("iTunes service key is empty"); see the README |
 | GitHub CLI login | `git push` | `gh auth login`, then `gh auth setup-git` |
 | Expo Go | testing on a real iPhone | App Store on the iPhone |
 
@@ -77,7 +77,7 @@ The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Androi
 - [x] Bundle identifier, export-compliance flag (`usesNonExemptEncryption: false`), simulator build profile
 - [x] Location permission: only the "while using" prompt (no "Always" prompts, which App Review rejects for apps that don't use them)
 - [x] About screen header clears the status bar / Dynamic Island
-- [x] Install Xcode and run the app in the Simulator; iPhone pass done 2026-10-03 (no issues)
+- [x] Install Xcode and run the app in the Simulator; iPhone and iPad (portrait + landscape) passes done 2026-10-03
 - [x] iPad: hero card split into text + photo panel (the full-bleed photo cropped to a thin strip)
 - [x] Trip directions on iOS offer Apple Maps or Google Maps
 - [ ] Test on a real iPhone via Expo Go (no iPhone on hand; possibly a family member's, see section 3)

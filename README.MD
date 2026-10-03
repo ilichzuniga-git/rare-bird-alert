@@ -304,11 +304,11 @@ The app is built in the cloud using [EAS Build](https://docs.expo.dev/build/intr
 ### One-time setup
 
 ```bash
-npm install -g eas-cli@23.2.0
+npm install -g eas-cli@24.5.0
 eas login
 ```
 
-`eas-cli` is pinned to a vetted version (see `security.md`); bump it deliberately rather than taking whatever is newest.
+`eas-cli` is pinned to a vetted version (see `security.md`); bump it deliberately rather than taking whatever is newest. Bumped from 23.2.0 to 24.5.0 on 2026-10-03: Apple changed its login in September 2026 and versions before 24.4.1 fail iOS builds with "iTunes service key is empty" ([expo/eas-cli#4392](https://github.com/expo/eas-cli/issues/4392)). 24.5.0 was 18 days old and `npm audit` reported the same 29 findings as 23.2.0. Android builds still work on 23.2.0.
 
 **Firebase config for cloud builds.** `mobile/google-services.json` (needed for push notifications) is git-ignored, and EAS doesn't upload ignored files. Instead, it's stored once as a secret EAS file variable; `mobile/app.config.js` uses it in cloud builds and the local file otherwise:
 
