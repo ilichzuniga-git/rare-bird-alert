@@ -287,9 +287,10 @@ node src/db/migrate.js
 
 1. Make your changes in `mobile/`
 2. Commit and push to GitHub
-3. Run `eas build -p android --profile production` and download the `.aab`
-4. Upload the `.aab` to Play Console → Internal Testing → Create new release
-5. Testers get the update automatically through the Play Store
+3. **Android:** run `eas build -p android --profile production`, download the `.aab`, and upload it to Play Console → Internal Testing → Create new release. Testers get the update automatically through the Play Store
+4. **iOS:** run `eas build -p ios --profile production`, then `eas submit -p ios --latest`. Testers get the update through TestFlight (see [Build for iOS](#build-for-ios-testflight--app-store))
+
+Each store only needs a new upload when you want that platform's users to get the change. An iOS-only change (a `Platform.OS === 'ios'` branch or the `ios` section of `app.json`) doesn't need an Android upload, and vice versa; the next build of the other platform picks the code up but behaves as before.
 
 You do **not** need to rebuild for backend-only changes — those take effect immediately since the app talks to the live server.
 
@@ -324,14 +325,15 @@ The Android keystore (signing key) is managed by EAS and was generated via `eas 
 
 ### Build profiles
 
-The `mobile/eas.json` file defines two profiles:
+The `mobile/eas.json` file defines three profiles:
 
 | Profile | Output | Use for |
 |---|---|---|
 | `preview` | `.apk` | Quick local testing — sideload directly onto any Android device |
-| `production` | `.aab` (App Bundle) | Google Play Store (Internal Testing / release); auto-increments the version code |
+| `production` | Android: `.aab` (App Bundle); iOS: `.ipa` | Google Play (Internal Testing / release) and Apple (TestFlight / App Store); auto-increments the version code (Android) and build number (iOS) |
+| `ios-simulator` | `.app` | Running a standalone iOS build in the Mac's Simulator; needs no Apple Developer account |
 
-The user-visible version (`1.1.0`) is `expo.version` in `app.json`; bump it for releases testers should notice.
+The user-visible version is `expo.version` in `app.json` (shared by both platforms); bump it for releases testers should notice. Each store tracks its own build numbers, so the platforms never clash.
 
 ### Build a preview APK (sideloadable, no Play Store needed)
 
@@ -357,6 +359,21 @@ eas build -p android --profile production
 ```
 
 Takes roughly 10–20 minutes. EAS prints a link to the build page; download the `.aab` from there, then upload it as described below.
+
+### Build for iOS (TestFlight / App Store)
+
+iOS builds also run in the cloud, so `eas build -p ios` works from Windows or the Mac. Testing in the iOS Simulator needs the Mac; see [`MAC_SETUP.md`](MAC_SETUP.md) for that and the step-by-step details. Requires the Apple Developer Program membership and eas-cli 24.4.1 or later (older versions can't log in to Apple).
+
+```bash
+cd mobile
+eas build -p ios --profile production    # ~15–25 min, builds the .ipa
+eas submit -p ios --latest                # uploads it to App Store Connect / TestFlight
+```
+
+- **First build only:** it asks you to log in to Apple (Apple ID, password, 6-digit code) and offers to create the bundle identifier, distribution certificate, provisioning profile and push notification (APNs) key. Answer **Yes** to each. EAS stores them, as it does the Android keystore.
+- **Later builds:** no setup questions. It may ask you to log in to Apple again when the saved session has expired; the build itself uses the stored credentials.
+- **Once a year:** the distribution certificate expires, and the next build offers to make a new one: say yes. Apps already installed keep working.
+- **Push notifications** work in TestFlight and App Store builds, not in Expo Go or Simulator builds.
 
 ---
 

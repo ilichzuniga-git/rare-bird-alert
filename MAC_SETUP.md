@@ -65,8 +65,44 @@ Expo Go only runs the one SDK it ships with (currently 57). If it says "Project 
 | `production` | `eas build -p ios --profile production` | `.ipa` for TestFlight / App Store | Yes ($99/yr) |
 
 - **Simulator build:** a real standalone build (not Expo Go). Install it with `eas build:run -p ios --latest`.
-- **Production build:** the first run asks you to log in to Apple. Let EAS create and manage the distribution certificate, provisioning profile and **push notification (APNs) key**, the iOS counterparts of the Android keystore and Firebase file. Build numbers increment automatically, as on Android (`appVersionSource: remote`).
-- **TestFlight:** `eas submit -p ios --latest` uploads the build to App Store Connect. Testers install it via the TestFlight app. Push notifications work there.
+### Production build: the first time
+
+Run in your own Terminal (it asks for passwords and codes):
+
+```bash
+cd ~/Documents/rba-app-mac/mobile
+eas build -p ios --profile production
+```
+
+| It asks | Answer |
+|---|---|
+| Log in to your Apple account? | **Yes**: Apple ID, password, then the 6-digit code sent to your Apple devices |
+| Select a team | Your team, if asked |
+| Register the bundle identifier | **Yes** |
+| Generate a new Apple Distribution Certificate? | **Yes**: the iOS counterpart of the Android keystore |
+| Generate a new Apple Provisioning Profile? | **Yes** |
+| Set up Push Notifications / generate an APNs key? | **Yes**: the iOS counterpart of the Firebase file |
+
+EAS stores all of these on its servers. Once it says the build is queued, the build runs in the cloud (about 15–25 minutes) and you can close Terminal.
+
+### Production build: every time after that
+
+- `eas build -p ios --profile production`, with no setup questions. It may ask you to log in to Apple again when the saved session has expired (password from the Keychain, plus the 6-digit code).
+- Build numbers increment automatically, as on Android (`appVersionSource: remote`).
+- **Once a year** the distribution certificate expires; the next build offers to create a new one. Say yes.
+
+### TestFlight
+
+- `eas submit -p ios --latest` uploads the latest build to App Store Connect. The first time, it creates the app's App Store Connect record; app names must be unique on the App Store.
+- Testers install the **TestFlight** app and get builds there. Push notifications work in TestFlight builds.
+- Adding testers: internal testers (invited to your App Store Connect team) get builds within minutes with no review. External testers get an email or public link, but each new version needs Apple's beta review first (usually about a day).
+
+### If the Apple login fails
+
+| Error | Fix |
+|---|---|
+| `Authentication with Apple Developer Portal failed! iTunes service key is empty` | eas-cli is older than 24.4.1. Install the pinned version: `npm install -g eas-cli@24.5.0` |
+| Uploads refused / agreement errors | Sign in at https://appstoreconnect.apple.com and accept any agreement banner |
 
 The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Android package name.
 
