@@ -2,7 +2,7 @@
 
 The Mac is used to build and test the **iOS version** of Birder's Best Friend. Android development stays on Windows (see `README.MD`). Both platforms build from the same `mobile/` code on `main`, so every change must keep working on Android too.
 
-**Where this runs:** every command below runs in a terminal on the Mac, inside `~/Documents/rba-app-mac/mobile`. The repo root has no `package.json`.
+**Where this runs:** every command below runs in a terminal on the Mac, inside `~/Documents/claude/rba-app-mac/mobile`. The repo root has no `package.json`.
 
 The app talks to the **production backend**, so the Mac needs no Postgres, local backend, `adb` or `google-services.json` (that file is Android-only; iOS push goes through Apple's APNs).
 
@@ -28,7 +28,7 @@ Check Xcode is set up: `xcrun simctl list devices available` should list iPhones
 ## 2. Everyday: run the app in the iOS Simulator
 
 ```bash
-cd ~/Documents/rba-app-mac/mobile
+cd ~/Documents/claude/rba-app-mac/mobile
 npx expo start
 ```
 
@@ -70,7 +70,7 @@ Expo Go only runs the one SDK it ships with (currently 57). If it says "Project 
 Run in your own Terminal (it asks for passwords and codes):
 
 ```bash
-cd ~/Documents/rba-app-mac/mobile
+cd ~/Documents/claude/rba-app-mac/mobile
 eas build -p ios --profile production
 ```
 
