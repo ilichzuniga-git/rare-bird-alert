@@ -11,7 +11,8 @@ export interface Prefs {
   hideAtSea: boolean;
 }
 
-const DEFAULTS: Prefs = { hideAtSea: false };
+// At-sea birds start hidden: pelagic trips are rare next to land birding
+const DEFAULTS: Prefs = { hideAtSea: true };
 
 const prefsFile = () => new File(Paths.document, 'prefs.json');
 

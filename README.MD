@@ -597,7 +597,7 @@ Comments are fetched on demand and never stored in the local database.
 - [x] Backend adds `at_sea` to each `/api/sightings` row: more than 2 km from land, using Natural Earth's 1:10m land and minor-islands polygons clipped to Southern California (`backend/src/atSea.js`, `backend/src/data/socal-land.json`, about 16 KB). Computed per response, so no migration. Catalina, San Clemente, Santa Barbara Island and the northern Channel Islands count as land, as do beaches, harbours and bays. A region outside lat 32.0–35.6, lng -120.5 to -116.5 needs the data re-clipped
 - [x] Bird detail: "🚤 At sea" in the header and a "Seen at sea" note; no Directions and no car (save to trip) button. A bird saved before can still be removed
 - [x] List rows, the hero card and map pins say "At sea"
-- [x] "🚤 At sea · N" switch next to the source filters hides those birds; remembered on the phone (`mobile/src/prefs.ts`, a JSON file like the trip). Shown by default
+- [x] "🚤 At sea · N" switch next to the source filters hides those birds; remembered on the phone (`mobile/src/prefs.ts`, a JSON file like the trip). Hidden by default, since pelagic trips are rare next to land birding; tap the pill to show them
 - [x] The hero card picks the rarest bird you can reach; an at-sea bird leads only when nothing else is in view
 - [x] Trip directions skip at-sea birds (saved before this change)
 
