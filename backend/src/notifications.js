@@ -1,6 +1,7 @@
 const https = require('https');
 const db = require('./db');
 const { ensureLoaded: ensureRarity, rarityCountFor } = require('./rarity');
+const { isAtSea } = require('./atSea');
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -15,14 +16,22 @@ function nameList(names) {
 }
 
 /**
- * The notification for one poll cycle's new sightings: the species, rarest first, and
- * where. Exported for testing.
- * @param {{ id: number, common_name: string, location_name: string|null, region_name: string, rarity: number|null }[]} sightings
+ * The notification for one poll cycle's new sightings: the species and where. Birds you can
+ * reach come first, rarest first; ones out on the ocean (pelagic trips, which few people go
+ * on) follow, marked "(at sea)". Exported for testing.
+ * @param {{ id: number, common_name: string, location_name: string|null, region_name: string,
+ *           rarity: number|null, at_sea: boolean }[]} sightings
  */
 function buildMessage(sightings) {
-  // Rarest first (fewest all-time county records; no data counts as common), then newest
-  const ranked = [...sightings].sort((a, b) => (a.rarity ?? Infinity) - (b.rarity ?? Infinity) || b.id - a.id);
-  const species = [...new Set(ranked.map(s => s.common_name))];
+  // Land before sea, then rarest (fewest all-time county records; no data counts as common), then newest
+  const ranked = [...sightings].sort((a, b) =>
+    a.at_sea - b.at_sea || (a.rarity ?? Infinity) - (b.rarity ?? Infinity) || b.id - a.id);
+  // A species counts as at sea only when every new report of it is
+  const species = [...new Set(ranked.map(s => s.common_name))].map(name => ({
+    name,
+    atSea: ranked.every(s => s.common_name !== name || s.at_sea),
+  }));
+  const label = sp => (sp.atSea ? `${sp.name} (at sea)` : sp.name);
   const regions = [...new Set(ranked.map(s => s.region_name))];
   // "Los Angeles & Orange County", not "Los Angeles County & Orange County"
   const where = regions.map((r, i) => (i < regions.length - 1 ? r.replace(/ County$/, '') : r)).join(' & ');
@@ -30,11 +39,14 @@ function buildMessage(sightings) {
   let title, body;
   if (species.length === 1) {
     const places = [...new Set(ranked.map(s => s.location_name).filter(Boolean))];
-    title = `🐦 ${species[0]}`;
+    title = `🐦 ${label(species[0])}`;
     body = places.length === 1 ? `${places[0]} · ${where}` : `New in ${where}`;
+  } else if (species.every(sp => sp.atSea)) {
+    title = `🐦 ${species.length} new rare birds at sea off ${where}`;
+    body = nameList(species.map(sp => sp.name));
   } else {
     title = `🐦 ${species.length} new rare birds in ${where}`;
-    body = nameList(species);
+    body = nameList(species.map(label));
   }
   return { title, body, data: { sightingIds: ranked.slice(0, MAX_IDS).map(s => s.id) } };
 }
@@ -51,7 +63,7 @@ async function dispatchNotifications(sightingIds) {
 
   const { rows } = await db.query(
     `SELECT s.id, s.common_name, s.scientific_name, s.location_name, s.region_code, s.rarity_count,
-            r.name AS region_name
+            s.lat, s.lng, r.name AS region_name
        FROM sightings s JOIN regions r ON r.code = s.region_code
       WHERE s.id = ANY($1)`,
     [sightingIds]
@@ -60,7 +72,10 @@ async function dispatchNotifications(sightingIds) {
 
   // eBird rows carry no rarity; rate them the way /api/sightings does
   await ensureRarity([...new Set(rows.map(r => r.region_code))]);
-  for (const r of rows) r.rarity = r.rarity_count ?? rarityCountFor(r.region_code, r.scientific_name);
+  for (const r of rows) {
+    r.rarity = r.rarity_count ?? rarityCountFor(r.region_code, r.scientific_name);
+    r.at_sea = isAtSea(r.lat, r.lng);
+  }
 
   const { title, body, data } = buildMessage(rows);
   const messages = devices.map(d => ({ to: d.token, sound: 'default', title, body, data }));
