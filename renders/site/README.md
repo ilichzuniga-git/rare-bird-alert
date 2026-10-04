@@ -50,6 +50,12 @@ than Google Fonts, so a visit contacts no third party and the privacy policy nee
 5. `xcrun simctl io booted screenshot shot.png`, then
    `sips -s format jpeg -s formatOptions 82 -Z 1311 shot.png --out shots/<name>.jpg`.
 
+Pointing hands: each `<span class="hand" style="--x:…;--y:…">` inside a `.shot` puts a fingertip on
+that spot, in % of the screen (402×874 pt, so `axe describe-ui` frames convert directly). `--r` turns
+the hand around the fingertip (`-90deg` points up, `90deg` down) and `--f:-1` mirrors it to point left.
+The hand is drawn in `index.html` (the `#hand` symbol), not a stock icon. Re-check the positions after
+re-shooting a screen.
+
 | File | Screen |
 |---|---|
 | `home.jpg` | This week, map and sheet (at-sea birds hidden) |

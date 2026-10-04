@@ -80,6 +80,16 @@
     box-shadow: 0 0 0 7px #1c1c1a, 0 22px 44px rgba(40,30,10,.22); margin: 7px; }
   .phones.two { flex-wrap: nowrap; }
   .phones.two .phone { width: min(200px, calc(50vw - 40px)); border-radius: 28px; box-shadow: 0 0 0 6px #1c1c1a, 0 18px 36px rgba(40,30,10,.2); }
+  /* Pointing hand over a screenshot: its fingertip sits on (--x, --y), in % of the screen.
+     --r turns it around the fingertip; --f: -1 mirrors it to point left. */
+  .shot { position: relative; margin: 7px; }
+  .shot .phone { margin: 0; }
+  .hand { position: absolute; left: var(--x); top: var(--y); width: 24%; pointer-events: none;
+    transform-origin: 100% 50%; transform: translate(-100%, -50%) rotate(var(--r, 0deg)) scaleX(var(--f, 1));
+    filter: drop-shadow(0 2px 3px rgba(40,30,10,.35)); }
+  .hand svg { display: block; width: 100%; height: auto; animation: poke 1.6s ease-in-out infinite; }
+  @keyframes poke { 50% { transform: translateX(-10%); } }
+  @media (prefers-reduced-motion: reduce) { .hand svg { animation: none; } }
   figcaption { margin-top: 14px; font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
 
   /* A drawn notification, since alerts can't be screenshotted in the simulator */
@@ -112,6 +122,17 @@
 </head>
 <body>
 <script>document.body.classList.add('js')</script>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="hand" viewBox="0 -3.5 64 40">
+    <g fill="#fff" stroke="#1f2a24" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M11 13 C16 12 20 9 24 6 C27 4 31 5 31 8 C31 10 29 12 27 13 L58 13 C61 13 62 15 62 16.5 C62 18 61 20 58 20 L41 20
+               C44 20 44 25 41 25 L40 25 C43 25 43 30 40 30 L38 30 C41 30 41 35 38 35 L24 35 C19 35 15 32 11 31 Z"/>
+      <path d="M32 25 H40 M31 30 H38" fill="none"/>
+      <rect x="2" y="10" width="9" height="24" rx="2"/>
+      <path d="M6.5 15 V29" fill="none"/>
+    </g>
+  </symbol>
+</svg>
 
 <header class="masthead">
   <div class="wrap">
@@ -154,8 +175,8 @@
       </dl>
     </div>
     <div class="phones two">
-      <figure><img class="phone" src="shots/home.jpg" alt="Map of Southern California with coloured bird pins above the Rarities list" loading="lazy" width="603" height="1311"><figcaption>Map</figcaption></figure>
-      <figure><img class="phone" src="shots/list.jpg" alt="The Rarities list dragged up, showing the Evening Grosbeak card and more birds" loading="lazy" width="603" height="1311"><figcaption>List pulled up</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/home.jpg" alt="Map of Southern California with coloured bird pins above the Rarities list" loading="lazy" width="603" height="1311"><span class="hand" style="--x:48.8%;--y:30.5%;--r:-35deg"><svg><use href="#hand"/></svg></span></div><figcaption>Map</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/list.jpg" alt="The Rarities list dragged up, showing the Evening Grosbeak card and more birds" loading="lazy" width="603" height="1311"><span class="hand" style="--x:14%;--y:36%"><svg><use href="#hand"/></svg></span></div><figcaption>List pulled up</figcaption></figure>
     </div>
   </article>
 
@@ -170,7 +191,7 @@
       </ul>
     </div>
     <div class="phones">
-      <figure><img class="phone" src="shots/near.jpg" alt="Near me view with the closest rare bird, a Red-breasted Nuthatch 2.5 km away" loading="lazy" width="603" height="1311"><figcaption>Near me</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/near.jpg" alt="Near me view with the closest rare bird, a Red-breasted Nuthatch 2.5 km away" loading="lazy" width="603" height="1311"><span class="hand" style="--x:79.4%;--y:59.2%;--r:90deg"><svg><use href="#hand"/></svg></span></div><figcaption>Near me</figcaption></figure>
     </div>
   </article>
 
@@ -182,7 +203,7 @@
       <p>The search box at the top finds species or places. It matches the start of words, so <kbd>rail</kbd> finds Ridgway's Rail but not "River Trail".</p>
     </div>
     <div class="phones">
-      <figure><img class="phone" src="shots/search.jpg" alt="Searching for murrelet finds Craveri's Murrelet" loading="lazy" width="603" height="1311"><figcaption>Search</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/search.jpg" alt="Searching for murrelet finds Craveri's Murrelet" loading="lazy" width="603" height="1311"><span class="hand" style="--x:37%;--y:12.5%;--r:-90deg"><svg><use href="#hand"/></svg></span><span class="hand" style="--x:15.9%;--y:67.8%;--r:-90deg"><svg><use href="#hand"/></svg></span></div><figcaption>Search</figcaption></figure>
     </div>
   </article>
 
@@ -195,8 +216,8 @@
         Islands such as Catalina count as land.</p>
     </div>
     <div class="phones two">
-      <figure><img class="phone" src="shots/last30.jpg" alt="At sea pill red and crossed out while at-sea birds are hidden" loading="lazy" width="603" height="1311"><figcaption>Hidden</figcaption></figure>
-      <figure><img class="phone" src="shots/atsea-on.jpg" alt="At sea pill turned on, Craveri's Murrelet shown offshore" loading="lazy" width="603" height="1311"><figcaption>Shown</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/last30.jpg" alt="At sea pill red and crossed out while at-sea birds are hidden" loading="lazy" width="603" height="1311"><span class="hand" style="--x:81.8%;--y:67.8%;--r:-90deg"><svg><use href="#hand"/></svg></span></div><figcaption>Hidden</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/atsea-on.jpg" alt="At sea pill turned on, Craveri's Murrelet shown offshore" loading="lazy" width="603" height="1311"><span class="hand" style="--x:81.8%;--y:67.8%;--r:-90deg"><svg><use href="#hand"/></svg></span></div><figcaption>Shown</figcaption></figure>
     </div>
   </article>
 
@@ -223,7 +244,7 @@
       <p>Sometimes a page also says <b>🎧 Also heard by a BirdWeather station</b>: a nearby microphone picked up the same species that day.</p>
     </div>
     <div class="phones">
-      <figure><img class="phone" src="shots/detail.jpg" alt="Evening Grosbeak page with day strip, Continuing status, Refound and Dipped buttons" loading="lazy" width="603" height="1311"><figcaption>Bird page</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/detail.jpg" alt="Evening Grosbeak page with day strip, Continuing status, Refound and Dipped buttons" loading="lazy" width="603" height="1311"><span class="hand" style="--x:26.7%;--y:76.8%;--r:-90deg"><svg><use href="#hand"/></svg></span></div><figcaption>Bird page</figcaption></figure>
     </div>
   </article>
 
@@ -234,7 +255,7 @@
       <p>An offshore bird's page says so. It has no Directions or trip button, because you can't drive to it.</p>
     </div>
     <div class="phones">
-      <figure><img class="phone" src="shots/detail-sea.jpg" alt="Craveri's Murrelet page with a Seen at sea note" loading="lazy" width="603" height="1311"><figcaption>At-sea bird</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/detail-sea.jpg" alt="Craveri's Murrelet page with a Seen at sea note" loading="lazy" width="603" height="1311"><span class="hand" style="--x:36%;--y:77.3%;--f:-1"><svg><use href="#hand"/></svg></span></div><figcaption>At-sea bird</figcaption></figure>
     </div>
   </article>
 
@@ -252,7 +273,7 @@
       </ul>
     </div>
     <div class="phones">
-      <figure><img class="phone" src="shots/trip.jpg" alt="Trip with two stops in driving order and a Directions button" loading="lazy" width="603" height="1311"><figcaption>Trip</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/trip.jpg" alt="Trip with two stops in driving order and a Directions button" loading="lazy" width="603" height="1311"><span class="hand" style="--x:85%;--y:13.5%;--r:-45deg"><svg><use href="#hand"/></svg></span><span class="hand" style="--x:77.5%;--y:61.4%;--f:-1"><svg><use href="#hand"/></svg></span></div><figcaption>Trip</figcaption></figure>
     </div>
   </article>
 
@@ -286,7 +307,7 @@
       <p>The app is free and non-commercial, with no accounts and no ads.</p>
     </div>
     <div class="phones">
-      <figure><img class="phone" src="shots/about.jpg" alt="About screen describing eBird, iNaturalist and BirdWeather" loading="lazy" width="603" height="1311"><figcaption>About</figcaption></figure>
+      <figure><div class="shot"><img class="phone" src="shots/about.jpg" alt="About screen describing eBird, iNaturalist and BirdWeather" loading="lazy" width="603" height="1311"></div><figcaption>About</figcaption></figure>
     </div>
   </article>
 </section>
