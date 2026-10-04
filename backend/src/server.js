@@ -35,9 +35,20 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, env: config.nodeEnv });
 });
 
-// Public privacy policy, linked from the Play Store listing
+// Public guide site: tour, what's new and the privacy policy (src/site). express.static
+// redirects /guide to /guide/ so the page's relative fonts/ and shots/ paths resolve.
+// The page itself is always revalidated so an edit shows at once; images and fonts cache for a day.
+app.use('/guide', express.static(path.join(__dirname, 'site'), {
+  maxAge: '1d',
+  setHeaders: (res, file) => {
+    if (file.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
+
+// Privacy policy URL given to the Play Store and App Store; it now lives in the guide.
+// Without JavaScript the guide shows every section, the policy included.
 app.get('/privacy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'privacy.html'));
+  res.redirect(302, '/guide/#privacy');
 });
 
 app.use('/api/sightings', sightingsRouter);

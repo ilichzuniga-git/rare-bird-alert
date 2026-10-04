@@ -120,7 +120,7 @@ The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Androi
 - [x] App Store Connect app record and first TestFlight build (1.3.0 build 3, 2026-10-03)
 - [ ] TestFlight on a real iPhone, including push notifications
 - [x] iPad: decided to keep iPad support (`supportsTablet: true`). Test iPad layouts in an iPad Simulator; the App Store listing needs iPad screenshots (13" iPad) too
-- [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), App Privacy answers matching the Play Data safety form
+- [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), support URL (`https://rba-backend.cloudedapps.org/guide/`), App Privacy answers matching the Play Data safety form
 - [ ] Submit for App Store review
 
 The README Roadmap ("iOS version" and "Both apps") tracks the same items alongside Android work.

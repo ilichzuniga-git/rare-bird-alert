@@ -271,7 +271,7 @@ node src/db/migrate.js
   - `POST /api/devices/register`: 20 per hour, Expo push tokens only
   - `POST /api/clusters/:id/report`: 10 per 15 minutes, plus the one-per-hour duplicate rule
 - **Dependencies:** pinned to exact versions and vetted before install (publish age plus `npm audit`); see the workspace `security.md`.
-- **Stored personal data:** push tokens and anonymous Refound/Dipped reports (bird, type, time). No accounts, locations or IPs are stored. Keep `backend/src/privacy.html`, the Play Data safety form and the App Store privacy answers (App Privacy in App Store Connect) in step with any change here.
+- **Stored personal data:** push tokens and anonymous Refound/Dipped reports (bird, type, time). No accounts, locations or IPs are stored. Keep the Privacy tab of the guide site (`backend/src/site/index.html`), the Play Data safety form and the App Store privacy answers (App Privacy in App Store Connect) in step with any change here.
 
 ---
 
@@ -586,10 +586,12 @@ Comments are fetched on demand and never stored in the local database.
 - [x] First TestFlight build (1.3.0 build 3); App Store Connect app "Birder's Best Friend"
 - [x] TestFlight on a real iPhone (a family member, build 3, 2026-10-04). Her feedback led to the at-sea and notification-tap changes below
 - [ ] TestFlight 1.4.0 (build 4): at-sea labels and switch confirmed on her iPhone (2026-10-04; she had to reinstall before the changes appeared). Still to test: **push notifications** on a real iPhone (tap with the app open, in the background, closed)
-- [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), description, App Privacy answers matching the Play Data safety form, privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`)
+- [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), description, App Privacy answers matching the Play Data safety form, privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), support URL (`https://rba-backend.cloudedapps.org/guide/`)
 - [ ] Submit for App Store review
 
 **Both apps**
+- [x] Guide site live at `https://rba-backend.cloudedapps.org/guide/` (2026-10-04): Tour, What's new, Privacy; `/privacy` redirects to its Privacy tab. Source and screenshot how-to: `backend/src/site/README.md`. Add a What's new entry with every release
+- [ ] Next build: a once-per-version "What's new" card linking to `/guide/#whats-new`, a Guide link on the About screen, and an app-icon badge for unread alerts
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
 - [x] `expo.version` bumped to **1.4.0** (2026-10-04), first used by the iOS TestFlight build with the at-sea and notification changes
 - [x] **Android upload (1.4.0, versionCode 8):** built with `eas build -p android --profile production`, uploaded to Play Console → Internal Testing (2026-10-04). Brings Android up to the iOS build:

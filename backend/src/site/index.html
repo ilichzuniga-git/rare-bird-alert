@@ -6,6 +6,8 @@
 <title>Birder's Best Friend · Guide</title>
 <meta name="description" content="How to use Birder's Best Friend, what's new in each release, and the privacy policy.">
 <meta name="color-scheme" content="light">
+<!-- External, not inline: the server's Content-Security-Policy (helmet) blocks inline scripts -->
+<script src="guide.js"></script>
 <style>
   /* Fonts are served from this site, not Google Fonts, so a visit contacts no one else */
   @font-face { font-family: Fraunces; src: url(fonts/fraunces.woff2) format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
@@ -121,7 +123,6 @@
 </style>
 </head>
 <body>
-<script>document.body.classList.add('js')</script>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="hand" viewBox="0 -3.5 64 40">
     <g fill="#fff" stroke="#1f2a24" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
@@ -427,20 +428,5 @@
     Screenshots show real reports from October 4, 2026.</div>
 </footer>
 
-<script>
-  // Tabs by URL hash, so the app can link straight to #whats-new or #privacy.
-  // Sections are id'd p-<tab> so the hash doesn't also jump-scroll to them.
-  const tabs = ['tour', 'whats-new', 'privacy'];
-  function show() {
-    const id = tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'tour';
-    for (const t of tabs) {
-      document.getElementById('p-' + t).classList.toggle('on', t === id);
-      document.querySelector(`nav a[href="#${t}"]`).classList.toggle('on', t === id);
-    }
-    window.scrollTo(0, 0);
-  }
-  addEventListener('hashchange', show);
-  show();
-</script>
 </body>
 </html>

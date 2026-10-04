@@ -1,30 +1,30 @@
 # Guide site
 
-A small website that replaces the in-app tutorial idea. One page with three tabs:
+Live at **https://rba-backend.cloudedapps.org/guide/**, served by `../server.js`; pushing `backend/`
+deploys it. `/privacy` (the URL in the Play Console and App Store listing) redirects to `#privacy`.
+A small website that replaces an in-app tutorial. One page with three tabs:
 
 | Tab | URL hash | What it is |
 |---|---|---|
 | Tour | `#tour` | How the app works, with simulator screenshots of the real app (1.4.0) |
 | What's new | `#whats-new` | One entry per release, with the iOS build and Android version code |
-| Privacy | `#privacy` | The privacy policy, the same text as `backend/src/privacy.html` |
+| Privacy | `#privacy` | The privacy policy. Change it here when data handling changes, with a new date |
 
 Design follows `../01-field-guide.html`: warm paper, Fraunces serif headings with a rust italic second
 half, small-caps labels, dashed rules. The rarity legend uses the app's own tier colours so it matches
 the pins people see.
 
-Not live yet. The plan:
+Still to do, in the next app build: a once-per-version "What's new" card that opens
+`/guide/#whats-new`, and a Guide link on the About screen. The site is also the App Store Support URL.
 
-1. Move this folder to the backend (e.g. `backend/src/site/`) and serve it at `/guide`, keeping
-   `/privacy` working (Play Console and the App Store listing link to it). Pushing `backend/` deploys.
-2. In the next app build: a once-per-version "What's new" card that opens `/guide#whats-new`, and a
-   Guide link on the About screen.
-3. The site can also be the App Store "Support URL".
+The tab script is `guide.js`, not inline: the server's Content-Security-Policy (helmet) blocks
+inline scripts. Inline `style` attributes are allowed.
 
 ## View it
 
 ```bash
-open renders/site/index.html        # macOS
-start renders/site/index.html       # Windows
+open backend/src/site/index.html     # macOS
+start backend/src/site/index.html    # Windows
 ```
 
 ## Fonts
