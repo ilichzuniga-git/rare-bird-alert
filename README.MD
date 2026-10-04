@@ -584,14 +584,20 @@ Comments are fetched on demand and never stored in the local database.
 - [x] iPad support: split hero card on wide screens; tested on iPhone and iPad simulators, portrait and landscape
 - [x] Apple Developer Program, EAS credentials (certificate, provisioning profile, APNs push key; renew by 2027-10-03)
 - [x] First TestFlight build (1.3.0 build 3); App Store Connect app "Birder's Best Friend"
-- [ ] TestFlight on a real iPhone (a family member): every screen, plus **push notifications**, untested on iOS so far
+- [x] TestFlight on a real iPhone (a family member, build 3, 2026-10-04). Her feedback led to the at-sea and notification-tap changes below
+- [ ] TestFlight 1.4.0: at-sea labels and switch, and **push notifications** on a real iPhone (tap with the app open, in the background, closed)
 - [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), description, App Privacy answers matching the Play Data safety form, privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`)
 - [ ] Submit for App Store review
 
 **Both apps**
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
-- [ ] Next Android upload: picks up the About text fix, the search box AutoFill change, the iOS-only code, and the **at-sea birds** and **notification taps** changes below (those do change Android behavior)
-- [ ] Bump `expo.version` (e.g. 1.4.0) for the next release on either store, so testers can tell builds without the location-sending code apart
+- [x] `expo.version` bumped to **1.4.0** (2026-10-04), first used by the iOS TestFlight build with the at-sea and notification changes
+- [ ] **Next Android upload (1.4.0):** `eas build -p android --profile production`, then Play Console → Internal Testing. Brings Android up to the iOS build:
+  - **At-sea birds** (see below): "At sea" labels, no Directions or trip button for them, and the "🚤 At sea" switch, hidden by default (red, struck through while hidden)
+  - **Notification taps** (see below): a tap opens the bird, or lists the announced birds under "Just reported". The new notification wording is already live from the server, but taps do nothing on 1.3.0
+  - About text fix and the search box AutoFill change
+  - First Android build without the location-sending report code (1.3.0 and earlier still send it; the server ignores it)
+  - Test on an Android phone before uploading: at-sea switch and labels, a notification tap with the app open, in the background and closed
 
 **At-sea (pelagic) birds.** From TestFlight feedback (2026-10-04): the rarest birds were often far offshore, seen from pelagic boat trips, and the app offered driving directions to a point in the ocean. Shared code, so both apps get it; the backend half is live as soon as it's pushed, and the app half ships with the next build of each. Older builds ignore the new field, so nothing changes for them until they update.
 - [x] Backend adds `at_sea` to each `/api/sightings` row: more than 2 km from land, using Natural Earth's 1:10m land and minor-islands polygons clipped to Southern California (`backend/src/atSea.js`, `backend/src/data/socal-land.json`, about 16 KB). Computed per response, so no migration. Catalina, San Clemente, Santa Barbara Island and the northern Channel Islands count as land, as do beaches, harbours and bays. A region outside lat 32.0–35.6, lng -120.5 to -116.5 needs the data re-clipped
