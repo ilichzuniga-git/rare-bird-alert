@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AppState,
   BackHandler,
   Image,
   Keyboard,
@@ -13,7 +14,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { registerForPushNotificationsAsync } from './src/notifications';
+import { onNotificationTap, registerForPushNotificationsAsync } from './src/notifications';
 import LeafletMap, { type MapFocus, type MapPin, type UserSpot } from './src/LeafletMap';
 import AboutModal from './src/AboutModal';
 import { DetailBody, DetailHeader, useSightingDetail } from './src/SightingDetail';
@@ -80,7 +81,16 @@ function Main() {
     return () => clearInterval(tick);
   }, [fetchSightings]);
 
+  // Birds from a tapped notification, listed first under "Just reported" (bird keys)
+  const [justReported, setJustReported] = useState<Set<string> | null>(null);
+  // Leaving the app ends that view; a later normal launch shows the usual list
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', s => { if (s === 'background') setJustReported(null); });
+    return () => sub.remove();
+  }, []);
+
   const onRefresh = useCallback(async () => {
+    setJustReported(null);
     setRefreshing(true);
     await fetchSightings();
     setRefreshing(false);
@@ -103,6 +113,7 @@ function Main() {
   const [nearState, setNearState] = useState<'idle' | 'locating' | 'denied' | 'ready'>('idle');
   const lastList = useRef<Period>('week'); // where closing the trip returns to
   const choosePeriod = useCallback(async (p: Period) => {
+    setJustReported(null);
     if (p !== 'trip') lastList.current = p;
     setPeriod(p);
     if ((p !== 'near' && p !== 'trip') || userLoc || nearState === 'locating') return;
@@ -157,24 +168,32 @@ function Main() {
 
   // Birds shown in the sheet and on the map: first one is the hero card.
   // seaCount: how many of them are out on the ocean, counted before the at-sea switch hides them.
-  const { birds, seaCount } = useMemo(() => {
-    if (period === 'trip') return { birds: route.map(t => t.bird).filter(b => matchesQuery(b, query)), seaCount: 0 };
+  // justCount: how many lead the list because a tapped notification announced them.
+  const { birds, seaCount, justCount } = useMemo(() => {
+    if (period === 'trip') {
+      return { birds: route.map(t => t.bird).filter(b => matchesQuery(b, query)), seaCount: 0, justCount: 0 };
+    }
+    // Announced birds show even when reported late (seen before this week) or at sea while those are hidden
+    const isJust = (b: Bird) => justReported?.has(b.key) === true;
     const matching = allBirds.filter(b =>
-      inPeriod(b, period) &&
+      (inPeriod(b, period) || isJust(b)) &&
       (!source || b.reports.some(r => r.source === source)) &&
       matchesQuery(b, query));
     const seaCount = matching.filter(atSea).length;
-    const visible = prefs.hideAtSea ? matching.filter(b => !atSea(b)) : matching;
+    const visible = prefs.hideAtSea ? matching.filter(b => !atSea(b) || isJust(b)) : matching;
     if (period === 'near' && userLoc) {
       visible.sort((a, b) => (distanceTo(a, userLoc) ?? Infinity) - (distanceTo(b, userLoc) ?? Infinity));
-      return { birds: visible, seaCount };
+      return { birds: visible, seaCount, justCount: 0 };
     }
+    // After a notification tap: its birds first, rarest leading as the hero, then the rest newest-first
+    const just = visible.filter(isJust).sort(byRarity);
+    if (just.length) return { birds: [...just, ...visible.filter(b => !isJust(b))], seaCount, justCount: just.length };
     // Rarest bird you can get to leads as the hero (one at sea only if that's all there is);
     // the rest stay newest-first
     const ranked = [...visible].sort(byRarity);
     const hero = ranked.find(b => !atSea(b)) ?? ranked[0];
-    return { birds: hero ? [hero, ...visible.filter(b => b !== hero)] : visible, seaCount };
-  }, [allBirds, period, source, query, userLoc, route, prefs.hideAtSea]);
+    return { birds: hero ? [hero, ...visible.filter(b => b !== hero)] : visible, seaCount, justCount: 0 };
+  }, [allBirds, period, source, query, userLoc, route, prefs.hideAtSea, justReported]);
 
   const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
     const { lat, lng } = b.latest;
@@ -211,6 +230,31 @@ function Main() {
     if (bird) selectBird(bird, bird.reports.find(r => r.id === id));
   }, [birds, allBirds, selectBird]);
   const closeDetail = useCallback(() => setSelected(null), []);
+
+  // Tapping a notification: reload, then open its bird, or list its birds first under "Just reported"
+  const [tapped, setTapped] = useState<number[] | null>(null);
+  useEffect(() => onNotificationTap(async ids => {
+    Keyboard.dismiss();
+    setSelected(null);
+    setQueryText(''); setQuery(''); setSource(null);
+    lastList.current = 'week';
+    setPeriod('week');
+    await fetchSightings();
+    setTapped(ids); // resolved below, once the fresh sightings are grouped into birds
+  }), [fetchSightings]);
+  useEffect(() => {
+    if (!tapped) return;
+    setTapped(null);
+    const ids = new Set(tapped);
+    const hits = allBirds.filter(b => b.reports.some(r => ids.has(r.id)));
+    if (hits.length === 1) {
+      setJustReported(null);
+      selectBird(hits[0], hits[0].reports.find(r => ids.has(r.id)));
+    } else {
+      setJustReported(hits.length ? new Set(hits.map(b => b.key)) : null);
+      sheetRef.current?.snapTo(1);
+    }
+  }, [tapped, allBirds, selectBird]);
   const openOrCloseTrip = useCallback(() => {
     if (period === 'trip' && !selected) { closeTrip(); return; }
     setSelected(null);
@@ -371,6 +415,7 @@ function Main() {
         ) : (
           <SheetList
             birds={birds}
+            justCount={justCount}
             period={period}
             loading={loading}
             error={error}

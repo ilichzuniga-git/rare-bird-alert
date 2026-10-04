@@ -1,27 +1,69 @@
 const https = require('https');
 const db = require('./db');
+const { ensureLoaded: ensureRarity, rarityCountFor } = require('./rarity');
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
+// Sighting ids sent with a notification, so tapping it opens those birds. Kept well under
+// the 4 KB push payload limit; the app shows whichever of them are still in its feed.
+const MAX_IDS = 100;
+
+/** "A", "A and B", "A, B and 3 more" */
+function nameList(names) {
+  if (names.length <= 2) return names.join(' and ');
+  return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
+}
+
 /**
- * Send push notifications to all registered devices when new sightings arrive.
- * @param {{ code: string, name: string }} region
- * @param {number} newCount
+ * The notification for one poll cycle's new sightings: the species, rarest first, and
+ * where. Exported for testing.
+ * @param {{ id: number, common_name: string, location_name: string|null, region_name: string, rarity: number|null }[]} sightings
  */
-async function dispatchNotifications(region, newCount) {
+function buildMessage(sightings) {
+  // Rarest first (fewest all-time county records; no data counts as common), then newest
+  const ranked = [...sightings].sort((a, b) => (a.rarity ?? Infinity) - (b.rarity ?? Infinity) || b.id - a.id);
+  const species = [...new Set(ranked.map(s => s.common_name))];
+  const regions = [...new Set(ranked.map(s => s.region_name))];
+  // "Los Angeles & Orange County", not "Los Angeles County & Orange County"
+  const where = regions.map((r, i) => (i < regions.length - 1 ? r.replace(/ County$/, '') : r)).join(' & ');
+
+  let title, body;
+  if (species.length === 1) {
+    const places = [...new Set(ranked.map(s => s.location_name).filter(Boolean))];
+    title = `🐦 ${species[0]}`;
+    body = places.length === 1 ? `${places[0]} · ${where}` : `New in ${where}`;
+  } else {
+    title = `🐦 ${species.length} new rare birds in ${where}`;
+    body = nameList(species);
+  }
+  return { title, body, data: { sightingIds: ranked.slice(0, MAX_IDS).map(s => s.id) } };
+}
+
+/**
+ * Send one push notification to every registered device for a poll cycle's new sightings.
+ * @param {number[]} sightingIds
+ */
+async function dispatchNotifications(sightingIds) {
   const { rows: devices } = await db.query(
     'SELECT token FROM device_tokens'
   );
   if (devices.length === 0) return;
 
-  const birdWord = newCount === 1 ? 'sighting' : 'sightings';
-  const messages = devices.map(d => ({
-    to: d.token,
-    sound: 'default',
-    title: `🐦 New in ${region.name}`,
-    body: `${newCount} new rare bird ${birdWord} reported.`,
-    data: { regionCode: region.code, newCount },
-  }));
+  const { rows } = await db.query(
+    `SELECT s.id, s.common_name, s.scientific_name, s.location_name, s.region_code, s.rarity_count,
+            r.name AS region_name
+       FROM sightings s JOIN regions r ON r.code = s.region_code
+      WHERE s.id = ANY($1)`,
+    [sightingIds]
+  );
+  if (!rows.length) return; // purged in the same cycle (older than the retention window)
+
+  // eBird rows carry no rarity; rate them the way /api/sightings does
+  await ensureRarity([...new Set(rows.map(r => r.region_code))]);
+  for (const r of rows) r.rarity = r.rarity_count ?? rarityCountFor(r.region_code, r.scientific_name);
+
+  const { title, body, data } = buildMessage(rows);
+  const messages = devices.map(d => ({ to: d.token, sound: 'default', title, body, data }));
 
   // Expo push API accepts batches of up to 100
   const BATCH = 100;
@@ -38,7 +80,7 @@ async function dispatchNotifications(region, newCount) {
     });
   }
 
-  console.log(`[notifications] Sent to ${devices.length} device(s) for ${region.name}`);
+  console.log(`[notifications] Sent "${title}" to ${devices.length} device(s)`);
 
   if (deadTokens.length) {
     await db.query('DELETE FROM device_tokens WHERE token = ANY($1)', [deadTokens]);
@@ -71,4 +113,4 @@ function _postJSON(url, body) {
   });
 }
 
-module.exports = { dispatchNotifications };
+module.exports = { dispatchNotifications, buildMessage };

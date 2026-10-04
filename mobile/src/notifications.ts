@@ -100,3 +100,43 @@ export async function configureNotificationHandler() {
     }),
   });
 }
+
+/**
+ * Call onTap with the sighting ids of a tapped notification: one tapped while the app
+ * is running or in the background, or the one that launched it from closed. Returns an
+ * unsubscribe function. No-ops in Expo Go, like the rest of this file.
+ */
+export function onNotificationTap(onTap: (sightingIds: number[]) => void): () => void {
+  if (isExpoGo() || Platform.OS === 'web') return () => {};
+
+  let sub: { remove: () => void } | null = null;
+  let cancelled = false;
+  // A launch tap can arrive through both paths below; handle each notification once
+  const handled = new Set<string>();
+
+  const handle = (response: NotificationsModule.NotificationResponse | null) => {
+    if (!response) return;
+    const id = response.notification.request.identifier;
+    if (handled.has(id)) return;
+    handled.add(id);
+    const ids = response.notification.request.content.data?.sightingIds;
+    // Older server builds sent no ids; the tap then still opens the week's list
+    onTap(Array.isArray(ids) ? ids.filter((n): n is number => typeof n === 'number') : []);
+  };
+
+  loadNotifications().then(Notifications => {
+    if (cancelled) return;
+    sub = Notifications.addNotificationResponseReceivedListener(response => {
+      handle(response);
+      Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    });
+    // The tap that launched the app may have fired before the listener existed
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (cancelled || !response) return;
+      handle(response);
+      Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    }).catch(() => {});
+  }).catch(() => {});
+
+  return () => { cancelled = true; sub?.remove(); };
+}

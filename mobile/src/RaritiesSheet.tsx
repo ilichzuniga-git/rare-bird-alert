@@ -107,6 +107,7 @@ type DistanceOf = (b: Bird) => number | null;
 
 export function SheetList({
   birds,
+  justCount,
   period,
   loading,
   error,
@@ -120,6 +121,8 @@ export function SheetList({
 }: {
   /** Already filtered and sorted; the first one becomes the hero card */
   birds: Bird[];
+  /** The first this many birds are from a tapped notification ("Just reported") */
+  justCount: number;
   period: Period;
   loading: boolean;
   error: string | null;
@@ -156,25 +159,30 @@ export function SheetList({
 
   const [hero, ...rest] = birds;
   const groupTitle = period === 'near' ? 'Also nearby' : period === 'week' ? 'Also this week' : 'Also in the last 30 days';
+  // Rows after the hero that a tapped notification announced: their own card, then the usual group
+  const split = Math.max(justCount - 1, 0);
 
   return (
     <FlatList
       data={rest}
       keyExtractor={b => b.key}
       renderItem={({ item, index }) => (
-        <BirdRow
-          bird={item}
-          first={index === 0}
-          last={index === rest.length - 1}
-          distance={distanceOf(item)}
-          onPress={() => onSelect(item)}
-        />
+        <>
+          {split > 0 && index === split ? <Text style={[styles.groupTitle, styles.groupGap]}>{groupTitle}</Text> : null}
+          <BirdRow
+            bird={item}
+            first={index === 0 || index === split}
+            last={index === rest.length - 1 || index === split - 1}
+            distance={distanceOf(item)}
+            onPress={() => onSelect(item)}
+          />
+        </>
       )}
       ListHeaderComponent={
         hero ? (
           <>
-            <Hero bird={hero} distance={distanceOf(hero)} onPress={() => onSelect(hero)} />
-            {rest.length ? <Text style={styles.groupTitle}>{groupTitle}</Text> : null}
+            <Hero bird={hero} fresh={justCount > 0} distance={distanceOf(hero)} onPress={() => onSelect(hero)} />
+            {rest.length ? <Text style={styles.groupTitle}>{split ? 'Just reported' : groupTitle}</Text> : null}
           </>
         ) : null
       }
@@ -194,7 +202,13 @@ export function SheetList({
 const WIDE_HERO = 700;
 const HERO_PANEL_W = 330;
 
-function Hero({ bird, distance, onPress }: { bird: Bird; distance: number | null; onPress: () => void }) {
+function Hero({ bird, fresh, distance, onPress }: {
+  bird: Bird;
+  /** From a tapped notification */
+  fresh: boolean;
+  distance: number | null;
+  onPress: () => void;
+}) {
   const wide = useWindowDimensions().width >= WIDE_HERO;
   const s = bird.latest;
   const photo = usePhoto(s.photo_url, s.photo_attribution, s.scientific_name);
@@ -222,7 +236,10 @@ function Hero({ bird, distance, onPress }: { bird: Bird; distance: number | null
         <Text style={styles.heroGhost}>🐦</Text>
       )}
       <View style={styles.kicker}>
-        <Text style={styles.chip}>★ {bird.tier.rank > 0 ? bird.tier.name.toUpperCase() : 'RAREST RIGHT NOW'}</Text>
+        <Text style={styles.chip}>
+          ★ {fresh ? `NEW${bird.tier.rank > 0 ? ` · ${bird.tier.name.toUpperCase()}` : ''}`
+            : bird.tier.rank > 0 ? bird.tier.name.toUpperCase() : 'RAREST RIGHT NOW'}
+        </Text>
         {status ? <Text style={styles.chip}>● {status}</Text> : null}
       </View>
       <Text style={styles.heroName} numberOfLines={1}>{bird.count && bird.count > 1 ? `${bird.count}× ` : ''}{s.common_name}</Text>
@@ -348,6 +365,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 4, paddingBottom: 6, fontSize: 12, fontWeight: '800',
     letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted,
   },
+  groupGap: { paddingTop: 18 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14,
     marginHorizontal: 16, backgroundColor: colors.card, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.line,

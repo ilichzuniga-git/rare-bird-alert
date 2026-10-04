@@ -590,7 +590,7 @@ Comments are fetched on demand and never stored in the local database.
 
 **Both apps**
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
-- [ ] Next Android upload: picks up the About text fix, the search box AutoFill change, the iOS-only code, and the **at-sea birds** changes below (those do change Android behavior)
+- [ ] Next Android upload: picks up the About text fix, the search box AutoFill change, the iOS-only code, and the **at-sea birds** and **notification taps** changes below (those do change Android behavior)
 - [ ] Bump `expo.version` (e.g. 1.4.0) for the next release on either store, so testers can tell builds without the location-sending code apart
 
 **At-sea (pelagic) birds.** From TestFlight feedback (2026-10-04): the rarest birds were often far offshore, seen from pelagic boat trips, and the app offered driving directions to a point in the ocean. Shared code, so both apps get it; the backend half is live as soon as it's pushed, and the app half ships with the next build of each. Older builds ignore the new field, so nothing changes for them until they update.
@@ -600,6 +600,14 @@ Comments are fetched on demand and never stored in the local database.
 - [x] "🚤 At sea · N" switch next to the source filters hides those birds; remembered on the phone (`mobile/src/prefs.ts`, a JSON file like the trip). Shown by default
 - [x] The hero card picks the rarest bird you can reach; an at-sea bird leads only when nothing else is in view
 - [x] Trip directions skip at-sea birds (saved before this change)
+
+**Notification taps.** From TestFlight feedback (2026-10-04): tapping a notification just opened the app where it was left, and the notification never said which bird. Shared code, so both apps get it. The server half is live once pushed, so testers on older builds see the new wording right away; tapping only works after they update.
+- [x] One notification per poll cycle, instead of one per source and county (`backend/src/poller/index.js`)
+- [x] It names the birds, rarest first: "🐦 Craveri's Murrelet" / "Crespi Knoll (ORA Co.) · Orange County" for one species, "🐦 3 new rare birds in Orange County" / "Cocos Booby, Least Storm-Petrel and 1 more" for several. `data.sightingIds` carries the new sighting ids (up to 100) (`backend/src/notifications.js`)
+- [x] Tapping refreshes, then opens the bird's detail when it's one bird; otherwise "This week" lists the announced birds first: the rarest as the hero (★ NEW), the rest under "Just reported", then "Also this week" as usual. Announced birds show even if they were seen before this week or are at sea while those are hidden (`mobile/src/notifications.ts`, `App.tsx`, `RaritiesSheet.tsx`)
+- [x] Works when the tap launches the app from closed, too
+- [x] "Just reported" clears when you switch tabs, pull to refresh, or leave the app
+- [ ] Test on a real phone (Expo Go has no push): one-bird and several-bird notifications, app open / in the background / closed
 
 **BirdWeather corroboration.** Permission granted 2026-09-28; stay within the scope in [docs/SOURCES.MD](docs/SOURCES.MD#birdweather-integrated).
 - [x] Backend job: for each active rare-bird report, query BirdWeather for high-confidence detections of that species within ~300 m on the same days, a few times an hour

@@ -9,8 +9,8 @@ const { clusterSightings } = require('../clustering');
 const RETENTION_DAYS = 28;
 
 /**
- * Run one full poll cycle across all enabled sources × all enabled regions.
- * Returns the total number of new sightings inserted.
+ * Run one full poll cycle across all enabled sources × all enabled regions, then send
+ * one notification for everything new in it. Returns the number of new sightings inserted.
  */
 async function pollAll() {
   const { rows: regions } = await db.query(
@@ -23,7 +23,7 @@ async function pollAll() {
     return 0;
   }
 
-  let totalNew = 0;
+  const newIds = [];
 
   for (const region of regions) {
     for (const source of sources) {
@@ -50,7 +50,7 @@ async function pollAll() {
                observed_at         = EXCLUDED.observed_at,
                location_accuracy_m = EXCLUDED.location_accuracy_m,
                location_obscured   = EXCLUDED.location_obscured
-             RETURNING (xmax = 0) AS inserted`,
+             RETURNING id, (xmax = 0) AS inserted`,
             [
               s.region_code, s.source, s.source_id, s.species_code,
               s.common_name, s.scientific_name,
@@ -60,22 +60,14 @@ async function pollAll() {
               s.location_accuracy_m ?? null, s.location_obscured === true,
             ]
           );
-          if (result.rows[0]?.inserted) newCount++;
+          if (result.rows[0]?.inserted) {
+            newCount++;
+            newIds.push(result.rows[0].id);
+          }
         }
         console.log(
           `[poller] ${source.name} / ${region.name}: ${sightings.length} fetched, ${newCount} new`
         );
-        totalNew += newCount;
-
-        // Notify devices about new sightings (imported lazily to avoid circular deps)
-        if (newCount > 0) {
-          try {
-            const { dispatchNotifications } = require('../notifications');
-            await dispatchNotifications(region, newCount);
-          } catch (e) {
-            console.warn('[poller] Notification dispatch error:', e.message);
-          }
-        }
       } catch (err) {
         console.error(`[poller] Error polling ${source.name} / ${region.code}:`, err.message);
       }
@@ -100,7 +92,17 @@ async function pollAll() {
     console.error('[poller] Clustering error:', err.message);
   }
 
-  return totalNew;
+  // One notification per cycle, not one per source and region (imported lazily to avoid circular deps)
+  if (newIds.length) {
+    try {
+      const { dispatchNotifications } = require('../notifications');
+      await dispatchNotifications(newIds);
+    } catch (e) {
+      console.warn('[poller] Notification dispatch error:', e.message);
+    }
+  }
+
+  return newIds.length;
 }
 
 /**
