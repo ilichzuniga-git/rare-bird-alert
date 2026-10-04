@@ -80,16 +80,17 @@ export function SheetHeader({
             );
           }) : null}
           {seaCount > 0 ? (
-            // A switch, not a filter choice: pushed to the right, crossed out while hidden
+            // A switch, not a filter choice: pushed to the right, red and struck through while hidden
             <Pressable
-              style={[styles.pill, styles.seaPill, !hideAtSea && styles.pillOn]}
+              style={[styles.pill, styles.seaPill, hideAtSea ? styles.seaPillOff : styles.pillOn]}
               onPress={() => onHideAtSea(!hideAtSea)}
               accessibilityRole="switch"
               accessibilityState={{ checked: !hideAtSea }}
               accessibilityLabel={`Birds at sea, ${seaCount}, ${hideAtSea ? 'hidden' : 'shown'}`}
             >
-              <Text style={[styles.pillText, !hideAtSea && styles.pillTextOn, hideAtSea && styles.pillTextOff]}>
-                🚤 At sea · {seaCount}
+              <Text style={[styles.pillText, hideAtSea ? styles.seaTextOff : styles.pillTextOn]}>
+                {/* strike the words only; a line through the emoji looks broken */}
+                🚤 <Text style={hideAtSea && styles.struck}>At sea · {seaCount}</Text>
               </Text>
             </Pressable>
           ) : null}
@@ -328,8 +329,10 @@ const styles = StyleSheet.create({
   pillOn: { backgroundColor: colors.accentSoft },
   pillText: { fontSize: 12, fontWeight: '700', color: colors.muted },
   pillTextOn: { color: colors.accent },
-  pillTextOff: { textDecorationLine: 'line-through' },
   seaPill: { marginLeft: 'auto' },
+  seaPillOff: { backgroundColor: colors.dippedSoft },
+  seaTextOff: { color: colors.red },
+  struck: { textDecorationLine: 'line-through' },
 
   // states
   center: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 24, gap: 10 },
