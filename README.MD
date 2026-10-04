@@ -591,7 +591,12 @@ Comments are fetched on demand and never stored in the local database.
 
 **Both apps**
 - [x] Guide site live at `https://rba-backend.cloudedapps.org/guide/` (2026-10-04): Tour, What's new, Privacy; `/privacy` redirects to its Privacy tab. Source and screenshot how-to: `backend/src/site/README.md`. Add a What's new entry with every release
-- [ ] Next build: a once-per-version "What's new" card linking to `/guide/#whats-new`, a Guide link on the About screen, and an app-icon badge for unread alerts
+- [ ] **Next build (1.5.0), both apps.** Shared code, so one batch for iOS and Android; no rebuild per item:
+  - [ ] "What's new" card, shown once after each update: store the last version seen in `prefs.json` and compare it with the app version. Its button opens `https://rba-backend.cloudedapps.org/guide/#whats-new`
+  - [ ] Guide link on the About screen, opening `/guide/`
+  - [ ] **Modernize the About screen** (`mobile/src/AboutModal.tsx`): it still has the old green-header, plain-text style. Bring it in line with the current sheet and cards (rounded cards, pills, the tier colours) and give the sources section the look of the rest of the app
+  - [ ] App-icon badge for unread alerts: the backend sends a badge count with each notification and the app clears it on launch (`shouldSetBadge` in `mobile/src/notifications.ts`). Not yet confirmed by the user
+  - [ ] Add a 1.5.0 entry to the guide's What's new tab, and retake any tour screenshots whose screens changed (`backend/src/site/README.md`)
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
 - [x] `expo.version` bumped to **1.4.0** (2026-10-04), first used by the iOS TestFlight build with the at-sea and notification changes
 - [x] **Android upload (1.4.0, versionCode 8):** built with `eas build -p android --profile production`, uploaded to Play Console → Internal Testing (2026-10-04). Brings Android up to the iOS build:
