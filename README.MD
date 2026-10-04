@@ -585,14 +585,14 @@ Comments are fetched on demand and never stored in the local database.
 - [x] Apple Developer Program, EAS credentials (certificate, provisioning profile, APNs push key; renew by 2027-10-03)
 - [x] First TestFlight build (1.3.0 build 3); App Store Connect app "Birder's Best Friend"
 - [x] TestFlight on a real iPhone (a family member, build 3, 2026-10-04). Her feedback led to the at-sea and notification-tap changes below
-- [ ] TestFlight 1.4.0: at-sea labels and switch, and **push notifications** on a real iPhone (tap with the app open, in the background, closed)
+- [ ] TestFlight 1.4.0 (build 4): at-sea labels and switch confirmed on her iPhone (2026-10-04; she had to reinstall before the changes appeared). Still to test: **push notifications** on a real iPhone (tap with the app open, in the background, closed)
 - [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), description, App Privacy answers matching the Play Data safety form, privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`)
 - [ ] Submit for App Store review
 
 **Both apps**
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
 - [x] `expo.version` bumped to **1.4.0** (2026-10-04), first used by the iOS TestFlight build with the at-sea and notification changes
-- [ ] **Next Android upload (1.4.0):** `eas build -p android --profile production`, then Play Console → Internal Testing. Brings Android up to the iOS build:
+- [x] **Android upload (1.4.0, versionCode 8):** built with `eas build -p android --profile production`, uploaded to Play Console → Internal Testing (2026-10-04). Brings Android up to the iOS build:
   - **At-sea birds** (see below): "At sea" labels, no Directions or trip button for them, and the "🚤 At sea" switch, hidden by default (red, struck through while hidden)
   - **Notification taps** (see below): a tap opens the bird, or lists the announced birds under "Just reported". The new notification wording is already live from the server, but taps do nothing on 1.3.0
   - About text fix and the search box AutoFill change
