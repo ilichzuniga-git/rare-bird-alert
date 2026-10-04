@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { parseCredit, usePhoto } from './BirdPhoto';
-import { refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
+import { atSea, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
 import { colors, radius, STATUS_DOT } from './theme';
 import { formatDistance, formatSource } from './util';
 
@@ -33,6 +33,9 @@ export function SheetHeader({
   sources,
   source,
   onSource,
+  seaCount,
+  hideAtSea,
+  onHideAtSea,
 }: {
   updatedLabel: string;
   period: Period;
@@ -41,6 +44,10 @@ export function SheetHeader({
   sources: string[];
   source: string | null;
   onSource: (s: string | null) => void;
+  /** Birds out on the ocean in the current view, counted whether or not they're hidden */
+  seaCount: number;
+  hideAtSea: boolean;
+  onHideAtSea: (hide: boolean) => void;
 }) {
   return (
     <View>
@@ -62,16 +69,30 @@ export function SheetHeader({
         })}
       </View>
 
-      {sources.length > 1 ? (
+      {sources.length > 1 || seaCount > 0 ? (
         <View style={styles.pills}>
-          {[null, ...sources].map(s => {
+          {sources.length > 1 ? [null, ...sources].map(s => {
             const on = s === source;
             return (
               <Pressable key={s ?? 'all'} style={[styles.pill, on && styles.pillOn]} onPress={() => onSource(s)}>
                 <Text style={[styles.pillText, on && styles.pillTextOn]}>{s ? formatSource(s) : 'All sources'}</Text>
               </Pressable>
             );
-          })}
+          }) : null}
+          {seaCount > 0 ? (
+            // A switch, not a filter choice: pushed to the right, crossed out while hidden
+            <Pressable
+              style={[styles.pill, styles.seaPill, !hideAtSea && styles.pillOn]}
+              onPress={() => onHideAtSea(!hideAtSea)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: !hideAtSea }}
+              accessibilityLabel={`Birds at sea, ${seaCount}, ${hideAtSea ? 'hidden' : 'shown'}`}
+            >
+              <Text style={[styles.pillText, !hideAtSea && styles.pillTextOn, hideAtSea && styles.pillTextOff]}>
+                🚤 At sea · {seaCount}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -180,6 +201,7 @@ function Hero({ bird, distance, onPress }: { bird: Bird; distance: number | null
   const credit = photo.url ? parseCredit(photo.attribution) : null;
   const status = refoundLabel(bird) ?? statusWord(bird);
   const meta = [
+    atSea(bird) ? '🚤 At sea' : null,
     s.location_name ?? s.region_name,
     bird.reports.length > 1 ? `${bird.reports.length} reports` : whenLabel(s.observed_at),
     distance != null ? formatDistance(distance) : null,
@@ -239,6 +261,7 @@ export const BirdRow = memo(function BirdRow({
   const dot = STATUS_DOT[bird.cluster?.status.level ?? 'gray'];
   const place = s.location_name ?? s.region_name;
   const sub = [
+    atSea(bird) ? '🚤 At sea' : null,
     distance != null ? formatDistance(distance) : null,
     place,
     stale ? 'No recent reports' : bird.reports.length > 1 ? `${bird.reports.length} reports` : null,
@@ -288,6 +311,8 @@ const styles = StyleSheet.create({
   pillOn: { backgroundColor: colors.accentSoft },
   pillText: { fontSize: 12, fontWeight: '700', color: colors.muted },
   pillTextOn: { color: colors.accent },
+  pillTextOff: { textDecorationLine: 'line-through' },
+  seaPill: { marginLeft: 'auto' },
 
   // states
   center: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 24, gap: 10 },

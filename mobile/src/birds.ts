@@ -90,6 +90,11 @@ export function distanceTo(bird: Bird, from: { lat: number; lng: number }): numb
   return distanceMetres(from.lat, from.lng, Number(lat), Number(lng));
 }
 
+/** Last seen out on the ocean, so it takes a boat (a pelagic trip), not a drive. */
+export function atSea(bird: Bird): boolean {
+  return bird.latest.at_sea === true;
+}
+
 /** Rarest first, then most-reported, then most recent: picks the hero card. */
 export function byRarity(a: Bird, b: Bird): number {
   return (

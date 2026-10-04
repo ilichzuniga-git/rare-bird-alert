@@ -106,14 +106,20 @@ export function useTrip(allBirds: Bird[]) {
 
 type Point = { lat: number; lng: number };
 
+/** Where to drive for this bird: none without coordinates, or when it was last seen out on the ocean. */
 function pointOf(b: Bird): Point | null {
-  const { lat, lng } = b.latest;
-  return lat == null || lng == null ? null : { lat: Number(lat), lng: Number(lng) };
+  const { lat, lng, at_sea } = b.latest;
+  return lat == null || lng == null || at_sea ? null : { lat: Number(lat), lng: Number(lng) };
+}
+
+/** Directions can route to this bird. */
+export function routable(b: Bird): boolean {
+  return pointOf(b) != null;
 }
 
 /**
  * Driving order: repeatedly go to the nearest unvisited stop, starting from the
- * user (or the first saved bird). Birds without coordinates go last.
+ * user (or the first saved bird). Birds that can't be driven to go last.
  */
 export function routeOrder(trip: TripBird[], start: Point | null): TripBird[] {
   const left = trip.filter(t => pointOf(t.bird));

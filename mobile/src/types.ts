@@ -24,6 +24,9 @@ export interface Sighting {
   location_obscured: boolean;
   notes: string | null;
   cluster_id: number | null;
+  // Out on the ocean, more than 2 km from any land (a pelagic trip); islands count as land.
+  // Missing from older backends.
+  at_sea?: boolean;
 }
 
 // ---- Cluster types ----

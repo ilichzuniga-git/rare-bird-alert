@@ -590,8 +590,16 @@ Comments are fetched on demand and never stored in the local database.
 
 **Both apps**
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
-- [ ] Next Android upload: picks up the About text fix, the search box AutoFill change and the iOS-only code (no Android behavior change otherwise)
+- [ ] Next Android upload: picks up the About text fix, the search box AutoFill change, the iOS-only code, and the **at-sea birds** changes below (those do change Android behavior)
 - [ ] Bump `expo.version` (e.g. 1.4.0) for the next release on either store, so testers can tell builds without the location-sending code apart
+
+**At-sea (pelagic) birds.** From TestFlight feedback (2026-10-04): the rarest birds were often far offshore, seen from pelagic boat trips, and the app offered driving directions to a point in the ocean. Shared code, so both apps get it; the backend half is live as soon as it's pushed, and the app half ships with the next build of each. Older builds ignore the new field, so nothing changes for them until they update.
+- [x] Backend adds `at_sea` to each `/api/sightings` row: more than 2 km from land, using Natural Earth's 1:10m land and minor-islands polygons clipped to Southern California (`backend/src/atSea.js`, `backend/src/data/socal-land.json`, about 16 KB). Computed per response, so no migration. Catalina, San Clemente, Santa Barbara Island and the northern Channel Islands count as land, as do beaches, harbours and bays. A region outside lat 32.0–35.6, lng -120.5 to -116.5 needs the data re-clipped
+- [x] Bird detail: "🚤 At sea" in the header and a "Seen at sea" note; no Directions and no car (save to trip) button. A bird saved before can still be removed
+- [x] List rows, the hero card and map pins say "At sea"
+- [x] "🚤 At sea · N" switch next to the source filters hides those birds; remembered on the phone (`mobile/src/prefs.ts`, a JSON file like the trip). Shown by default
+- [x] The hero card picks the rarest bird you can reach; an at-sea bird leads only when nothing else is in view
+- [x] Trip directions skip at-sea birds (saved before this change)
 
 **BirdWeather corroboration.** Permission granted 2026-09-28; stay within the scope in [docs/SOURCES.MD](docs/SOURCES.MD#birdweather-integrated).
 - [x] Backend job: for each active rare-bird report, query BirdWeather for high-confidence detections of that species within ~300 m on the same days, a few times an hour

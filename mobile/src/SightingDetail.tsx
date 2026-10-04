@@ -13,7 +13,7 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 import BirdPhoto from './BirdPhoto';
 import CarIcon from './CarIcon';
-import { refoundLabel, statusWord, type Bird } from './birds';
+import { atSea, refoundLabel, statusWord, type Bird } from './birds';
 import { colors, radius, STATUS_DOT } from './theme';
 import {
   API_BASE, distanceMetres, findNoteCoordinates, formatDate, formatDateTime, formatDistance, formatSource, openInMaps,
@@ -154,8 +154,13 @@ export function DetailHeader({ bird, sighting, distance, onClose, onTrip, onTogg
   onTrip: boolean;
   onToggleTrip: () => void;
 }) {
-  const place = [sighting.location_name ?? sighting.region_name, distance != null ? formatDistance(distance) : null]
-    .filter(Boolean).join(' · ');
+  const place = [
+    sighting.at_sea ? '🚤 At sea' : null,
+    sighting.location_name ?? sighting.region_name,
+    distance != null ? formatDistance(distance) : null,
+  ].filter(Boolean).join(' · ');
+  // A bird out on the ocean can't be driven to, so it can't be added; one saved earlier can still be removed
+  const canSave = onTrip || !atSea(bird);
   return (
     <View style={styles.hdr}>
       {/* 64px photo with its credit + license (list avatars are too small for one) */}
@@ -173,16 +178,18 @@ export function DetailHeader({ bird, sighting, distance, onClose, onTrip, onTogg
         <Text style={styles.place} numberOfLines={1}>{place}</Text>
       </View>
       <View style={styles.hdrBtns}>
-        <Pressable
-          style={[styles.close, onTrip && styles.tripOn]}
-          onPress={onToggleTrip}
-          hitSlop={8}
-          accessibilityLabel={onTrip ? 'Remove from trip' : 'Save to trip'}
-          accessibilityState={{ selected: onTrip }}
-        >
-          <CarIcon size={22} color={onTrip ? '#fff' : colors.text} cut={onTrip ? colors.accent : colors.bg} />
-          {onTrip ? <Text style={styles.tripCheck}>✓</Text> : null}
-        </Pressable>
+        {canSave ? (
+          <Pressable
+            style={[styles.close, onTrip && styles.tripOn]}
+            onPress={onToggleTrip}
+            hitSlop={8}
+            accessibilityLabel={onTrip ? 'Remove from trip' : 'Save to trip'}
+            accessibilityState={{ selected: onTrip }}
+          >
+            <CarIcon size={22} color={onTrip ? '#fff' : colors.text} cut={onTrip ? colors.accent : colors.bg} />
+            {onTrip ? <Text style={styles.tripCheck}>✓</Text> : null}
+          </Pressable>
+        ) : null}
         <Pressable style={styles.close} onPress={onClose} hitSlop={8} accessibilityLabel="Back to the list">
           <Text style={styles.closeText}>✕</Text>
         </Pressable>
@@ -285,8 +292,10 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
   const noteCount = (payload?.observer_note ? 1 : 0) + comments.length;
   // For an obscured iNaturalist location we must never offer Directions to the
   // randomised point — only to the observer's exact spot if the notes include one.
+  // Nor to a spot out on the ocean, which no road reaches.
   const obscured = sighting.location_obscured === true;
-  const target = exactSpot ?? (obscured ? null : reportPoint);
+  const offshore = sighting.at_sea === true;
+  const target = offshore ? null : exactSpot ?? (obscured ? null : reportPoint);
 
   return (
     <>
@@ -307,6 +316,16 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
             <Pressable style={[styles.ctaBtn, styles.ctaNo]} onPress={() => detail.openConfirm('dipped')} disabled={detail.reporting}>
               <Text style={styles.ctaNoText}>✗ Dipped</Text>
             </Pressable>
+          </View>
+        ) : null}
+
+        {offshore ? (
+          <View style={styles.seaCard}>
+            <Text style={styles.seaTitle}>🚤 Seen at sea</Text>
+            <Text style={styles.seaText}>
+              This report is out on the ocean, more than 2 km from land, so it was most likely seen from a boat
+              (a pelagic birding trip). There are no driving directions to it.
+            </Text>
           </View>
         ) : null}
 
@@ -489,6 +508,11 @@ const styles = StyleSheet.create({
   pillNotesText: { color: '#1d4ed8' },
   pillEbird: { backgroundColor: '#e3eff4' },
   pillEbirdText: { color: colors.heroFrom },
+
+  // at sea
+  seaCard: { marginTop: 12, backgroundColor: '#e3eff4', borderLeftWidth: 3, borderLeftColor: colors.heroFrom, borderRadius: 8, padding: 12 },
+  seaTitle: { fontSize: 13, fontWeight: '800', color: colors.heroFrom, marginBottom: 2 },
+  seaText: { fontSize: 13, color: colors.text, lineHeight: 18 },
 
   // BirdWeather corroboration
   bwCard: { marginTop: 12, backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12, gap: 4 },

@@ -21,8 +21,9 @@ import BottomSheet, { type BottomSheetHandle } from './src/BottomSheet';
 import { SheetHeader, SheetList } from './src/RaritiesSheet';
 import { TripHeader, TripList } from './src/TripSheet';
 import CarIcon from './src/CarIcon';
-import { MAX_STOPS, openTripDirections, routeOrder, useTrip } from './src/trip';
-import { byRarity, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
+import { MAX_STOPS, openTripDirections, routable, routeOrder, useTrip } from './src/trip';
+import { atSea, byRarity, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
+import { usePrefs } from './src/prefs';
 import { colors } from './src/theme';
 import { API_BASE, formatDate } from './src/util';
 import type { ClusterData, Sighting } from './src/types';
@@ -88,6 +89,8 @@ function Main() {
   // ---- filters ----
   const [period, setPeriod] = useState<Period>('week');
   const [source, setSource] = useState<string | null>(null);
+  const { prefs, setPref } = usePrefs();
+  const hideAtSea = useCallback((hide: boolean) => setPref('hideAtSea', hide), [setPref]);
   const [queryText, setQueryText] = useState('');
   const [query, setQuery] = useState(''); // debounced, so the map isn't redrawn on every keystroke
   useEffect(() => {
@@ -152,25 +155,31 @@ function Main() {
     [period, userLoc],
   );
 
-  // Birds shown in the sheet and on the map: first one is the hero card
-  const birds = useMemo(() => {
-    if (period === 'trip') return route.map(t => t.bird).filter(b => matchesQuery(b, query));
-    const visible = allBirds.filter(b =>
+  // Birds shown in the sheet and on the map: first one is the hero card.
+  // seaCount: how many of them are out on the ocean, counted before the at-sea switch hides them.
+  const { birds, seaCount } = useMemo(() => {
+    if (period === 'trip') return { birds: route.map(t => t.bird).filter(b => matchesQuery(b, query)), seaCount: 0 };
+    const matching = allBirds.filter(b =>
       inPeriod(b, period) &&
       (!source || b.reports.some(r => r.source === source)) &&
       matchesQuery(b, query));
+    const seaCount = matching.filter(atSea).length;
+    const visible = prefs.hideAtSea ? matching.filter(b => !atSea(b)) : matching;
     if (period === 'near' && userLoc) {
-      return visible.sort((a, b) => (distanceTo(a, userLoc) ?? Infinity) - (distanceTo(b, userLoc) ?? Infinity));
+      visible.sort((a, b) => (distanceTo(a, userLoc) ?? Infinity) - (distanceTo(b, userLoc) ?? Infinity));
+      return { birds: visible, seaCount };
     }
-    // Rarest bird leads as the hero; the rest stay newest-first
-    const hero = [...visible].sort(byRarity)[0];
-    return hero ? [hero, ...visible.filter(b => b !== hero)] : visible;
-  }, [allBirds, period, source, query, userLoc, route]);
+    // Rarest bird you can get to leads as the hero (one at sea only if that's all there is);
+    // the rest stay newest-first
+    const ranked = [...visible].sort(byRarity);
+    const hero = ranked.find(b => !atSea(b)) ?? ranked[0];
+    return { birds: hero ? [hero, ...visible.filter(b => b !== hero)] : visible, seaCount };
+  }, [allBirds, period, source, query, userLoc, route, prefs.hideAtSea]);
 
   const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
     const { lat, lng } = b.latest;
     if (lat == null || lng == null) return [];
-    const date = formatDate(b.latest.observed_at);
+    const date = (atSea(b) ? 'At sea · ' : '') + formatDate(b.latest.observed_at);
     const stop = period === 'trip' ? stopOf.get(b.key) : undefined;
     return [{
       lat, lng, id: b.latest.id,
@@ -322,7 +331,7 @@ function Main() {
         ) : period === 'trip' ? (
           <TripHeader
             count={trip.count}
-            stops={route.filter(t => t.bird.latest.lat != null && t.bird.latest.lng != null).length}
+            stops={route.filter(t => routable(t.bird)).length}
             fromYou={!!userLoc}
             onDirections={() => openTripDirections(route)}
             onClear={trip.clear}
@@ -337,6 +346,9 @@ function Main() {
             sources={sources}
             source={source}
             onSource={setSource}
+            seaCount={seaCount}
+            hideAtSea={prefs.hideAtSea}
+            onHideAtSea={hideAtSea}
           />
         )}
       >
