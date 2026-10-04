@@ -1,0 +1,1392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Birder's Best Friend — Intro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="description" content="Intro slide deck for the Birder's Best Friend mobile app." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #f5f1e8;
+    --bg-2: #efe9dc;
+    --ink: #14171e;
+    --ink-2: #4a4f5a;
+    --muted: #7c7a72;
+    --line: #e1d9c4;
+    --line-soft: #ece5d2;
+    --card: #ffffff;
+    --card-soft: #fbf8f1;
+    --teal: #0f5c7a;
+    --teal-soft: #dceaf0;
+    --teal-deep: #0a4661;
+    --land: #f0ead9;
+    --water: #d9e6ea;
+    --water-line: #b9cdd2;
+    --park: #c7d2ad;
+    --road: #d8cdb3;
+    --minor: #c9bea1;
+
+    --rust: #b4532a;
+    --rust-soft: #f5dccd;
+    --ochre: #c07f1e;
+    --ochre-soft: #f4e2bf;
+    --moss: #6b7f3a;
+    --moss-soft: #e3ead2;
+
+    --green: #1f9d5c;
+    --green-soft: #d6efde;
+    --amber: #d98a07;
+    --amber-soft: #fbe6c0;
+    --red: #d64545;
+    --red-soft: #fbe1e1;
+    --gray: #98a29c;
+    --gray-soft: #e7ebe9;
+
+    --bezel: #1c1c1a;
+    --bezel-2: #2a2a26;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ====== HUD ====== */
+  .hud{
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 60px; padding: 0 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    z-index: 100;
+    background: linear-gradient(to bottom, var(--bg) 70%, rgba(245,241,232,0));
+  }
+  .brand{
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 14px; color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .brand .mark{
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--teal);
+    display: grid; place-items: center;
+  }
+  .brand .mark svg{ width: 18px; height: 18px; }
+  .progress{
+    display: flex; gap: 8px; align-items: center;
+  }
+  .dot{
+    width: 32px; height: 4px; border: 0; border-radius: 4px;
+    background: var(--line);
+    cursor: pointer; transition: background .25s;
+    font: inherit;
+  }
+  .dot.on{ background: var(--teal); }
+  .counter{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .counter b{ color: var(--ink); font-weight: 600; }
+
+  /* ====== Deck shell ====== */
+  .deck{
+    position: relative;
+    height: 100vh; width: 100vw;
+    overflow: hidden;
+  }
+  .slide{
+    position: absolute; inset: 0;
+    display: grid;
+    align-items: center; justify-items: center;
+    padding: 80px 24px 28px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(40px);
+    transition: opacity .45s ease, transform .55s cubic-bezier(.2,.7,.2,1);
+  }
+  .slide.on{ opacity: 1; pointer-events: auto; transform: translateX(0); }
+  .slide.prev{ transform: translateX(-40px); }
+
+  /* ====== Generic slide layouts ====== */
+  .split{
+    width: min(1180px, 100%);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .split > .copy{ max-width: 520px; }
+  .split > .visual{ display: flex; justify-content: center; }
+
+  .eyebrow{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--teal); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .eyebrow::before{
+    content: ''; width: 22px; height: 1px; background: var(--teal);
+  }
+  h1{
+    font-family: 'DM Serif Display', serif;
+    font-weight: 400;
+    font-size: clamp(40px, 5.4vw, 64px);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 18px 0 18px;
+  }
+  h1 em{ font-style: italic; color: var(--rust); }
+  .lede{
+    font-size: 18px; line-height: 1.55; color: var(--ink-2);
+    max-width: 480px;
+  }
+  .chips{
+    margin-top: 28px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .chip{
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--line);
+    font-size: 13px; font-weight: 500; color: var(--ink-2);
+  }
+  .chip .swatch{
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+
+  /* ====== Phone mockup ====== */
+  .phone{
+    width: 320px; height: 660px;
+    border-radius: 36px;
+    background: var(--bg);
+    box-shadow:
+      0 1px 0 8px var(--bezel),
+      0 2px 0 9px var(--bezel-2),
+      0 30px 60px -20px rgba(40,30,10,.35),
+      0 12px 24px -8px rgba(40,30,10,.2);
+    position: relative; overflow: hidden;
+  }
+  .phone .screen{
+    position: absolute; inset: 8px;
+    border-radius: 30px;
+    overflow: hidden;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+  }
+  .notch{
+    position: absolute; top: 14px; left: 50%;
+    transform: translateX(-50%);
+    width: 90px; height: 24px; border-radius: 14px;
+    background: var(--bezel);
+    z-index: 5;
+  }
+  .status{
+    height: 36px; padding: 0 22px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 600; color: var(--ink);
+    position: relative; z-index: 3;
+  }
+  .status .glyphs{ display: flex; gap: 6px; align-items: center; }
+  .status .glyphs span{ font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+  /* ====== Slide 1 ====== */
+  .hero-map{
+    position: absolute; inset: 0;
+    background: var(--land);
+  }
+  .hero-map svg{ width: 100%; height: 100%; display: block; }
+  .hero-sheet{
+    position: absolute; left: 12px; right: 12px; bottom: 12px;
+    background: var(--card);
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 0 14px 30px -12px rgba(40,30,10,.4),
+                inset 0 0 0 1px var(--line);
+    z-index: 4;
+  }
+  .hero-sheet .top{
+    display: grid; grid-template-columns: 56px 1fr auto; gap: 12px;
+    align-items: center;
+  }
+  .hero-plate{
+    width: 56px; height: 56px; border-radius: 12px;
+    background: var(--bg-2);
+    display: grid; place-items: center;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .hero-plate svg{ width: 38px; height: 38px; }
+  .hero-meta{ min-width: 0; }
+  .hero-meta h3{
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px; font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .hero-meta .sci{
+    font-family: 'DM Serif Display', serif;
+    font-style: italic; font-size: 12px;
+    color: var(--muted); margin-top: 2px;
+  }
+  .hero-tier{
+    font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase;
+    font-weight: 700; color: var(--rust);
+  }
+  .hero-tier .bar{ display: block; width: 32px; height: 2px; background: var(--rust); margin-top: 3px; }
+  .hero-sheet .row{
+    display: flex; gap: 12px; margin-top: 10px;
+    font-size: 11px; color: var(--ink-2);
+  }
+  .hero-sheet .row span{ display: inline-flex; align-items: center; gap: 5px; }
+  .hero-sheet .row .dot{ width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .hero-sheet .stats{
+    margin-top: 12px;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+    border-top: 1px dashed var(--line); padding-top: 10px;
+  }
+  .hero-sheet .stat{
+    text-align: center;
+  }
+  .hero-sheet .stat b{
+    display: block; font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 600; color: var(--ink);
+  }
+  .hero-sheet .stat span{
+    font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+
+  /* Pins on map */
+  .pin{
+    position: absolute;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 3px solid var(--moss);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 4px 8px -2px rgba(40,30,10,.35);
+    z-index: 2;
+  }
+  .pin.t-exceptional{ border-color: var(--rust); width: 28px; height: 28px; }
+  .pin.t-very-rare{ border-color: var(--ochre); width: 25px; height: 25px; }
+  .pin.t-rare{ border-color: var(--moss); }
+  .pin.t-notable{ border-color: var(--teal); width: 20px; height: 20px; }
+  .pin .status{
+    position: absolute; top: -3px; right: -3px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green); border: 1.5px solid var(--card);
+    height: 10px;
+  }
+  .pin .status.amber{ background: var(--amber); }
+  .pin .status.red{ background: var(--red); }
+  .pin .status.gray{ background: var(--gray); }
+
+  /* Hero number labels (map) */
+  .map-label{
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 1.4px;
+    color: var(--ink-2); opacity: .6;
+    z-index: 1;
+  }
+
+  /* ====== Slide 2 — three browse modes ====== */
+  .mode-callout{
+    margin-top: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .mode-row{
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    gap: 16px;
+    padding: 18px 20px;
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: inset 0 0 0 1px var(--line);
+    align-items: center;
+  }
+  .mode-row.featured{
+    background: var(--teal);
+    box-shadow: 0 12px 24px -12px rgba(15,92,122,.5);
+  }
+  .mode-row.featured .mode-title{ color: #fff; }
+  .mode-row.featured .mode-desc{ color: rgba(255,255,255,.8); }
+  .mode-row.featured .mode-num{ color: rgba(255,255,255,.4); }
+  .mode-row.featured .mode-icon{ background: rgba(255,255,255,.15); color: #fff; }
+  .mode-num{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--muted); font-weight: 600;
+  }
+  .mode-icon{
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--bg-2);
+    display: grid; place-items: center;
+    color: var(--teal);
+  }
+  .mode-icon svg{ width: 22px; height: 22px; }
+  .mode-title{
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px; line-height: 1.1;
+  }
+  .mode-desc{
+    font-size: 13px; color: var(--ink-2); margin-top: 4px; line-height: 1.4;
+  }
+  .mode-tag{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .mode-row.featured .mode-tag{ color: rgba(255,255,255,.7); }
+
+  /* Bottom-sheet inside phone for slide 2 */
+  .sheet{
+    position: absolute; left: 8px; right: 8px; bottom: 8px;
+    background: var(--card);
+    border-radius: 22px;
+    padding: 14px 14px 16px;
+    box-shadow: 0 16px 30px -12px rgba(40,30,10,.4),
+                inset 0 0 0 1px var(--line);
+    z-index: 4;
+  }
+  .grabber{
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--line); margin: 0 auto 12px;
+  }
+  .period-row{
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    background: var(--bg-2);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 12px;
+  }
+  .period-row button{
+    border: 0; background: transparent;
+    font: inherit; font-size: 12px; font-weight: 600;
+    color: var(--ink-2);
+    padding: 8px 6px; border-radius: 8px;
+    cursor: default;
+  }
+  .period-row button.on{
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,.08), inset 0 0 0 1px var(--line);
+  }
+  .bird-row{
+    display: grid; grid-template-columns: 44px 1fr auto; gap: 12px;
+    padding: 10px 0; border-bottom: 1px dashed var(--line);
+    align-items: center;
+  }
+  .bird-row:last-child{ border-bottom: 0; }
+  .bird-plate{
+    width: 44px; height: 44px; border-radius: 10px;
+    background: var(--bg-2);
+    display: grid; place-items: center;
+    box-shadow: inset 0 0 0 1px var(--line);
+    position: relative;
+  }
+  .bird-plate svg{ width: 30px; height: 30px; }
+  .bird-plate .ring{
+    position: absolute; top: -2px; right: -2px;
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid var(--card);
+  }
+  .bird-name{
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px; line-height: 1.1;
+  }
+  .bird-sub{
+    font-size: 11px; color: var(--ink-2); margin-top: 3px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .bird-sub .dot{ width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+  .bird-tier{
+    font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase;
+    font-weight: 700; text-align: right;
+  }
+  .bird-tier.exceptional{ color: var(--rust); }
+  .bird-tier.very-rare{ color: var(--ochre); }
+  .bird-tier.rare{ color: var(--moss); }
+  .bird-tier .scratch{ display: block; height: 2px; margin-top: 3px; background: currentColor; opacity: .6; }
+
+  /* ====== Slide 3 — map features ====== */
+  .legend{
+    width: min(1180px, 100%);
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .legend-panel{
+    background: var(--card);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 16px 32px -16px rgba(40,30,10,.2),
+                inset 0 0 0 1px var(--line);
+  }
+  .legend-panel h3{
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px; font-weight: 400;
+    margin-bottom: 18px;
+  }
+  .legend-group{ margin-bottom: 18px; }
+  .legend-group:last-child{ margin-bottom: 0; }
+  .legend-group .lbl{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; margin-bottom: 10px;
+  }
+  .legend-row{
+    display: flex; align-items: center; gap: 14px;
+    padding: 8px 0; border-bottom: 1px dashed var(--line);
+    font-size: 14px;
+  }
+  .legend-row:last-child{ border-bottom: 0; }
+  .swatch-pin{
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--card); border: 3px solid var(--moss);
+    position: relative; flex-shrink: 0;
+  }
+  .swatch-pin.t-exceptional{ border-color: var(--rust); width: 28px; height: 28px; }
+  .swatch-pin.t-very-rare{ border-color: var(--ochre); }
+  .swatch-pin.t-rare{ border-color: var(--moss); }
+  .swatch-status{
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    border: 1.5px solid var(--card);
+    box-shadow: 0 0 0 1px currentColor;
+  }
+  .legend-row b{
+    font-family: 'DM Serif Display', serif;
+    font-weight: 400; font-size: 15px;
+  }
+  .legend-row .desc{
+    margin-left: auto; color: var(--ink-2); font-size: 13px; max-width: 200px;
+    text-align: right;
+  }
+
+  /* callouts pointing into the phone */
+  .map-callout{
+    position: absolute;
+    background: var(--card);
+    padding: 8px 12px; border-radius: 10px;
+    font-size: 12px; font-weight: 600;
+    box-shadow: 0 8px 16px -8px rgba(40,30,10,.3),
+                inset 0 0 0 1px var(--line);
+    z-index: 10;
+    display: inline-flex; align-items: center; gap: 8px;
+    white-space: nowrap;
+  }
+  .map-callout .arrow{
+    position: absolute; width: 28px; height: 1px; background: var(--ink-2);
+    opacity: .4;
+  }
+
+  /* toggle pill (at sea) */
+  .pill-toggle{
+    position: absolute; top: 60px; right: 16px;
+    background: var(--card); padding: 6px 10px;
+    border-radius: 999px; font-size: 11px; font-weight: 600;
+    box-shadow: 0 4px 8px -2px rgba(40,30,10,.2),
+                inset 0 0 0 1px var(--line);
+    display: inline-flex; align-items: center; gap: 6px;
+    z-index: 3;
+  }
+  .pill-toggle .knob{
+    width: 22px; height: 12px; border-radius: 8px;
+    background: var(--teal); position: relative;
+  }
+  .pill-toggle .knob::after{
+    content: ''; position: absolute; right: 1px; top: 1px;
+    width: 10px; height: 10px; border-radius: 50%; background: #fff;
+  }
+
+  /* ====== Slide 4 — detail + notifications ====== */
+  .detail-screen{ background: var(--card-soft); }
+  .detail-hero{
+    height: 220px;
+    background:
+      radial-gradient(ellipse at 70% 30%, rgba(15,92,122,.0) 0%, rgba(15,92,122,.15) 100%),
+      linear-gradient(160deg, #e8d8b8 0%, #c9a577 60%, #8c6b3f 100%);
+    position: relative; overflow: hidden;
+  }
+  .detail-hero .silhouette{
+    position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%);
+    width: 240px; height: 200px;
+  }
+  .detail-hero .badge{
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(255,255,255,.9); backdrop-filter: blur(8px);
+    padding: 5px 10px; border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+    color: var(--ink);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .detail-hero .src{
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(8px);
+    color: #fff; padding: 5px 10px; border-radius: 999px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+  }
+  .detail-body{ padding: 16px 18px 18px; flex: 1; overflow: hidden; }
+  .detail-body .tier-row{
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .detail-body h2{
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px; font-weight: 400;
+    line-height: 1.05; letter-spacing: -0.01em;
+  }
+  .detail-body .sci{
+    font-family: 'DM Serif Display', serif;
+    font-style: italic; color: var(--muted);
+    font-size: 14px; margin-top: 2px;
+  }
+  .detail-meta{
+    margin-top: 14px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    border-top: 1px dashed var(--line); padding-top: 12px;
+  }
+  .detail-meta .label{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .detail-meta .val{
+    font-size: 13px; font-weight: 500; color: var(--ink); margin-top: 2px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .detail-meta .val .dot{ width: 7px; height: 7px; border-radius: 50%; }
+  .tier-pill{
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  }
+  .tier-pill.exceptional{ background: var(--rust-soft); color: var(--rust); }
+  .tier-pill.very-rare{ background: var(--ochre-soft); color: var(--ochre); }
+  .tier-pill.rare{ background: var(--moss-soft); color: var(--moss); }
+  .tier-pill.notable{ background: var(--teal-soft); color: var(--teal); }
+  .detail-cta{
+    margin-top: 16px;
+    display: grid; grid-template-columns: 1fr auto; gap: 8px;
+  }
+  .detail-cta .btn-primary{
+    background: var(--ink); color: #fff;
+    border: 0; padding: 12px 14px; border-radius: 12px;
+    font: inherit; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    cursor: default;
+  }
+  .detail-cta .btn-ghost{
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--line);
+    color: var(--ink);
+    border: 0; padding: 12px 14px; border-radius: 12px;
+    font: inherit; font-size: 13px; font-weight: 600;
+    cursor: default;
+  }
+  .detail-cta .btn-primary svg{ width: 16px; height: 16px; }
+
+  /* Notification mock (floating outside phone) */
+  .notif{
+    position: absolute;
+    background: var(--card);
+    padding: 12px 14px;
+    border-radius: 14px;
+    box-shadow: 0 20px 40px -12px rgba(40,30,10,.3),
+                inset 0 0 0 1px var(--line);
+    width: 280px;
+    z-index: 8;
+  }
+  .notif-head{
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    font-size: 11px; font-weight: 600; color: var(--ink-2);
+  }
+  .notif-head .logo{
+    width: 18px; height: 18px; border-radius: 5px;
+    background: var(--teal); display: grid; place-items: center;
+  }
+  .notif-head .logo svg{ width: 12px; height: 12px; }
+  .notif-head .time{ margin-left: auto; color: var(--muted); font-weight: 500; }
+  .notif h4{
+    font-family: 'DM Serif Display', serif;
+    font-weight: 400; font-size: 16px; line-height: 1.2;
+    color: var(--ink);
+  }
+  .notif .sub{
+    font-size: 12px; color: var(--ink-2); margin-top: 3px;
+    line-height: 1.4;
+  }
+
+  /* ====== Slide 5 — sources ====== */
+  .sources{
+    width: min(1180px, 100%);
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 20px;
+  }
+  .src-feature{
+    grid-row: 1 / span 2;
+    background: var(--card);
+    padding: 32px;
+    border-radius: 22px;
+    box-shadow: 0 16px 32px -16px rgba(40,30,10,.15),
+                inset 0 0 0 1px var(--line);
+    display: flex; flex-direction: column;
+    position: relative; overflow: hidden;
+  }
+  .src-feature::after{
+    content: ''; position: absolute; top: -80px; right: -80px;
+    width: 240px; height: 240px; border-radius: 50%;
+    background: radial-gradient(circle, var(--teal-soft) 0%, transparent 70%);
+    opacity: .7;
+  }
+  .src-feature .src-tag{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--teal); font-weight: 600;
+  }
+  .src-feature .src-big{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 84px; font-weight: 600;
+    line-height: 1; color: var(--ink);
+    margin: 18px 0 4px;
+  }
+  .src-feature .src-big span{ color: var(--teal); }
+  .src-feature h2{
+    font-family: 'DM Serif Display', serif;
+    font-size: 36px; line-height: 1.05; font-weight: 400;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+  }
+  .src-feature p{
+    font-size: 16px; color: var(--ink-2); max-width: 380px;
+  }
+  .src-mini{
+    background: var(--card);
+    padding: 22px 24px;
+    border-radius: 18px;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .src-mini h3{
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px; font-weight: 400; margin-bottom: 4px;
+  }
+  .src-mini p{
+    font-size: 13px; color: var(--ink-2); line-height: 1.45;
+  }
+  .src-mini .src-tag{ margin-bottom: 8px; display: inline-block; }
+  .footer-note{
+    margin-top: 28px;
+    display: flex; gap: 20px; flex-wrap: wrap;
+    font-size: 13px; color: var(--ink-2);
+  }
+  .footer-note span{
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .footer-note span::before{
+    content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--teal);
+  }
+
+  /* ====== Pager ====== */
+  .pager{
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; align-items: center;
+    z-index: 100;
+    background: var(--card);
+    padding: 6px;
+    border-radius: 999px;
+    box-shadow: 0 16px 32px -12px rgba(40,30,10,.25),
+                inset 0 0 0 1px var(--line);
+  }
+  .pager button{
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 0; background: transparent;
+    color: var(--ink-2); cursor: pointer;
+    display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .pager button:hover{ background: var(--bg-2); color: var(--ink); }
+  .pager button:disabled{ opacity: .3; cursor: default; }
+  .pager button svg{ width: 18px; height: 18px; }
+  .pager .label{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    padding: 0 10px; letter-spacing: 0.08em;
+  }
+
+  /* responsive */
+  @media (max-width: 980px){
+    .split, .legend, .sources{ grid-template-columns: 1fr; gap: 28px; }
+    .sources{ grid-template-rows: auto; }
+    .src-feature{ grid-row: auto; }
+    h1{ font-size: 38px; }
+    .pager .label{ display: none; }
+  }
+  @media (max-width: 560px){
+    .hud{ padding: 0 16px; }
+    .brand span{ display: none; }
+    .slide{ padding: 72px 16px 24px; }
+    .phone{ transform: scale(.85); transform-origin: center top; }
+    .mode-row{ padding: 14px 16px; }
+    .notif{ width: 240px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hud">
+  <div class="brand">
+    <span class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/>
+        <circle cx="12" cy="9" r="2.4"/>
+      </svg>
+    </span>
+    <span>Birder's Best Friend</span>
+  </div>
+  <div class="progress" role="tablist" aria-label="Slide navigation">
+    <button class="dot on" data-i="1" aria-label="Slide 1"></button>
+    <button class="dot" data-i="2" aria-label="Slide 2"></button>
+    <button class="dot" data-i="3" aria-label="Slide 3"></button>
+    <button class="dot" data-i="4" aria-label="Slide 4"></button>
+    <button class="dot" data-i="5" aria-label="Slide 5"></button>
+  </div>
+  <div class="counter"><b id="cur">1</b> / 5</div>
+</header>
+
+<main class="deck" id="deck">
+
+  <!-- ================================================================ -->
+  <!-- SLIDE 1 — Hero                                                   -->
+  <!-- ================================================================ -->
+  <section class="slide on" data-i="1" aria-label="Welcome">
+    <div class="split">
+      <div class="copy">
+        <span class="eyebrow">Welcome</span>
+        <h1>Rare birds,<br/><em>in real time.</em></h1>
+        <p class="lede">A field companion for LA &amp; Orange County birders. Live sightings from eBird, iNaturalist, and BirdWeather — pulled into one map with one tap to chase.</p>
+        <div class="chips">
+          <span class="chip"><span class="swatch" style="background:#3b8d52"></span>eBird</span>
+          <span class="chip"><span class="swatch" style="background:#9b6cb5"></span>iNaturalist</span>
+          <span class="chip"><span class="swatch" style="background:#0f5c7a"></span>BirdWeather</span>
+        </div>
+      </div>
+
+      <div class="visual">
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="status">
+              <span>9:41</span>
+              <span class="glyphs"><span>●●●</span><span style="opacity:.6">Wi-Fi</span><span>96</span></span>
+            </div>
+            <!-- Map fills the entire screen -->
+            <div class="hero-map">
+              <svg viewBox="0 0 320 660" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <pattern id="waterLines1" width="14" height="14" patternUnits="userSpaceOnUse">
+                    <path d="M0 7h14" stroke="#b9cdd2" stroke-width="0.7"/>
+                  </pattern>
+                </defs>
+                <rect width="320" height="660" fill="#f0ead9"/>
+                <!-- water (Pacific) -->
+                <path d="M0 90 C40 130 60 160 70 200 C80 240 60 270 90 310 C110 340 90 370 110 400 C130 430 180 420 210 450 C250 478 290 510 320 540 L320 660 L0 660 Z" fill="#d9e6ea"/>
+                <path d="M0 90 C40 130 60 160 70 200 C80 240 60 270 90 310 C110 340 90 370 110 400 C130 430 180 420 210 450 C250 478 290 510 320 540 L320 660 L0 660 Z" fill="url(#waterLines1)" opacity=".7"/>
+                <!-- parks -->
+                <g fill="#c7d2ad" opacity=".7">
+                  <ellipse cx="120" cy="180" rx="22" ry="14"/>
+                  <ellipse cx="260" cy="150" rx="20" ry="12"/>
+                  <ellipse cx="225" cy="430" rx="22" ry="12"/>
+                  <ellipse cx="130" cy="280" rx="14" ry="10"/>
+                  <ellipse cx="280" cy="470" rx="16" ry="10"/>
+                </g>
+                <!-- roads -->
+                <g fill="none" stroke="#d8cdb3" stroke-linecap="round">
+                  <path d="M50 90 L320 145" stroke-width="6"/>
+                  <path d="M95 0 C130 180 160 380 220 580 C260 460 290 350 305 0" stroke-width="5"/>
+                  <path d="M0 290 C100 310 220 270 320 250" stroke-width="3"/>
+                  <path d="M75 430 C180 420 270 440 320 410" stroke-width="3"/>
+                </g>
+                <g stroke="#c9bea1" stroke-width="0.4" fill="none" opacity=".7">
+                  <path d="M30 0 L10 660"/><path d="M80 0 L70 660"/><path d="M130 0 L130 660"/>
+                  <path d="M180 0 L195 660"/><path d="M230 0 L260 660"/><path d="M280 0 L295 660"/>
+                </g>
+                <!-- water overlay (stronger) -->
+                <path d="M0 90 C40 130 60 160 70 200 C80 240 60 270 90 310 C110 340 90 370 110 400 C130 430 180 420 210 450 C250 478 290 510 320 540 L320 660 L0 660 Z" fill="#d9e6ea" opacity=".7"/>
+                <g font-family="JetBrains Mono, monospace" font-size="7" fill="#7c7a72" letter-spacing="1.2" opacity=".7">
+                  <text x="170" y="250">LOS ANGELES</text>
+                  <text x="245" y="395">ORANGE CO.</text>
+                  <text x="40" y="610" font-style="italic" letter-spacing="2">PACIFIC</text>
+                </g>
+              </svg>
+
+              <!-- Pins -->
+              <span class="pin t-exceptional" style="left:28%;top:42%"><span class="status"></span></span>
+              <span class="pin t-very-rare" style="left:62%;top:60%"><span class="status"></span></span>
+              <span class="pin t-rare" style="left:40%;top:30%"><span class="status amber"></span></span>
+              <span class="pin t-exceptional" style="left:38%;top:72%"><span class="status"></span></span>
+              <span class="pin t-rare" style="left:78%;top:38%"><span class="status red"></span></span>
+              <span class="pin t-very-rare" style="left:30%;top:80%"><span class="status gray"></span></span>
+
+              <!-- Floating label -->
+              <span class="map-label" style="left:50%;top:90%;opacity:.35">POINT FERMIN</span>
+            </div>
+
+            <!-- Hero sheet (peek) -->
+            <div class="hero-sheet">
+              <div class="top">
+                <div class="hero-plate">
+                  <svg viewBox="0 0 64 64" aria-hidden="true">
+                    <path fill="#b4532a" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z"/>
+                    <circle cx="46" cy="24" r="1.6" fill="#fff" opacity=".85"/>
+                  </svg>
+                </div>
+                <div class="hero-meta">
+                  <h3>Nazca Booby</h3>
+                  <div class="sci">Sula granti · Point Fermin Park</div>
+                </div>
+                <div class="hero-tier">Exceptional<span class="bar"></span></div>
+              </div>
+              <div class="row">
+                <span><span class="dot"></span>Refound 38 min ago</span>
+                <span>31 km away</span>
+                <span>6 reports</span>
+              </div>
+              <div class="stats">
+                <div class="stat"><b>3</b><span>Exceptional</span></div>
+                <div class="stat"><b>5</b><span>Very Rare</span></div>
+                <div class="stat"><b>11</b><span>Rare</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- SLIDE 2 — Three browse modes                                     -->
+  <!-- ================================================================ -->
+  <section class="slide" data-i="2" aria-label="Three browse modes">
+    <div class="split">
+      <div class="visual">
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="status">
+              <span>9:41</span>
+              <span class="glyphs"><span>●●●</span><span style="opacity:.6">Wi-Fi</span><span>96</span></span>
+            </div>
+            <!-- Map peek -->
+            <div class="hero-map" style="flex:1">
+              <svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
+                <rect width="320" height="200" fill="#f0ead9"/>
+                <path d="M0 60 C80 100 160 90 240 110 C320 100 320 200 320 200 L0 200 Z" fill="#d9e6ea"/>
+                <g fill="#c7d2ad" opacity=".7">
+                  <ellipse cx="100" cy="100" rx="22" ry="14"/>
+                  <ellipse cx="240" cy="80" rx="20" ry="12"/>
+                </g>
+                <g fill="none" stroke="#d8cdb3" stroke-linecap="round">
+                  <path d="M0 80 L320 60" stroke-width="5"/>
+                </g>
+              </svg>
+              <span class="pin t-exceptional" style="left:30%;top:60%"><span class="status"></span></span>
+              <span class="pin t-very-rare" style="left:65%;top:55%"><span class="status"></span></span>
+              <span class="pin t-rare" style="left:48%;top:40%"><span class="status amber"></span></span>
+            </div>
+            <!-- Bottom sheet -->
+            <div class="sheet">
+              <div class="grabber"></div>
+              <div class="period-row">
+                <button class="on">This week</button>
+                <button>Near me</button>
+                <button>Trip · 3</button>
+              </div>
+
+              <div class="bird-row">
+                <div class="bird-plate">
+                  <svg viewBox="0 0 64 64" aria-hidden="true">
+                    <path fill="#b4532a" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z"/>
+                    <circle cx="46" cy="24" r="1.6" fill="#fff" opacity=".85"/>
+                  </svg>
+                  <span class="ring" style="background:var(--rust)"></span>
+                </div>
+                <div>
+                  <div class="bird-name">Nazca Booby</div>
+                  <div class="bird-sub"><span class="dot"></span>Refound 38m · Point Fermin</div>
+                </div>
+                <div class="bird-tier exceptional">Exceptional<span class="scratch"></span></div>
+              </div>
+
+              <div class="bird-row">
+                <div class="bird-plate">
+                  <svg viewBox="0 0 64 64" aria-hidden="true">
+                    <path fill="#c07f1e" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z"/>
+                    <circle cx="46" cy="24" r="1.6" fill="#fff" opacity=".85"/>
+                  </svg>
+                  <span class="ring" style="background:var(--ochre)"></span>
+                </div>
+                <div>
+                  <div class="bird-name">Yellow-green Vireo</div>
+                  <div class="bird-sub"><span class="dot"></span>Continuing · Huntington</div>
+                </div>
+                <div class="bird-tier very-rare">Very Rare<span class="scratch"></span></div>
+              </div>
+
+              <div class="bird-row">
+                <div class="bird-plate">
+                  <svg viewBox="0 0 64 64" aria-hidden="true">
+                    <path fill="#c07f1e" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z"/>
+                    <circle cx="46" cy="24" r="1.6" fill="#fff" opacity=".85"/>
+                  </svg>
+                  <span class="ring" style="background:var(--ochre)"></span>
+                </div>
+                <div>
+                  <div class="bird-name">Red-throated Pipit</div>
+                  <div class="bird-sub" style="color:var(--amber)"><span class="dot" style="background:var(--amber)"></span>Not reported today</div>
+                </div>
+                <div class="bird-tier very-rare">Very Rare<span class="scratch"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="copy">
+        <span class="eyebrow">Browse</span>
+        <h1>Three ways to <em>find</em> your next bird.</h1>
+        <p class="lede">One screen, three modes. Switch in a tap; the map and list stay in sync.</p>
+
+        <div class="mode-callout">
+          <div class="mode-row featured">
+            <div class="mode-num">01</div>
+            <div>
+              <div class="mode-title">This Week</div>
+              <div class="mode-desc">Rarest first, latest reports at the top. The default list.</div>
+            </div>
+            <div class="mode-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 10h18M8 2v4M16 2v4"/>
+              </svg>
+            </div>
+            <span class="mode-tag">Default</span>
+          </div>
+          <div class="mode-row">
+            <div class="mode-num">02</div>
+            <div>
+              <div class="mode-title">Near Me</div>
+              <div class="mode-desc">Asks once for permission, then sorts by straight-line distance from where you are right now.</div>
+            </div>
+            <div class="mode-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s7-7.5 7-13a7 7 0 0 0-14 0c0 5.5 7 13 7 13z"/><circle cx="12" cy="9" r="2.5"/>
+              </svg>
+            </div>
+            <span class="mode-tag">Location</span>
+          </div>
+          <div class="mode-row">
+            <div class="mode-num">03</div>
+            <div>
+              <div class="mode-title">Trip</div>
+              <div class="mode-desc">Save up to 10 stops; the app orders them by driving time and hands off to your maps app for turn-by-turn.</div>
+            </div>
+            <div class="mode-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 17h14l-2-7H7l-2 7z"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/>
+              </svg>
+            </div>
+            <span class="mode-tag">Saved</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- SLIDE 3 — The map                                               -->
+  <!-- ================================================================ -->
+  <section class="slide" data-i="3" aria-label="Map features">
+    <div class="legend">
+      <div class="visual" style="display:flex;justify-content:center;">
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="status">
+              <span>9:41</span>
+              <span class="glyphs"><span>●●●</span><span style="opacity:.6">Wi-Fi</span><span>96</span></span>
+            </div>
+
+            <div class="hero-map">
+              <svg viewBox="0 0 320 660" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <pattern id="waterLines3" width="14" height="14" patternUnits="userSpaceOnUse">
+                    <path d="M0 7h14" stroke="#b9cdd2" stroke-width="0.7"/>
+                  </pattern>
+                </defs>
+                <rect width="320" height="660" fill="#f0ead9"/>
+                <path d="M0 90 C40 130 60 160 70 200 C80 240 60 270 90 310 C110 340 90 370 110 400 C130 430 180 420 210 450 C250 478 290 510 320 540 L320 660 L0 660 Z" fill="#d9e6ea"/>
+                <path d="M0 90 C40 130 60 160 70 200 C80 240 60 270 90 310 C110 340 90 370 110 400 C130 430 180 420 210 450 C250 478 290 510 320 540 L320 660 L0 660 Z" fill="url(#waterLines3)" opacity=".7"/>
+                <g fill="#c7d2ad" opacity=".7">
+                  <ellipse cx="120" cy="180" rx="22" ry="14"/>
+                  <ellipse cx="260" cy="150" rx="20" ry="12"/>
+                  <ellipse cx="225" cy="430" rx="22" ry="12"/>
+                  <ellipse cx="130" cy="280" rx="14" ry="10"/>
+                  <ellipse cx="280" cy="470" rx="16" ry="10"/>
+                </g>
+                <g fill="none" stroke="#d8cdb3" stroke-linecap="round">
+                  <path d="M50 90 L320 145" stroke-width="6"/>
+                  <path d="M95 0 C130 180 160 380 220 580 C260 460 290 350 305 0" stroke-width="5"/>
+                  <path d="M0 290 C100 310 220 270 320 250" stroke-width="3"/>
+                  <path d="M75 430 C180 420 270 440 320 410" stroke-width="3"/>
+                </g>
+                <!-- Cluster trail (Point Fermin) -->
+                <g fill="none" stroke="#b4532a" stroke-width="1.6" stroke-dasharray="3 3" opacity=".6">
+                  <path d="M75 290 Q 90 260 110 240 T 95 195"/>
+                </g>
+                <circle cx="95" cy="270" r="22" fill="none" stroke="#b4532a" stroke-width="1.2" stroke-dasharray="2 2" opacity=".5"/>
+                <g stroke="#c9bea1" stroke-width="0.4" fill="none" opacity=".7">
+                  <path d="M30 0 L10 660"/><path d="M80 0 L70 660"/><path d="M130 0 L130 660"/>
+                  <path d="M180 0 L195 660"/><path d="M230 0 L260 660"/><path d="M280 0 L295 660"/>
+                </g>
+                <path d="M0 90 C40 130 60 160 70 200 C80 240 60 270 90 310 C110 340 90 370 110 400 C130 430 180 420 210 450 C250 478 290 510 320 540 L320 660 L0 660 Z" fill="#d9e6ea" opacity=".7"/>
+                <g font-family="JetBrains Mono, monospace" font-size="7" fill="#7c7a72" letter-spacing="1.2" opacity=".7">
+                  <text x="170" y="250">LOS ANGELES</text>
+                  <text x="245" y="395">ORANGE CO.</text>
+                  <text x="40" y="610" font-style="italic" letter-spacing="2">PACIFIC</text>
+                </g>
+              </svg>
+
+              <!-- Pins -->
+              <span class="pin t-exceptional" style="left:30%;top:42%"><span class="status"></span></span>
+              <span class="pin t-very-rare" style="left:62%;top:60%"><span class="status"></span></span>
+              <span class="pin t-rare" style="left:40%;top:30%"><span class="status amber"></span></span>
+              <span class="pin t-exceptional" style="left:38%;top:72%"><span class="status"></span></span>
+              <span class="pin t-rare" style="left:78%;top:38%"><span class="status red"></span></span>
+              <span class="pin t-very-rare" style="left:30%;top:80%"><span class="status gray"></span></span>
+
+              <!-- At-sea toggle -->
+              <div class="pill-toggle">
+                At sea · ON
+                <span class="knob"></span>
+              </div>
+
+              <!-- Callouts -->
+              <div class="map-callout" style="left:32%;top:30%;transform:translate(28px,-100%);">
+                <span style="width:10px;height:10px;border-radius:50%;border:2.5px solid var(--rust);background:var(--card);"></span>
+                Rarity ring
+                <span class="arrow" style="left:-28px;top:50%;transform:translateY(-50%) rotate(180deg);"></span>
+              </div>
+              <div class="map-callout" style="left:34%;top:48%;transform:translate(28px,0%);">
+                <span class="swatch-status" style="background:var(--green);color:var(--green)"></span>
+                Refound today
+                <span class="arrow" style="left:-28px;top:50%;transform:translateY(-50%) rotate(180deg);"></span>
+              </div>
+              <div class="map-callout" style="left:74%;top:32%;transform:translate(-100%,0) translateX(-10px);">
+                <span class="swatch-status" style="background:var(--red);color:var(--red)"></span>
+                Dipped by 3
+                <span class="arrow" style="right:-28px;top:50%;transform:translateY(-50%);"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend-panel">
+        <span class="eyebrow" style="color:var(--ink-2)">Map features</span>
+        <h3 style="margin-top:10px">The map tells you <em style="font-style:italic;color:var(--rust)">what's still there.</em></h3>
+
+        <div class="legend-group" style="margin-top:20px">
+          <div class="lbl">Rarity · ring colour</div>
+          <div class="legend-row">
+            <span class="swatch-pin t-exceptional"></span>
+            <b style="color:var(--rust)">Exceptional</b>
+            <span class="desc">County-first or mega — chase now</span>
+          </div>
+          <div class="legend-row">
+            <span class="swatch-pin t-very-rare"></span>
+            <b style="color:var(--ochre)">Very Rare</b>
+            <span class="desc">Annual vagrants, not seen every year</span>
+          </div>
+          <div class="legend-row">
+            <span class="swatch-pin t-rare"></span>
+            <b style="color:var(--moss)">Rare</b>
+            <span class="desc">Out-of-season or out-of-range</span>
+          </div>
+        </div>
+
+        <div class="legend-group">
+          <div class="lbl">Status · corner dot</div>
+          <div class="legend-row">
+            <span class="swatch-status" style="background:var(--green);color:var(--green)"></span>
+            <b>Refound</b>
+            <span class="desc">Someone reported it again, today</span>
+          </div>
+          <div class="legend-row">
+            <span class="swatch-status" style="background:var(--amber);color:var(--amber)"></span>
+            <b>Not reported</b>
+            <span class="desc">Seen earlier, not refound</span>
+          </div>
+          <div class="legend-row">
+            <span class="swatch-status" style="background:var(--red);color:var(--red)"></span>
+            <b>Dipped</b>
+            <span class="desc">Birders looked, no bird</span>
+          </div>
+        </div>
+
+        <div class="legend-group">
+          <div class="lbl">Clusters &amp; pelagics</div>
+          <div class="legend-row">
+            <span style="width:14px;height:14px;border-radius:50%;border:1.5px dashed var(--rust);"></span>
+            <b>Cluster trail</b>
+            <span class="desc">Same bird, multiple reports nearby</span>
+          </div>
+          <div class="legend-row">
+            <span style="width:14px;height:14px;border-radius:50%;background:#a5c8d6;"></span>
+            <b>At sea</b>
+            <span class="desc">Toggle hides pelagic birds</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- SLIDE 4 — Detail + notifications                                -->
+  <!-- ================================================================ -->
+  <section class="slide" data-i="4" aria-label="Bird detail and notifications">
+    <div class="split">
+      <div class="copy">
+        <span class="eyebrow">Detail</span>
+        <h1>Tap a pin,<br/><em>save a chase.</em></h1>
+        <p class="lede">Full species card with photos, multiple reports at the same spot, and a one-tap handoff to your trip or directions. Get a push notification the moment a rare bird lands near you.</p>
+
+        <div style="margin-top:36px; display:grid; gap:18px;">
+          <div style="display:grid;grid-template-columns:36px 1fr;gap:14px;align-items:start">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--teal-soft);display:grid;place-items:center;color:var(--teal)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>
+            </div>
+            <div>
+              <b style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400">Photos from iNaturalist</b>
+              <p style="font-size:13px;color:var(--ink-2);margin-top:4px;line-height:1.5">Research-grade observations surface first. Tap any photo to enlarge.</p>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:36px 1fr;gap:14px;align-items:start">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--teal-soft);display:grid;place-items:center;color:var(--teal)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s7-7.5 7-13a7 7 0 0 0-14 0c0 5.5 7 13 7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            </div>
+            <div>
+              <b style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400">Cluster view</b>
+              <p style="font-size:13px;color:var(--ink-2);margin-top:4px;line-height:1.5">Multiple reports at one location stack into one card with a dashed cluster circle and trail.</p>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:36px 1fr;gap:14px;align-items:start">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--rust-soft);display:grid;place-items:center;color:var(--rust)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            </div>
+            <div>
+              <b style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400">Push notifications</b>
+              <p style="font-size:13px;color:var(--ink-2);margin-top:4px;line-height:1.5">Tap a notification and the app jumps straight to that bird, or surfaces its sighting at the top of the list.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="visual" style="position:relative">
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen detail-screen">
+            <div class="status">
+              <span>9:41</span>
+              <span class="glyphs"><span>●●●</span><span style="opacity:.6">Wi-Fi</span><span>96</span></span>
+            </div>
+
+            <div class="detail-hero">
+              <span class="badge">
+                <span style="width:7px;height:7px;border-radius:50%;background:var(--rust);"></span>
+                EXCEPTIONAL
+              </span>
+              <span class="src">iNATURALIST</span>
+              <svg class="silhouette" viewBox="0 0 240 200" fill="rgba(0,0,0,.18)">
+                <path d="M20 140c20-10 30-20 40-40 12-24 32-40 60-44 22-3 36 4 50 16l30 6-26 12c-4 36-30 60-72 64l-10 30h-14l4-26c-26-4-48-14-62-18z"/>
+                <circle cx="170" cy="84" r="6" fill="#fff" opacity=".7"/>
+              </svg>
+            </div>
+
+            <div class="detail-body">
+              <h2>Nazca Booby</h2>
+              <div class="sci">Sula granti · Pelecanidae</div>
+
+              <div class="detail-meta">
+                <div>
+                  <div class="label">Location</div>
+                  <div class="val">Point Fermin Park</div>
+                </div>
+                <div>
+                  <div class="label">Distance</div>
+                  <div class="val">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 22s7-7.5 7-13a7 7 0 0 0-14 0c0 5.5 7 13 7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                    31 km
+                  </div>
+                </div>
+                <div>
+                  <div class="label">Status</div>
+                  <div class="val" style="color:var(--green)">
+                    <span class="dot" style="background:var(--green)"></span>
+                    Refound 38 min
+                  </div>
+                </div>
+                <div>
+                  <div class="label">Reports</div>
+                  <div class="val">6 reports · eBird</div>
+                </div>
+              </div>
+
+              <div class="detail-cta">
+                <button class="btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Add to Trip
+                </button>
+                <button class="btn-ghost">Directions</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating notification -->
+        <div class="notif" style="top:14%;right:-30px">
+          <div class="notif-head">
+            <span class="logo">
+              <svg viewBox="0 0 24 24" fill="white"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/></svg>
+            </span>
+            Birder's Best Friend
+            <span class="time">now</span>
+          </div>
+          <h4>Nazca Booby refound near you</h4>
+          <div class="sub">Point Fermin Park · 6 reports today</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- SLIDE 5 — Sources                                               -->
+  <!-- ================================================================ -->
+  <section class="slide" data-i="5" aria-label="Built on real sources">
+    <div class="split">
+      <div class="copy">
+        <span class="eyebrow">Sources</span>
+        <h1>Built on real<br/><em>bird data.</em></h1>
+        <p class="lede">Every sighting comes from one of three public datasets. The app doesn't own your location, your contacts, or your inbox — and never will.</p>
+
+        <div class="footer-note">
+          <span>Free</span>
+          <span>No account</span>
+          <span>No tracking</span>
+          <span>LA &amp; Orange County</span>
+        </div>
+      </div>
+
+      <div class="visual">
+        <div class="sources">
+          <div class="src-feature">
+            <div class="src-tag">Primary source</div>
+            <div class="src-big">1.2B<span>+</span></div>
+            <h2>eBird observations<br/>across the world.</h2>
+            <p>The world's largest birding dataset, run by the Cornell Lab of Ornithology. Birder's Best Friend ingests only rare-bird records within LA &amp; Orange County — never the global feed.</p>
+            <div style="margin-top:auto;display:flex;gap:8px;align-items:center;padding-top:24px;">
+              <span class="chip"><span class="swatch" style="background:#3b8d52"></span>ebird.org</span>
+            </div>
+          </div>
+          <div class="src-mini">
+            <span class="src-tag">Photos · verification</span>
+            <h3>iNaturalist</h3>
+            <p>Research-grade observations with attached photos. Used to confirm sightings and surface images in the detail view.</p>
+          </div>
+          <div class="src-mini">
+            <span class="src-tag">Corroboration</span>
+            <h3>BirdWeather</h3>
+            <p>Nearby weather-station audio — used as a corroboration signal, never as a primary source.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="pager" aria-label="Slide controls">
+  <button id="prev" aria-label="Previous slide" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <span class="label" id="label">Slide 1 of 5</span>
+  <button id="next" aria-label="Next slide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+  </button>
+</nav>
+
+<script>
+  (function(){
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+    const cur = document.getElementById('cur');
+    const label = document.getElementById('label');
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    let i = 1;
+    const N = slides.length;
+
+    function go(n){
+      n = Math.max(1, Math.min(N, n));
+      slides.forEach(s => {
+        const k = +s.dataset.i;
+        s.classList.toggle('on', k === n);
+        s.classList.toggle('prev', k < n);
+      });
+      dots.forEach(d => d.classList.toggle('on', +d.dataset.i === n));
+      cur.textContent = n;
+      label.textContent = `Slide ${n} of ${N}`;
+      prev.disabled = n === 1;
+      next.disabled = n === N;
+      i = n;
+    }
+
+    prev.addEventListener('click', () => go(i - 1));
+    next.addEventListener('click', () => go(i + 1));
+    dots.forEach(d => d.addEventListener('click', () => go(+d.dataset.i)));
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(i + 1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); go(i - 1); }
+      else if (e.key === 'Home') { e.preventDefault(); go(1); }
+      else if (e.key === 'End') { e.preventDefault(); go(N); }
+    });
+
+    // touch swipe
+    let touchX = null;
+    document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, {passive:true});
+    document.addEventListener('touchend', e => {
+      if (touchX == null) return;
+      const dx = e.changedTouches[0].clientX - touchX;
+      if (Math.abs(dx) > 40) go(dx < 0 ? i + 1 : i - 1);
+      touchX = null;
+    }, {passive:true});
+  })();
+</script>
+
+</body>
+</html>
