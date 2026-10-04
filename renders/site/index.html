@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Birder's Best Friend · Guide</title>
+<meta name="description" content="How to use Birder's Best Friend, what's new in each release, and the privacy policy.">
+<meta name="color-scheme" content="light">
+<style>
+  /* Fonts are served from this site, not Google Fonts, so a visit contacts no one else */
+  @font-face { font-family: Fraunces; src: url(fonts/fraunces.woff2) format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+  @font-face { font-family: Fraunces; src: url(fonts/fraunces-italic.woff2) format('woff2'); font-weight: 100 900; font-style: italic; font-display: swap; }
+  @font-face { font-family: Inter; src: url(fonts/inter.woff2) format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+
+  /* Field-guide palette (renders/01-field-guide.html) */
+  :root {
+    --paper: #f4efe4; --paper-2: #ebe4d4; --card: #fbf8f1; --ink: #1f2a24; --ink-2: #5b6259;
+    --rule: #d9cfbb; --forest: #2d6a4f; --rust: #b4532a; --ochre: #c07f1e; --moss: #6b7f3a;
+    --green: #2d6a4f; --amber: #b7791f; --red: #a33a2a; --gray: #8a8a80;
+    /* The app's own tier colours, so the legend matches the pins on your screen */
+    --t-exc: #e0364f; --t-vr: #e8701a; --t-rare: #c99a06; --t-not: #5f6b64;
+    --serif: Fraunces, Georgia, serif; --sans: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 64px; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 var(--sans); }
+  a { color: var(--forest); text-underline-offset: 2px; }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---- Masthead ---- */
+  .masthead { padding: 28px 0 0; border-bottom: 1px solid var(--rule); }
+  .eyebrow { font-size: 11px; letter-spacing: 2.2px; text-transform: uppercase; color: var(--forest); font-weight: 700;
+    display: flex; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand img { width: 28px; height: 28px; border-radius: 7px; }
+  h1 { font-family: var(--serif); font-weight: 650; font-size: clamp(34px, 8vw, 52px); line-height: 1.02;
+    letter-spacing: -.5px; margin: 14px 0 0; }
+  h1 em, h2 em { font-weight: 400; color: var(--rust); }
+  .lede { color: var(--ink-2); max-width: 600px; margin: 12px 0 0; }
+  nav.tabs { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); }
+  nav.tabs .wrap { display: flex; gap: 22px; overflow-x: auto; }
+  nav.tabs a { flex: none; padding: 14px 0 10px; font-size: 14px; font-weight: 600; color: var(--ink-2); text-decoration: none;
+    border-bottom: 2px solid transparent; }
+  nav.tabs a.on { color: var(--ink); border-bottom-color: var(--ink); }
+
+  /* ---- Sections ---- */
+  section.page { padding: 8px 0 56px; }
+  .js section.page { display: none; }
+  .js section.page.on { display: block; }
+  .chapter { display: flex; align-items: center; gap: 12px; margin: 36px 0 4px; font-family: var(--serif); font-style: italic;
+    font-size: 18px; color: var(--ink-2); }
+  .chapter::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+  /* A tour step: number + text beside its screenshots, stacked on phones */
+  .step { display: grid; grid-template-columns: 1fr; gap: 20px; padding: 24px 0; border-bottom: 1px dashed var(--rule); }
+  .step:last-child { border-bottom: 0; }
+  @media (min-width: 760px) { .step { grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; } }
+  .no { font-family: var(--serif); font-size: 13px; color: var(--ink-2); }
+  .tier { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; font-weight: 700; color: var(--rust); margin-left: 8px; }
+  h2 { font-family: var(--serif); font-weight: 650; font-size: 26px; line-height: 1.15; letter-spacing: -.3px; margin: 4px 0 10px; }
+  h3 { font-family: var(--serif); font-weight: 650; font-size: 19px; margin: 22px 0 6px; }
+  p { margin: 0 0 12px; }
+  .step ul { padding-left: 20px; margin: 0 0 12px; }
+  .step li { margin-bottom: 6px; }
+  .tip { background: var(--card); border-radius: 10px; padding: 12px 14px; box-shadow: inset 0 0 0 1px var(--rule); font-size: 14.5px; margin-top: 14px; }
+  .tip b:first-child { font-family: var(--serif); font-style: italic; font-weight: 500; color: var(--rust); margin-right: 4px; }
+  kbd { font: 600 13px var(--sans); background: var(--paper-2); border-radius: 5px; padding: 1px 6px; box-shadow: inset 0 0 0 1px var(--rule); white-space: nowrap; }
+
+  /* Legends: rarity and status as small caps / dots, like the field guide */
+  dl.legend { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 10px 0 14px; font-size: 14.5px; }
+  dl.legend dt { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 700; padding-top: 3px; white-space: nowrap; }
+  dl.legend dd { margin: 0; color: var(--ink-2); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+
+  /* Screenshots in a phone frame */
+  .phones { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+  figure { margin: 0; text-align: center; }
+  .phone { width: 250px; height: auto; border-radius: 34px; overflow: hidden; background: #fff;
+    box-shadow: 0 0 0 7px #1c1c1a, 0 22px 44px rgba(40,30,10,.22); margin: 7px; }
+  .phones.two { flex-wrap: nowrap; }
+  .phones.two .phone { width: min(200px, calc(50vw - 40px)); border-radius: 28px; box-shadow: 0 0 0 6px #1c1c1a, 0 18px 36px rgba(40,30,10,.2); }
+  figcaption { margin-top: 14px; font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+
+  /* A drawn notification, since alerts can't be screenshotted in the simulator */
+  .notif { max-width: 360px; margin: 6px auto; background: rgba(251,248,241,.92); border-radius: 22px; padding: 12px 14px;
+    display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: start; box-shadow: 0 10px 30px rgba(40,30,10,.18), inset 0 0 0 1px var(--rule); text-align: left; }
+  .notif img { width: 38px; height: 38px; border-radius: 9px; }
+  .notif b { display: block; font-size: 14.5px; line-height: 1.3; }
+  .notif span { font-size: 14px; color: var(--ink-2); line-height: 1.35; display: block; }
+  .notif time { font-size: 12px; color: var(--ink-2); }
+  .notifs { display: grid; gap: 10px; padding: 18px 12px; border-radius: 24px; background: linear-gradient(160deg, #c9d8cf, #efe7d4); }
+
+  /* ---- What's new ---- */
+  .release { padding: 20px 0; border-bottom: 1px dashed var(--rule); }
+  .release:last-child { border-bottom: 0; }
+  .release h2 { font-size: 24px; margin: 0; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; font-size: 13px; color: var(--ink-2); margin: 4px 0 10px; }
+  .build { font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 700; color: var(--forest); }
+  .release ul { padding-left: 20px; margin: 0; }
+  .release li { margin-bottom: 6px; }
+
+  /* ---- Privacy ---- */
+  .prose { max-width: 680px; }
+  .prose h2 { font-size: 21px; margin: 28px 0 6px; }
+  .prose ul { padding-left: 22px; }
+  .prose li { margin-bottom: 6px; }
+  .updated { font-family: var(--serif); font-style: italic; color: var(--ink-2); margin: 18px 0 0; }
+
+  footer { border-top: 1px solid var(--rule); padding: 22px 0 40px; font-size: 13px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<script>document.body.classList.add('js')</script>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="eyebrow"><span class="brand"><img src="icon.png" alt="">Birder's Best Friend</span><span>LA · OC</span></div>
+    <h1>A field guide<br><em>to the app</em></h1>
+    <p class="lede">Rare bird sightings in Los Angeles and Orange Counties, on one map. This page shows how it works,
+      what changed in each update, and what the app does with your data.</p>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="wrap">
+    <a href="#tour">Tour</a>
+    <a href="#whats-new">What's new</a>
+    <a href="#privacy">Privacy</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- =================================================================== TOUR -->
+<section class="page" id="p-tour">
+
+  <div class="chapter">Finding birds</div>
+
+  <article class="step">
+    <div>
+      <span class="no">01</span>
+      <h2>The map and the <em>Rarities</em> list</h2>
+      <p>Every pin is a rare bird reported in Los Angeles or Orange County. A pin's colour is how rare the bird is, and the rarest show their names.</p>
+      <p>Under the map is the <b>Rarities</b> list. The large card at the top is the rarest bird, and the rest follow newest first.
+        Drag the list up to read more of it, or down to see more of the map.</p>
+      <h3>How rare is rare?</h3>
+      <p>The rating counts how often the species has ever been recorded in the county (research-grade iNaturalist observations).</p>
+      <dl class="legend">
+        <dt style="color:var(--t-exc)">Exceptional</dt><dd>3 or fewer county records</dd>
+        <dt style="color:var(--t-vr)">Very rare</dt><dd>4 to 9</dd>
+        <dt style="color:var(--t-rare)">Rare</dt><dd>10 to 49</dd>
+        <dt style="color:var(--t-not)">Notable</dt><dd>More than that, but eBird flagged it, for example for being out of season</dd>
+      </dl>
+    </div>
+    <div class="phones two">
+      <figure><img class="phone" src="shots/home.jpg" alt="Map of Southern California with coloured bird pins above the Rarities list" loading="lazy" width="603" height="1311"><figcaption>Map</figcaption></figure>
+      <figure><img class="phone" src="shots/list.jpg" alt="The Rarities list dragged up, showing the Evening Grosbeak card and more birds" loading="lazy" width="603" height="1311"><figcaption>List pulled up</figcaption></figure>
+    </div>
+  </article>
+
+  <article class="step">
+    <div>
+      <span class="no">02</span>
+      <h2>Three ways <em>to look</em></h2>
+      <ul>
+        <li><b>This week</b> shows birds reported since Sunday, with a count.</li>
+        <li><b>Last 30 days</b> shows everything still on file.</li>
+        <li><b>Near me</b> sorts birds by distance from you and marks your spot on the map. It needs location access, and your location never leaves the phone.</li>
+      </ul>
+    </div>
+    <div class="phones">
+      <figure><img class="phone" src="shots/near.jpg" alt="Near me view with the closest rare bird, a Red-breasted Nuthatch 2.5 km away" loading="lazy" width="603" height="1311"><figcaption>Near me</figcaption></figure>
+    </div>
+  </article>
+
+  <article class="step">
+    <div>
+      <span class="no">03</span>
+      <h2>Narrow it <em>down</em></h2>
+      <p>The pills under the views pick a source: <b>All sources</b>, <b>eBird</b> or <b>iNaturalist</b>.</p>
+      <p>The search box at the top finds species or places. It matches the start of words, so <kbd>rail</kbd> finds Ridgway's Rail but not "River Trail".</p>
+    </div>
+    <div class="phones">
+      <figure><img class="phone" src="shots/search.jpg" alt="Searching for murrelet finds Craveri's Murrelet" loading="lazy" width="603" height="1311"><figcaption>Search</figcaption></figure>
+    </div>
+  </article>
+
+  <article class="step">
+    <div>
+      <span class="no">04</span><span class="tier">New in 1.4</span>
+      <h2>Birds <em>at sea</em></h2>
+      <p>Some rarities are seen from boats on pelagic trips, more than 2 km offshore. Few people go on those, so they're hidden at first.</p>
+      <p>The <b>🚤 At sea</b> pill shows how many there are. While they're hidden it's red and crossed out. Tap it to show them, and tap again to hide them.
+        Islands such as Catalina count as land.</p>
+    </div>
+    <div class="phones two">
+      <figure><img class="phone" src="shots/last30.jpg" alt="At sea pill red and crossed out while at-sea birds are hidden" loading="lazy" width="603" height="1311"><figcaption>Hidden</figcaption></figure>
+      <figure><img class="phone" src="shots/atsea-on.jpg" alt="At sea pill turned on, Craveri's Murrelet shown offshore" loading="lazy" width="603" height="1311"><figcaption>Shown</figcaption></figure>
+    </div>
+  </article>
+
+  <div class="chapter">On a bird</div>
+
+  <article class="step">
+    <div>
+      <span class="no">05</span>
+      <h2>A bird's <em>page</em></h2>
+      <p>Tap any pin or card. The map zooms to where it's been reported, and the dashed circle is the area the reports cover.</p>
+      <ul>
+        <li><b>The day strip</b> covers the last week. Green means it was reported that day, and red means people only dipped.</li>
+        <li><b>Refound</b> or <b>Dipped</b>: if you go, tell other birders whether you saw it. Reports are anonymous.</li>
+        <li><b>Directions</b>, <b>Notes</b> (what observers wrote) and a link to the <b>eBird</b> report.</li>
+        <li>The report chips: tap one to see its exact spot.</li>
+      </ul>
+      <h3>Is it still there?</h3>
+      <dl class="legend">
+        <dt style="color:var(--green)"><span class="dot" style="background:var(--green)"></span>Continuing</dt><dd>Seen in the last 6 hours, or in the last 2 days by more than one birder</dd>
+        <dt style="color:var(--gray)"><span class="dot" style="background:var(--gray)"></span>Single report</dt><dd>One report, in the last 3 days</dd>
+        <dt style="color:var(--amber)"><span class="dot" style="background:var(--amber)"></span>Last seen</dt><dd>Within the past week</dd>
+        <dt style="color:var(--red)"><span class="dot" style="background:var(--red)"></span>May have departed</dt><dd>Not seen for a week or more</dd>
+      </dl>
+      <p>Sometimes a page also says <b>🎧 Also heard by a BirdWeather station</b>: a nearby microphone picked up the same species that day.</p>
+    </div>
+    <div class="phones">
+      <figure><img class="phone" src="shots/detail.jpg" alt="Evening Grosbeak page with day strip, Continuing status, Refound and Dipped buttons" loading="lazy" width="603" height="1311"><figcaption>Bird page</figcaption></figure>
+    </div>
+  </article>
+
+  <article class="step">
+    <div>
+      <span class="no">06</span><span class="tier">New in 1.4</span>
+      <h2>Seen <em>at sea</em></h2>
+      <p>An offshore bird's page says so. It has no Directions or trip button, because you can't drive to it.</p>
+    </div>
+    <div class="phones">
+      <figure><img class="phone" src="shots/detail-sea.jpg" alt="Craveri's Murrelet page with a Seen at sea note" loading="lazy" width="603" height="1311"><figcaption>At-sea bird</figcaption></figure>
+    </div>
+  </article>
+
+  <div class="chapter">Going birding</div>
+
+  <article class="step">
+    <div>
+      <span class="no">07</span>
+      <h2>Plan a <em>trip</em></h2>
+      <ul>
+        <li>On a bird's page, tap the <b>car</b> button to save it to your trip.</li>
+        <li>The car button at the top right opens the trip. The number on it is how many birds are saved.</li>
+        <li>Stops are put in driving order from where you are. <b>Directions</b> opens the whole route in your maps app (on iPhone, you pick Apple Maps or Google Maps).</li>
+        <li>Swipe a bird sideways to remove it.</li>
+      </ul>
+    </div>
+    <div class="phones">
+      <figure><img class="phone" src="shots/trip.jpg" alt="Trip with two stops in driving order and a Directions button" loading="lazy" width="603" height="1311"><figcaption>Trip</figcaption></figure>
+    </div>
+  </article>
+
+  <div class="chapter">Staying in the loop</div>
+
+  <article class="step">
+    <div>
+      <span class="no">08</span>
+      <h2>Rare-bird <em>alerts</em></h2>
+      <p>The app checks for new reports every 10 minutes. When there are new ones, you get one alert that names them. Birds you can drive to come first, and offshore ones come last, marked "(at sea)".</p>
+      <p>Tap an alert to open the bird. If it named several, they're listed first under <b>Just reported</b>.</p>
+      <div class="tip"><b>Tip</b> An alert gone too fast? On iPhone go to <b>Settings → Notifications → Birder's Best Friend → Banner Style → Persistent</b>, and banners will stay until you swipe them away.
+        Missed alerts also wait on the Lock Screen and in Notification Center. On Android, they wait in the pull-down shade.</div>
+    </div>
+    <div class="notifs" role="img" aria-label="Two example alerts">
+      <div class="notif"><img src="icon.png" alt=""><div><b>🐦 Evening Grosbeak</b><span>Los Pinos Trailhead · Orange County</span></div><time>now</time></div>
+      <div class="notif"><img src="icon.png" alt=""><div><b>🐦 3 new rare birds in Los Angeles &amp; Orange County</b><span>Clark's Nutcracker, Lucy's Warbler and Craveri's Murrelet (at sea)</span></div><time>10m ago</time></div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div>
+      <span class="no">09</span>
+      <h2>Where the <em>birds come from</em></h2>
+      <p>The logo button at the top left opens <b>About</b>, which explains the sources:</p>
+      <ul>
+        <li><b>eBird</b> (Cornell Lab of Ornithology): notable sightings, observer notes, hotspots.</li>
+        <li><b>iNaturalist</b>: research-grade rare observations and the bird photos.</li>
+        <li><b>BirdWeather</b> and <b>BirdNET</b>: microphones that back up birds people have already reported.</li>
+      </ul>
+      <p>The app is free and non-commercial, with no accounts and no ads.</p>
+    </div>
+    <div class="phones">
+      <figure><img class="phone" src="shots/about.jpg" alt="About screen describing eBird, iNaturalist and BirdWeather" loading="lazy" width="603" height="1311"><figcaption>About</figcaption></figure>
+    </div>
+  </article>
+</section>
+
+<!-- ============================================================= WHAT'S NEW -->
+<section class="page" id="p-whats-new">
+  <div class="chapter">October 2026</div>
+
+  <article class="release">
+    <h2>1.4.0 <em>Birds at sea</em></h2>
+    <div class="meta"><span>October 4, 2026</span><span class="build">iPhone build 4</span><span class="build">Android 8</span></div>
+    <ul>
+      <li><b>Birds at sea.</b> Rarities seen from boats, more than 2 km offshore, are marked "🚤 At sea" and hidden at first. Tap the "At sea" pill to show them. They have no Directions or trip button.</li>
+      <li><b>Alerts name the birds.</b> One alert per check, listing the new species, with offshore ones last. Tapping it opens the bird, or lists them under "Just reported".</li>
+      <li>Android: your location stays on the phone. Refound and Dipped reports no longer send where you were (iPhone has had this since build 3).</li>
+    </ul>
+  </article>
+
+  <article class="release">
+    <h2>1.3.0 <em>Also heard</em></h2>
+    <div class="meta"><span>September 29, 2026</span><span class="build">Android</span><span class="build">iPhone build 3 · October 3</span></div>
+    <ul>
+      <li>"Also heard by a BirdWeather station" on birds that a nearby microphone picked up the same day.</li>
+      <li>Bird pages got coloured links and clearer Refound and Dipped buttons.</li>
+      <li>Report locations say which source they came from, and hidden iNaturalist locations are flagged.</li>
+      <li><b>iPhone build 3</b>, the first TestFlight build, also: your location stays on the phone, trip directions let you choose Apple Maps or Google Maps, and iPad layout fixes.</li>
+    </ul>
+  </article>
+
+  <div class="chapter">September 2026</div>
+
+  <article class="release">
+    <h2>1.2.0 <em>Trips</em></h2>
+    <div class="meta"><span>September 28, 2026</span></div>
+    <ul><li>Save birds for a day trip and get directions to all of them in driving order.</li></ul>
+  </article>
+
+  <article class="release">
+    <h2>1.1.0 <em>The map</em></h2>
+    <div class="meta"><span>September 24, 2026</span><span class="build">First Android test build</span></div>
+    <ul>
+      <li>A full-screen map with the Rarities list in a sheet you drag up and down.</li>
+      <li>"Near me" marks your spot on the map.</li>
+      <li>The new pin app icon.</li>
+    </ul>
+  </article>
+</section>
+
+<!-- ================================================================ PRIVACY -->
+<section class="page" id="p-privacy">
+  <div class="prose">
+    <p class="updated">Privacy policy · last updated October 3, 2026</p>
+    <p>Birder's Best Friend is a free, non-commercial app for Android and iPhone that shows rare bird sightings in
+      Los Angeles and Orange Counties. It has no accounts, no ads, and no analytics or tracking. This
+      page explains the little data the app does handle.</p>
+
+    <h2>What the app collects</h2>
+    <ul>
+      <li><b>Refound and dipped reports.</b> When you tap "Refound" or "Dipped", the server
+        stores only which bird it was, which button you tapped, and when. It does not store your
+        location or any identifier for your phone.</li>
+      <li><b>A push notification token.</b> If you allow notifications, the app registers
+        a token (issued by Expo, and delivered through Google Firebase Cloud Messaging on Android or
+        the Apple Push Notification service on iPhone) with our server so it can send
+        rare-bird alerts. The token identifies the app install for delivery, not you.</li>
+    </ul>
+    <p>Reports and tokens are not linked to your name, email, or any account; the app never asks for them.</p>
+
+    <h2>What stays on your phone</h2>
+    <p>The app uses your location only on your device: to sort birds by distance and show your spot
+      on the map in the "Near me" view, and to show how far you are from a bird when you report it. That
+      location is not sent to our server.</p>
+    <p>Earlier versions of the app sent your coordinates with each report. Since October 1, 2026 the
+      server discards them if an older version still sends them, and the locations that earlier reports
+      had stored have been deleted.</p>
+
+    <h2>How it's used</h2>
+    <p>Only to run the app: reports help show whether a bird is still being seen, and push tokens are
+      used to deliver alerts. We do not sell, rent, or share this data, and we don't use it for advertising.</p>
+
+    <h2>Services the app talks to</h2>
+    <p>Like any app that loads content from the internet, your phone connects directly to these
+      services, which see your IP address under their own privacy policies:</p>
+    <ul>
+      <li><a href="https://www.inaturalist.org/pages/privacy">iNaturalist</a> — bird photos</li>
+      <li><a href="https://osmfoundation.org/wiki/Privacy_Policy">OpenStreetMap</a> — map tiles</li>
+      <li><a href="https://unpkg.com">unpkg</a> — the Leaflet map library</li>
+      <li><a href="https://expo.dev/privacy">Expo</a> and
+        <a href="https://firebase.google.com/support/privacy">Google Firebase</a> (Android) or
+        <a href="https://www.apple.com/legal/privacy/">Apple</a> (iPhone) — delivering push notifications</li>
+    </ul>
+    <p>Links you tap (eBird pages, directions) open in your browser or maps app and are governed by those services.</p>
+
+    <h2>Security and retention</h2>
+    <p>All data is sent over encrypted HTTPS connections. Our server briefly keeps IP addresses in
+      memory (for at most an hour) to limit spam and abuse; the app never saves them to its database. Push tokens are deleted when they stop working
+      (for example, after you uninstall the app). Reports are kept to show each bird's history.</p>
+
+    <h2>Your choices</h2>
+    <ul>
+      <li>Deny or revoke location access in your phone's settings; the app still works.</li>
+      <li>Turn off notifications in your phone's settings, or uninstall the app, to stop alerts.</li>
+    </ul>
+
+    <h2>Children</h2>
+    <p>The app is not directed at children under 13 and does not knowingly collect their data.</p>
+
+    <h2>Changes and contact</h2>
+    <p>If this policy changes, the updated version will be posted here with a new date. Questions?
+      Email <a href="mailto:ILICHZUNIGA@protonmail.com">ILICHZUNIGA@protonmail.com</a>.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">Birder's Best Friend · free and non-commercial · sightings from eBird, iNaturalist and BirdWeather.
+    Screenshots show real reports from October 4, 2026.</div>
+</footer>
+
+<script>
+  // Tabs by URL hash, so the app can link straight to #whats-new or #privacy.
+  // Sections are id'd p-<tab> so the hash doesn't also jump-scroll to them.
+  const tabs = ['tour', 'whats-new', 'privacy'];
+  function show() {
+    const id = tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'tour';
+    for (const t of tabs) {
+      document.getElementById('p-' + t).classList.toggle('on', t === id);
+      document.querySelector(`nav a[href="#${t}"]`).classList.toggle('on', t === id);
+    }
+    window.scrollTo(0, 0);
+  }
+  addEventListener('hashchange', show);
+  show();
+</script>
+</body>
+</html>
