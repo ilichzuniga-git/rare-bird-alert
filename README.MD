@@ -595,9 +595,9 @@ Comments are fetched on demand and never stored in the local database.
   - [x] "What's new" card, shown once per version (`mobile/src/WhatsNewCard.tsx`; text in `WHATS_NEW`, `mobile/src/guide.ts`). Its buttons open the guide in an in-app browser (`expo-web-browser`, a new native module, so it needs the new build)
   - [x] About screen modernized (`mobile/src/AboutModal.tsx`): page sheet on iPhone, header like the bird page, a teal Guide card (tour / what's new), source cards with link pills, a Privacy policy pill
   - [x] App-icon badge: the backend counts alerts per device since its app was last opened (`device_tokens.unread`, migration 019, live) and sends the count to builds that register with `badge: true`; the app clears it on launch, on returning to the foreground, and for alerts that arrive while it's open (`POST /api/devices/seen`). Older builds get no badge
-  - [ ] Before building: add a 1.5.0 entry to the guide's What's new tab, and retake `about.jpg` (the About screen changed) — `backend/src/site/README.md`
+  - [x] Guide: 1.5.0 entry in What's new, new `about.jpg`, tour step 09 about the guide card, badge in the alerts step (2026-10-04)
   - [ ] Test on real phones: the card and Guide links on both platforms; the badge counts up with alerts and clears on opening (not testable in Expo Go). Android not yet tried in an emulator
-  - [ ] Build and submit: iOS `eas build -p ios --profile production --auto-submit`, Android `eas build -p android --profile production` then Play Console upload
+  - [ ] Build and submit (started 2026-10-04 from commit b283018: iOS build 5 with auto-submit, Android versionCode 9): add iOS build 5 to the Team (Expo) group in TestFlight; upload the Android `.aab` to Play Console → Internal testing
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
 - [x] `expo.version` bumped to **1.4.0** (2026-10-04), first used by the iOS TestFlight build with the at-sea and notification changes
 - [x] **Android upload (1.4.0, versionCode 8):** built with `eas build -p android --profile production`, uploaded to Play Console → Internal Testing (2026-10-04). Brings Android up to the iOS build:
