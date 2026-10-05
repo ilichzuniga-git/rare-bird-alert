@@ -37,11 +37,12 @@ app.get('/health', (req, res) => {
 
 // Public guide site: tour, what's new and the privacy policy (src/site). express.static
 // redirects /guide to /guide/ so the page's relative fonts/ and shots/ paths resolve.
-// The page itself is always revalidated so an edit shows at once; images and fonts cache for a day.
+// Fonts cache for a day. The page, its script and the screenshots are revalidated on every
+// visit (a cheap 304 when unchanged), so a retaken screenshot shows at once.
 app.use('/guide', express.static(path.join(__dirname, 'site'), {
   maxAge: '1d',
   setHeaders: (res, file) => {
-    if (file.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+    if (!file.includes(`${path.sep}fonts${path.sep}`)) res.setHeader('Cache-Control', 'no-cache');
   },
 }));
 
