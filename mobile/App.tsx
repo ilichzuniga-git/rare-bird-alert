@@ -14,9 +14,11 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { onNotificationTap, registerForPushNotificationsAsync } from './src/notifications';
+import { markAlertsSeen, onNotificationTap, registerForPushNotificationsAsync } from './src/notifications';
 import LeafletMap, { type MapFocus, type MapPin, type UserSpot } from './src/LeafletMap';
 import AboutModal from './src/AboutModal';
+import WhatsNewCard from './src/WhatsNewCard';
+import { APP_VERSION, WHATS_NEW } from './src/guide';
 import { DetailBody, DetailHeader, useSightingDetail } from './src/SightingDetail';
 import BottomSheet, { type BottomSheetHandle } from './src/BottomSheet';
 import { SheetHeader, SheetList } from './src/RaritiesSheet';
@@ -85,7 +87,10 @@ function Main() {
   const [justReported, setJustReported] = useState<Set<string> | null>(null);
   // Leaving the app ends that view; a later normal launch shows the usual list
   useEffect(() => {
-    const sub = AppState.addEventListener('change', s => { if (s === 'background') setJustReported(null); });
+    const sub = AppState.addEventListener('change', s => {
+      if (s === 'background') setJustReported(null);
+      if (s === 'active') markAlertsSeen(); // back in the app: clear the icon badge
+    });
     return () => sub.remove();
   }, []);
 
@@ -276,6 +281,10 @@ function Main() {
 
   const [aboutOpen, setAboutOpen] = useState(false);
 
+  // "What's new" once per release that has an entry, after the first load so it isn't over a spinner
+  const whatsNewDue = WHATS_NEW.version === APP_VERSION && prefs.lastSeenVersion !== APP_VERSION;
+  const closeWhatsNew = useCallback(() => setPref('lastSeenVersion', APP_VERSION), [setPref]);
+
   // ---- layout ----
   const searchBottom = insets.top + 8 + SEARCH_BAR_H;
   const snapPoints = useMemo(() => [
@@ -431,6 +440,7 @@ function Main() {
       </BottomSheet>
 
       <AboutModal visible={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <WhatsNewCard visible={whatsNewDue && !loading && !aboutOpen} onDone={closeWhatsNew} />
     </View>
   );
 }

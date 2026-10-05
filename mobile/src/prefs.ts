@@ -9,10 +9,12 @@ import { File, Paths } from 'expo-file-system';
 export interface Prefs {
   /** Leave out birds last seen out on the ocean (pelagic trips) */
   hideAtSea: boolean;
+  /** The app version whose "What's new" card was last shown (or skipped), null before the first */
+  lastSeenVersion: string | null;
 }
 
 // At-sea birds start hidden: pelagic trips are rare next to land birding
-const DEFAULTS: Prefs = { hideAtSea: true };
+const DEFAULTS: Prefs = { hideAtSea: true, lastSeenVersion: null };
 
 const prefsFile = () => new File(Paths.document, 'prefs.json');
 

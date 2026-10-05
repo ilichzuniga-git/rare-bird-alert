@@ -271,7 +271,7 @@ node src/db/migrate.js
   - `POST /api/devices/register`: 20 per hour, Expo push tokens only
   - `POST /api/clusters/:id/report`: 10 per 15 minutes, plus the one-per-hour duplicate rule
 - **Dependencies:** pinned to exact versions and vetted before install (publish age plus `npm audit`); see the workspace `security.md`.
-- **Stored personal data:** push tokens and anonymous Refound/Dipped reports (bird, type, time). No accounts, locations or IPs are stored. Keep the Privacy tab of the guide site (`backend/src/site/index.html`), the Play Data safety form and the App Store privacy answers (App Privacy in App Store Connect) in step with any change here.
+- **Stored personal data:** push tokens (with an unread-alert count for the icon badge) and anonymous Refound/Dipped reports (bird, type, time). No accounts, locations or IPs are stored. Keep the Privacy tab of the guide site (`backend/src/site/index.html`), the Play Data safety form and the App Store privacy answers (App Privacy in App Store Connect) in step with any change here.
 
 ---
 
@@ -591,12 +591,13 @@ Comments are fetched on demand and never stored in the local database.
 
 **Both apps**
 - [x] Guide site live at `https://rba-backend.cloudedapps.org/guide/` (2026-10-04): Tour, What's new, Privacy; `/privacy` redirects to its Privacy tab. Source and screenshot how-to: `backend/src/site/README.md`. Add a What's new entry with every release
-- [ ] **Next build (1.5.0), both apps.** Shared code, so one batch for iOS and Android; no rebuild per item:
-  - [ ] "What's new" card, shown once after each update: store the last version seen in `prefs.json` and compare it with the app version. Its button opens `https://rba-backend.cloudedapps.org/guide/#whats-new`
-  - [ ] Guide link on the About screen, opening `/guide/`
-  - [ ] **Modernize the About screen** (`mobile/src/AboutModal.tsx`): it still has the old green-header, plain-text style. Bring it in line with the current sheet and cards (rounded cards, pills, the tier colours) and give the sources section the look of the rest of the app
-  - [ ] App-icon badge for unread alerts: the backend sends a badge count with each notification and the app clears it on launch (`shouldSetBadge` in `mobile/src/notifications.ts`). Not yet confirmed by the user
-  - [ ] Add a 1.5.0 entry to the guide's What's new tab, and retake any tour screenshots whose screens changed (`backend/src/site/README.md`)
+- [ ] **Next build (1.5.0), both apps.** Code done 2026-10-04 (`expo.version` is 1.5.0); ships with the next iOS and Android builds:
+  - [x] "What's new" card, shown once per version (`mobile/src/WhatsNewCard.tsx`; text in `WHATS_NEW`, `mobile/src/guide.ts`). Its buttons open the guide in an in-app browser (`expo-web-browser`, a new native module, so it needs the new build)
+  - [x] About screen modernized (`mobile/src/AboutModal.tsx`): page sheet on iPhone, header like the bird page, a teal Guide card (tour / what's new), source cards with link pills, a Privacy policy pill
+  - [x] App-icon badge: the backend counts alerts per device since its app was last opened (`device_tokens.unread`, migration 019, live) and sends the count to builds that register with `badge: true`; the app clears it on launch, on returning to the foreground, and for alerts that arrive while it's open (`POST /api/devices/seen`). Older builds get no badge
+  - [ ] Before building: add a 1.5.0 entry to the guide's What's new tab, and retake `about.jpg` (the About screen changed) — `backend/src/site/README.md`
+  - [ ] Test on real phones: the card and Guide links on both platforms; the badge counts up with alerts and clears on opening (not testable in Expo Go). Android not yet tried in an emulator
+  - [ ] Build and submit: iOS `eas build -p ios --profile production --auto-submit`, Android `eas build -p android --profile production` then Play Console upload
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
 - [x] `expo.version` bumped to **1.4.0** (2026-10-04), first used by the iOS TestFlight build with the at-sea and notification changes
 - [x] **Android upload (1.4.0, versionCode 8):** built with `eas build -p android --profile production`, uploaded to Play Console → Internal Testing (2026-10-04). Brings Android up to the iOS build:

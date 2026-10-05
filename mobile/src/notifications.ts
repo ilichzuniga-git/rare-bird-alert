@@ -6,6 +6,9 @@ import Constants from 'expo-constants';
 
 const API_BASE = 'https://rba-backend.cloudedapps.org';
 
+// This install's push token, once registered; markAlertsSeen needs it
+let pushToken: string | null = null;
+
 // Push notifications are not supported in Expo Go SDK 53+.
 // They require a development build or production build.
 function isExpoGo(): boolean {
@@ -67,17 +70,38 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     const token = tokenData.data;
     console.log('[notifications] Expo push token:', token);
 
+    // badge: this build clears the icon badge when opened, so the server may send counts.
+    // Registering also tells the server the app was just opened (unread back to 0).
     await fetch(`${API_BASE}/api/devices/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, platform: Platform.OS }),
+      body: JSON.stringify({ token, platform: Platform.OS, badge: true }),
     });
+    pushToken = token;
+    Notifications.setBadgeCountAsync(0).catch(() => {});
 
     return token;
   } catch (err: any) {
     console.warn('[notifications] Token registration failed:', err.message);
     return null;
   }
+}
+
+/**
+ * Clear the app-icon badge, and the server's count of alerts since the app was last opened
+ * (the next alert's badge starts again at 1). Call when the app comes to the foreground.
+ */
+export async function markAlertsSeen() {
+  if (isExpoGo() || Platform.OS === 'web' || !pushToken) return;
+  const Notifications = await loadNotifications();
+  const count = await Notifications.getBadgeCountAsync().catch(() => 0);
+  if (count === 0) return; // nothing to clear, so no request
+  Notifications.setBadgeCountAsync(0).catch(() => {});
+  fetch(`${API_BASE}/api/devices/seen`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: pushToken }),
+  }).catch(() => {});
 }
 
 /**
@@ -90,14 +114,24 @@ export async function configureNotificationHandler() {
   const Notifications = await loadNotifications();
 
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      // shouldShowAlert is deprecated in favor of the two below (banner = heads-up,
-      // list = notification center/shade) — both true keeps the old behavior.
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
+    handleNotification: async () => {
+      // An alert that arrives while the app is open has been seen: don't count it on the icon
+      if (pushToken) {
+        fetch(`${API_BASE}/api/devices/seen`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: pushToken }),
+        }).catch(() => {});
+      }
+      return {
+        // shouldShowAlert is deprecated in favor of the two below (banner = heads-up,
+        // list = notification center/shade) — both true keeps the old behavior.
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      };
+    },
   });
 }
 

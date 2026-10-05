@@ -56,10 +56,7 @@ function buildMessage(sightings) {
  * @param {number[]} sightingIds
  */
 async function dispatchNotifications(sightingIds) {
-  const { rows: devices } = await db.query(
-    'SELECT token FROM device_tokens'
-  );
-  if (devices.length === 0) return;
+  if (!(await db.query('SELECT 1 FROM device_tokens LIMIT 1')).rows.length) return;
 
   const { rows } = await db.query(
     `SELECT s.id, s.common_name, s.scientific_name, s.location_name, s.region_code, s.rarity_count,
@@ -78,7 +75,15 @@ async function dispatchNotifications(sightingIds) {
   }
 
   const { title, body, data } = buildMessage(rows);
-  const messages = devices.map(d => ({ to: d.token, sound: 'default', title, body, data }));
+
+  // Count this alert for each device's app-icon badge; only builds that clear it get a number
+  const { rows: devices } = await db.query(
+    'UPDATE device_tokens SET unread = unread + CASE WHEN badges THEN 1 ELSE 0 END RETURNING token, badges, unread'
+  );
+  const messages = devices.map(d => ({
+    to: d.token, sound: 'default', title, body, data,
+    ...(d.badges ? { badge: d.unread } : {}),
+  }));
 
   // Expo push API accepts batches of up to 100
   const BATCH = 100;
