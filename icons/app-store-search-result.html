@@ -1,0 +1,62 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+  /* App Store search results asset: 3840x2560, key art inside the centered ~2160x1024 safe area
+     (measured from Apple's creative_assets-search_results_template-static.psd). Add ?guides to see it.
+     Same look as app-store-header.html; it states what the app does and shows the real UI. */
+  body { margin: 0; }
+  .s { width: 3840px; height: 2560px; position: relative; overflow: hidden;
+       background: linear-gradient(135deg, #0f5c7a, #1f8fa8); font-family: -apple-system, 'SF Pro Display', system-ui, sans-serif; }
+  svg.bg { position: absolute; inset: 0; }
+  .txt { position: absolute; left: 900px; top: 1280px; transform: translateY(-50%); color: #fff; width: 860px; }
+  .txt svg { display: block; width: 150px; height: 190px; margin-bottom: 44px; }
+  h1 { margin: 0; font-size: 116px; font-weight: 700; letter-spacing: -3px; line-height: 1.04; }
+  p { margin: 34px 0 0; font-size: 50px; font-weight: 500; opacity: .9; line-height: 1.25; }
+  .phone { position: absolute; top: 742px; width: 480px; height: 1044px; border-radius: 76px; overflow: hidden;
+           background: #fff; border: 15px solid #0b2f3b; box-shadow: 0 40px 120px rgba(0,0,0,.4); }
+  .phone img { width: 100%; display: block; }
+  .p1 { left: 1830px; transform: rotate(-6deg) translateY(30px); }
+  .p3 { left: 2520px; transform: rotate(6deg) translateY(30px); }
+  .p2 { left: 2170px; top: 712px; z-index: 1; box-shadow: 0 50px 140px rgba(0,0,0,.5); }
+  .guide { display: none; position: absolute; left: 840px; top: 768px; width: 2160px; height: 1024px;
+           outline: 4px solid #0f0; background: rgba(0,255,0,.12); z-index: 2; }
+  .guides .guide { display: block; }
+</style></head><body><div class="s" id="s">
+<svg class="bg" viewBox="0 0 3840 2560" width="3840" height="2560">
+  <defs>
+    <path id="drop" transform="rotate(-45)" d="M-220 220V0A220 220 0 0 1 0-220A220 220 0 0 1 220 0A220 220 0 0 1 0 220Z" stroke="#fff" stroke-width="30" stroke-linejoin="round"/>
+    <path id="bird" transform="scale(6.3) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/>
+  </defs>
+  <!-- faint map roads -->
+  <g fill="none" stroke="#fff" stroke-opacity=".07" stroke-width="34" stroke-linecap="round">
+    <path d="M-60 520 C700 400 1200 820 1900 650 S3100 300 3900 460"/>
+    <path d="M-60 2120 C650 1950 1100 2300 1900 2030 S3200 1700 3900 1930"/>
+    <path d="M700 -60 C800 700 600 1700 760 2620"/>
+    <path d="M3150 -60 C3050 800 3330 1700 3110 2620"/>
+  </g>
+  <g stroke="#fff" stroke-opacity=".05" stroke-width="10" fill="none">
+    <path d="M-60 1300 C900 1180 2000 1460 3900 1240"/><path d="M2300 -60 C2400 900 2230 1700 2370 2620"/>
+    <path d="M1500 -60 C1450 600 1620 1100 1540 2620"/>
+  </g>
+  <!-- tier pins scattered like the map (outside the safe area) -->
+  <g transform="translate(560 420) scale(.2)"><use href="#drop" fill="#e0364f"/><use href="#bird"/></g>
+  <g transform="translate(3300 2200) scale(.18)"><use href="#drop" fill="#e8701a"/><use href="#bird"/></g>
+  <g transform="translate(3240 470) scale(.15)"><use href="#drop" fill="#c99a06"/><use href="#bird"/></g>
+  <g transform="translate(1900 520) scale(.12)"><use href="#drop" fill="#5f6b64"/><use href="#bird"/></g>
+  <g transform="translate(1250 2160) scale(.15)"><use href="#drop" fill="#c99a06"/><use href="#bird"/></g>
+  <g transform="translate(2350 2240) scale(.11)"><use href="#drop" fill="#5f6b64"/><use href="#bird"/></g>
+  <g transform="translate(240 1500) scale(.13)"><use href="#drop" fill="#5f6b64"/><use href="#bird"/></g>
+  <g transform="translate(3650 1320) scale(.14)"><use href="#drop" fill="#e0364f"/><use href="#bird"/></g>
+  <g transform="translate(330 2300) scale(.12)"><use href="#drop" fill="#e8701a"/><use href="#bird"/></g>
+  <g transform="translate(3620 200) scale(.11)"><use href="#drop" fill="#5f6b64"/><use href="#bird"/></g>
+</svg>
+<div class="txt">
+  <svg viewBox="-260 -330 520 660"><use href="#drop" fill="#1f7a55"/><use href="#bird"/></svg>
+  <h1>Rare birds<br>near you, live</h1>
+  <p>Fresh reports across LA &amp; Orange County, ranked by rarity</p>
+</div>
+<div class="phone p1"><img src="../AppStoreScreenshots/iPhone/01-map.png"></div>
+<div class="phone p3"><img src="../AppStoreScreenshots/iPhone/04-trip.png"></div>
+<div class="phone p2"><img src="../AppStoreScreenshots/iPhone/03-list.png"></div>
+<div class="guide"></div>
+</div><script>
+  if (location.search.indexOf('guides') >= 0) document.getElementById('s').classList.add('guides');
+</script></body></html>
