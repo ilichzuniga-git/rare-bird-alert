@@ -403,6 +403,32 @@ To put a build that's already uploaded on another track (Internal and Closed tes
 
 ---
 
+## Store assets
+
+Artwork for the store listings. Each graphic is a plain HTML page sized to the exact pixels the store wants: open it in Chrome and screenshot the page, or record it for the video. They share the app's colours (teal gradient `#0f5c7a` → `#1f8fa8`, tier-coloured pins, the green bird pin).
+
+| File | Size | What it is |
+|---|---|---|
+| `icons/app-store-header.html` → `.png`, `.mp4` | 3840×1646 | **App Store product page header** (2026-10-07). Tagline "Every rare bird, on one map / Live rarities across LA & Orange County", the green pin, two framed phones (`backend/src/site/shots/home.jpg`, `detail.jpg`). The key art sits inside Apple's centered 1644×658 safe area, so it survives cropping. The `.mp4` is a 10 s loop at 30 fps: the pin shrinks away, a bird flies in, drops it with a bounce and a GPS pulse, and flies off. Its first frame matches the still |
+| `icons/featured-graphic.html` | 1024×500 | Google Play feature graphic |
+| `icons/screenshots/frame.html` → `1-map.png` … `4-about.png` | 1080×1920 | Google Play phone screenshots: a raw capture (`raw*.png`) inside a phone frame with a headline; `_all.png` shows them side by side |
+| `AppStoreScreenshots/iPhone/` | 1206×2622 | App Store iPhone 6.3" screenshots from the iPhone 18 Pro simulator: map, bird, list, trip, about |
+| `AppStoreScreenshots/iPad/` | 2064×2752 | App Store iPad 13" screenshots from the iPad Pro 13" simulator: map, bird, trip, about. The iPadOS "Expo Go" status-bar label and the window-corner arc are edited out |
+| `icons/1-pin.svg` … `4b-pin-hero-green.svg`, `preview.html` | | App icon concepts; `preview.html` compares them. The shipped icon is in `mobile/assets/` |
+
+**The header page's URL options:**
+- `?guides` shows the safe area in green.
+- `?t=5` freezes the animation at that second; `t=0` is the still.
+- `?play` runs the loop live.
+
+**To re-render:**
+- **Still:** open the page at full size and capture the 3840×1646 frame.
+- **Video:** there is no saved script for this yet. It was made by stepping `window.setT(t)` frame by frame in a headless browser and encoding with ffmpeg. Save that script next to the page the next time it's needed.
+
+The `.mp4` carries a silent audio track; strip it with `ffmpeg -i in.mp4 -an -c:v copy out.mp4` if a store rejects it.
+
+---
+
 ## Updating GitHub
 
 ### Everyday workflow

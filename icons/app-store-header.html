@@ -1,0 +1,151 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+  /* App Store product page header: 3840x1646, key art inside the centered 1644x658 safe area
+     (from Apple's creative_assets-product_page_header_template). Add ?guides to see the safe area. */
+  body { margin: 0; }
+  .h { width: 3840px; height: 1646px; position: relative; overflow: hidden;
+       background: linear-gradient(135deg, #0f5c7a, #1f8fa8); font-family: -apple-system, 'SF Pro Display', system-ui, sans-serif; }
+  svg.bg { position: absolute; inset: 0; }
+  .txt { position: absolute; left: 1590px; top: 823px; transform: translateY(-50%); color: #fff; }
+  h1 { margin: 0; font-size: 124px; font-weight: 700; letter-spacing: -3px; line-height: 1.04; }
+  p { margin: 34px 0 0; font-size: 54px; font-weight: 500; opacity: .9; line-height: 1.25; }
+  .phone { position: absolute; top: 330px; width: 600px; height: 1304px; border-radius: 96px; overflow: hidden;
+           background: #fff; border: 18px solid #0b2f3b; box-shadow: 0 50px 140px rgba(0,0,0,.4); }
+  .phone img { width: 100%; display: block; }
+  .l { left: 300px; transform: rotate(-7deg); }
+  .r { right: 300px; transform: rotate(7deg); }
+  .guide { display: none; position: absolute; left: 1098px; top: 494px; width: 1644px; height: 658px;
+           outline: 4px solid #0f0; background: rgba(0,255,0,.12); }
+  .guides .guide { display: block; }
+</style></head><body><div class="h" id="h">
+<svg class="bg" viewBox="0 0 3840 1646" width="3840" height="1646">
+  <defs>
+    <path id="drop" transform="rotate(-45)" d="M-220 220V0A220 220 0 0 1 0-220A220 220 0 0 1 220 0A220 220 0 0 1 0 220Z" stroke="#fff" stroke-width="30" stroke-linejoin="round"/>
+    <path id="bird" transform="scale(6.3) translate(-34 -37.5)" d="M9 40c7 0 12-4 16-10 4-7 9-11 16-11 5 0 8 3 10 6l8 2-7 3c-1 10-8 17-19 18l-3 8h-4l1-7c-7-1-13-4-18-9z" fill="#fff"/>
+  </defs>
+  <!-- faint map roads -->
+  <g fill="none" stroke="#fff" stroke-opacity=".07" stroke-width="34" stroke-linecap="round">
+    <path d="M-60 380 C700 290 1200 600 1900 470 S3100 200 3900 330"/>
+    <path d="M-60 1380 C650 1250 1100 1500 1900 1310 S3200 1080 3900 1240"/>
+    <path d="M1000 -60 C1090 500 900 1100 1060 1700"/>
+    <path d="M2900 -60 C2800 520 3080 1100 2860 1700"/>
+  </g>
+  <g stroke="#fff" stroke-opacity=".05" stroke-width="10" fill="none">
+    <path d="M-60 860 C900 760 2000 980 3900 820"/><path d="M2250 -60 C2350 650 2180 1100 2320 1700"/>
+    <path d="M1500 -60 C1450 400 1620 700 1540 1700"/>
+  </g>
+  <!-- tier pins scattered like the map (outside the safe area) -->
+  <g transform="translate(1030 220) scale(.2)"><use href="#drop" fill="#e0364f"/><use href="#bird"/></g>
+  <g transform="translate(2960 1420) scale(.17)"><use href="#drop" fill="#e8701a"/><use href="#bird"/></g>
+  <g transform="translate(2860 250) scale(.15)"><use href="#drop" fill="#c99a06"/><use href="#bird"/></g>
+  <g transform="translate(1900 260) scale(.12)"><use href="#drop" fill="#5f6b64"/><use href="#bird"/></g>
+  <g transform="translate(1580 1450) scale(.14)"><use href="#drop" fill="#c99a06"/><use href="#bird"/></g>
+  <g transform="translate(2250 1420) scale(.11)"><use href="#drop" fill="#5f6b64"/><use href="#bird"/></g>
+  <g transform="translate(110 200) scale(.13)"><use href="#drop" fill="#5f6b64"/><use href="#bird"/></g>
+  <g transform="translate(3730 230) scale(.13)"><use href="#drop" fill="#e0364f"/><use href="#bird"/></g>
+  <!-- hero pin -->
+  <ellipse id="ring" cx="1320" cy="1040" rx="0" ry="0" fill="none" stroke="#fff" stroke-width="8" opacity="0"/>
+  <ellipse id="shadow" cx="1320" cy="1060" rx="140" ry="28" fill="#062e3d" opacity=".35"/>
+  <g id="pin" transform="translate(1320 755) scale(.85)"><use href="#drop" fill="#1f7a55"/><use href="#bird"/></g>
+</svg>
+<div class="phone l"><img src="../backend/src/site/shots/home.jpg"></div>
+<div class="phone r"><img src="../backend/src/site/shots/detail.jpg"></div>
+<div class="txt"><h1>Every rare bird,<br>on one map</h1><p>Live rarities across LA &amp; Orange County</p></div>
+<svg class="bg" viewBox="0 0 3840 1646" width="3840" height="1646">
+  <!-- flying bird for the video version; parked off-canvas in the still -->
+  <g id="flyer" transform="translate(-1000 -1000)" filter="drop-shadow(0 24px 30px rgba(0,0,0,.25))">
+    <path id="wingFar" fill="#cfe3ea"/>
+    <use href="#bird"/>
+    <path id="wingNear" fill="#f4f9fb" stroke="#0f5c7a" stroke-opacity=".3" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>
+<div class="guide"></div>
+</div><script>
+  var q = location.search;
+  if (q.indexOf('guides') >= 0) document.getElementById('h').classList.add('guides');
+
+  // Video version: setT(t) draws the frame at t seconds of a LOOP-second loop.
+  // The bird flies in, drops the pin, and flies out; t = 0 matches the still.
+  var LOOP = 10, TIP = 311, PIN_X = 1320, TIP_Y = 755 + TIP * .85, HOVER = [1320, 380];
+  var $ = function (id) { return document.getElementById(id); };
+  var clamp = function (x) { return Math.max(0, Math.min(1, x)); };
+  var seg = function (t, a, b) { return clamp((t - a) / (b - a)); };
+  var easeIn = function (x) { return x * x * x; };
+  var easeInOut = function (x) { return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+  var easeOutBack = function (x) { var c = 1.9; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+  function bez(p, u) {
+    var v = 1 - u;
+    return [0, 1].map(function (i) {
+      return v*v*v*p[0][i] + 3*v*v*u*p[1][i] + 3*v*u*u*p[2][i] + u*u*u*p[3][i];
+    });
+  }
+  var IN = [[-400, 120], [450, 20], [900, 520], HOVER];
+  var OUT = [HOVER, [1520, 230], [2500, 40], [4250, -300]];
+
+  // swept, feathered wing drawn raised; flapping flexes it around the shoulder (s: 1 up .. -0.7 down)
+  var WING = 'M45 -10C30 -120 -40 -200 -150 -260C-130 -215 -125 -190 -112 -170C-130 -160 -120 -130 -100 -120' +
+             'C-115 -100 -100 -70 -85 -60C-95 -40 -85 -10 -75 15Z';
+  function setWing(id, x, y, k, s) {
+    $(id).setAttribute('d', WING);
+    $(id).setAttribute('transform', 'translate(' + x + ' ' + y + ') scale(' + k + ' ' + (k * s) + ')');
+  }
+
+  function setPin(k, dy, op) {
+    $('pin').setAttribute('transform', 'translate(' + PIN_X + ' ' + (TIP_Y + dy) + ') scale(' + (.85 * k) + ') translate(0 ' + -TIP + ')');
+    $('pin').setAttribute('opacity', op);
+    var sk = Math.max(0, Math.min(1, k)) * clamp(1 + dy / 300);
+    $('shadow').setAttribute('rx', 140 * sk);
+    $('shadow').setAttribute('ry', 28 * sk);
+  }
+
+  function setRing(u) {
+    $('ring').setAttribute('rx', 60 + 300 * u);
+    $('ring').setAttribute('ry', 14 + 66 * u);
+    $('ring').setAttribute('opacity', u > 0 && u < 1 ? .7 * (1 - u) : 0);
+  }
+
+  window.setT = function (t) {
+    t = ((t % LOOP) + LOOP) % LOOP;
+
+    // pin: held, shrinks away, then dropped by the bird with a bounce
+    if (t < 4.4) setPin(1, 0, 1);
+    else if (t < 4.8) setPin(1 - easeIn(seg(t, 4.4, 4.8)), 0, 1);
+    else if (t < 7.0) setPin(0, 0, 0);
+    else if (t < 7.35) { var f = easeIn(seg(t, 7.0, 7.35)); setPin(.25 + .75 * f, -400 * (1 - f), 1); }
+    else setPin(Math.min(easeOutBack(seg(t, 7.35, 7.75)), 1.15) * (1 - .1 * Math.sin(Math.PI * seg(t, 7.35, 7.55))), 0, 1);
+
+    // GPS pulse rings at the tip
+    var r = 0;
+    [[1.0, 2.2], [2.8, 4.0], [7.35, 8.55], [8.7, 9.9]].forEach(function (w) { if (t >= w[0] && t < w[1]) r = seg(t, w[0], w[1]); });
+    setRing(r);
+
+    // bird: in along IN, hover with a bob, out along OUT
+    var pos, ang = 0, flap = 3.2, hover = false;
+    if (t >= 4.9 && t < 6.75) {
+      var u = easeInOut(seg(t, 4.9, 6.75));
+      pos = bez(IN, u); var n = bez(IN, Math.min(1, u + .02)), pr = bez(IN, Math.max(0, u - .02));
+      ang = Math.atan2(n[1] - pr[1], n[0] - pr[0]) * 180 / Math.PI;
+    } else if (t >= 6.75 && t < 7.4) {
+      hover = true; flap = 5;
+      pos = [HOVER[0], HOVER[1] + 10 * Math.sin(2 * Math.PI * (t - 6.75) * 1.5)];
+    } else if (t >= 7.4 && t < 9.3) {
+      var u2 = easeIn(seg(t, 7.4, 9.3)) * .7 + seg(t, 7.4, 9.3) * .3;
+      pos = bez(OUT, u2); var n2 = bez(OUT, Math.min(1, u2 + .02)), p2 = bez(OUT, Math.max(0, u2 - .02));
+      ang = Math.atan2(n2[1] - p2[1], n2[0] - p2[0]) * 180 / Math.PI;
+    }
+    var fl = $('flyer');
+    if (!pos) { fl.setAttribute('transform', 'translate(-1000 -1000)'); return; }
+    ang = Math.max(-28, Math.min(28, ang)) * (hover ? 0 : 1);
+    var a = Math.sin(2 * Math.PI * flap * t);
+    var s = a > 0 ? a : .7 * a;
+    setWing('wingNear', 0, -60, 1, s);
+    setWing('wingFar', 40, -78, .85, s);
+    fl.setAttribute('transform', 'translate(' + pos[0] + ' ' + pos[1] + ') rotate(' + ang + ') scale(1.05)');
+  };
+
+  var qt = /[?&]t=([\d.]+)/.exec(q);
+  setT(qt ? +qt[1] : 0);
+  if (q.indexOf('play') >= 0) {
+    var t0 = performance.now();
+    (function tick(now) { setT((now - t0) / 1000); requestAnimationFrame(tick); })(t0);
+  }
+</script></body></html>
