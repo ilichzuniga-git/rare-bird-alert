@@ -586,8 +586,9 @@ Comments are fetched on demand and never stored in the local database.
 - [x] First TestFlight build (1.3.0 build 3); App Store Connect app "Birder's Best Friend"
 - [x] TestFlight on a real iPhone (a family member, build 3, 2026-10-04). Her feedback led to the at-sea and notification-tap changes below
 - [x] TestFlight on her iPhone: at-sea labels and switch confirmed on 1.4.0 (build 4, 2026-10-04; she had to reinstall before the changes appeared); push notifications confirmed working (2026-10-07)
-- [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), description, App Privacy answers matching the Play Data safety form, privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), support URL (`https://rba-backend.cloudedapps.org/guide/`)
-- [ ] Submit for App Store review
+- [x] App Store listing (2026-10-07): screenshots (iPhone 6.3" 1206×2622 from the iPhone 18 Pro simulator, iPad 13" 2064×2752), subtitle, description, keywords, Reference / Education, age rating 4+, USA only, free. App Privacy: Device ID (push token) and Other User Content (Refound/Dipped reports), both App Functionality only, not linked, no tracking; location not collected. Privacy policy URL `https://rba-backend.cloudedapps.org/privacy`, support URL `https://rba-backend.cloudedapps.org/guide/`
+- [x] Submitted 1.5.0 (5) for App Store review (2026-10-07), set to manual release
+- [ ] Approved by App Review, then **Release This Version** in App Store Connect
 
 **Both apps**
 - [x] Guide site live at `https://rba-backend.cloudedapps.org/guide/` (2026-10-04): Tour, What's new, Privacy; `/privacy` redirects to its Privacy tab. Source and screenshot how-to: `backend/src/site/README.md`. Add a What's new entry with every release
