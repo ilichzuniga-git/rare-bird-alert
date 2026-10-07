@@ -585,7 +585,7 @@ Comments are fetched on demand and never stored in the local database.
 - [x] Apple Developer Program, EAS credentials (certificate, provisioning profile, APNs push key; renew by 2027-10-03)
 - [x] First TestFlight build (1.3.0 build 3); App Store Connect app "Birder's Best Friend"
 - [x] TestFlight on a real iPhone (a family member, build 3, 2026-10-04). Her feedback led to the at-sea and notification-tap changes below
-- [ ] TestFlight 1.4.0 (build 4): at-sea labels and switch confirmed on her iPhone (2026-10-04; she had to reinstall before the changes appeared). Still to test: **push notifications** on a real iPhone (tap with the app open, in the background, closed)
+- [x] TestFlight on her iPhone: at-sea labels and switch confirmed on 1.4.0 (build 4, 2026-10-04; she had to reinstall before the changes appeared); push notifications confirmed working (2026-10-07)
 - [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), description, App Privacy answers matching the Play Data safety form, privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), support URL (`https://rba-backend.cloudedapps.org/guide/`)
 - [ ] Submit for App Store review
 
@@ -596,7 +596,7 @@ Comments are fetched on demand and never stored in the local database.
   - [x] About screen modernized (`mobile/src/AboutModal.tsx`): page sheet on iPhone, header like the bird page, a teal Guide card (tour / what's new), source cards with link pills, a Privacy policy pill
   - [x] App-icon badge: the backend counts alerts per device since its app was last opened (`device_tokens.unread`, migration 019, live) and sends the count to builds that register with `badge: true`; the app clears it on launch, on returning to the foreground, and for alerts that arrive while it's open (`POST /api/devices/seen`). Older builds get no badge
   - [x] Guide: 1.5.0 entry in What's new, new `about.jpg`, tour step 09 about the guide card, badge in the alerts step (2026-10-04)
-  - [ ] Test on real phones: the card and Guide links on both platforms; the badge counts up with alerts and clears on opening (not testable in Expo Go). Android not yet tried in an emulator
+  - [ ] Test on real phones (iOS notifications confirmed 2026-10-07): the card and Guide links on both platforms; the badge counts up with alerts and clears on opening (not testable in Expo Go). Android not yet tried in an emulator
   - [x] Built from commit b283018 and uploaded (2026-10-04): iOS 1.5.0 build 5 on TestFlight, Android 1.5.0 versionCode 9 on Play Internal testing
 - [x] About screen and privacy page match current data handling: reports store only bird, type and time; location stays on the phone (2026-10-03)
 - [x] `expo.version` bumped to **1.4.0** (2026-10-04), first used by the iOS TestFlight build with the at-sea and notification changes
