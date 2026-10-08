@@ -16,7 +16,7 @@ Apple asked, because the developer account is new, for:
 
 ```
 1. Screen recording
-Attached: a recording on an iPhone running the latest iOS, starting from launching the app. The app has no accounts (no registration, login or deletion), no paid content or in-app purchases, and no user-posted text, photos or profiles (see 2 and 3).
+Attached: a recording of the release build (1.5.0) starting from launching the app. I am an independent developer and don't own an iPhone, so it was recorded on the iPhone 18 Pro simulator running iOS 27, the latest. The app was tested on a physical iPhone through TestFlight (builds 3 to 5, by a family member), including push notifications, confirmed on 2026-10-07. The app has no accounts (no registration, login or deletion), no paid content or in-app purchases, and no user-posted text, photos or profiles (see 2 and 3).
 
 2. Purpose and audience
 Birder's Best Friend shows rare bird sightings in Los Angeles and Orange County, California, on one map, updated every 10 minutes. It is for birdwatchers who want to know quickly when a rare bird has been reported nearby, see where exactly it was seen, and decide whether it is worth the drive. Today that means checking several websites and mailing lists; the app combines the public reports, ranks each bird by how rare it is locally, groups repeat reports of the same individual bird, and tells you whether it is still being seen. Optional push notifications announce new rare birds. The app is free, with no ads, accounts or purchases.
@@ -49,7 +49,7 @@ Not a regulated industry. All data is used within its providers' terms, with the
 
 ### Screen recording
 
-Record on a real iPhone with the latest iOS. Use the same build that's under review: TestFlight 1.5.0 (5). Use iOS screen recording: Control Center → Screen Recording, and turn the microphone off.
+We have no iPhone, so the recording comes from the iOS 27 simulator. It runs a simulator build of the same code as 1.5.0 (5): EAS profile `ios-simulator`, build d1124f5f, 2026-10-08. It is recorded with `xcrun simctl io booted recordVideo`. The reply says so. Result: `AppStoreReview/birders-best-friend-walkthrough.mp4` (2 min 20 s, 1206×2622). In it, Refound is opened and then cancelled, so no fake report reaches the live server. If Apple insists on a physical device, borrow an iPhone, install TestFlight build 5 and follow the same steps.
 
 1. Start recording on the Home Screen, then tap the app icon to launch it.
 2. Map and sheet: pan the map a little, then drag the sheet up to show the list.
