@@ -616,6 +616,7 @@ Comments are fetched on demand and never stored in the local database.
 - [x] App Store listing (2026-10-07): screenshots (iPhone 6.3" 1206×2622 from the iPhone 18 Pro simulator, iPad 13" 2064×2752), subtitle, description, keywords, Reference / Education, age rating 4+, USA only, free. App Privacy: Device ID (push token) and Other User Content (Refound/Dipped reports), both App Functionality only, not linked, no tracking; location not collected. Privacy policy URL `https://rba-backend.cloudedapps.org/privacy`, support URL `https://rba-backend.cloudedapps.org/guide/`
 - [x] Submitted 1.5.0 (5) for App Store review (2026-10-07), set to manual release
 - [x] Added the product page header video (`icons/app-store-header.mp4`) and the search results image (`icons/app-store-search-result.png`) to the listing and resubmitted for review (2026-10-07). See [Store assets](#store-assets)
+- [ ] Answer App Review's Guideline 2.1 request (2026-10-08): screen recording on a real iPhone plus the written answers in [docs/APP_REVIEW.md](docs/APP_REVIEW.md), also pasted into the App Review Notes field
 - [ ] Approved by App Review, then **Release This Version** in App Store Connect
 
 **Both apps**
