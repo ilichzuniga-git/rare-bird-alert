@@ -668,3 +668,6 @@ Comments are fetched on demand and never stored in the local database.
 Not committed to. Each needs more thought before it's built.
 - [ ] **Push alerts for saved birds** ("your saved Pinyon Jay was refound"). Would mean storing the saved list on the server next to the anonymous push token: still account-free, but the Data safety form, App Store privacy answers and privacy page would need updating.
 - [ ] **Share a trip** with a friend via a link that carries the saved list, no accounts needed.
+- [ ] **Advertise that Refound / Dipped are faster than eBird.** A tap reaches everyone within seconds. On 2026-10-08 an eBird upload took about 21 minutes to reach the app (about 19 of those were eBird's own delay). Say so in the guide, the What's new card or on the bird screen to encourage taps.
+- [ ] **Animated map marker for birds with a recent Refound / Dipped**, e.g. a pulse on a fresh refound, so the community reports stand out on the map and encourage participation.
+- [ ] **Public transit directions** alongside driving: a transit option for the trip and the Directions button (Apple Maps and Google Maps both support a transit mode).
