@@ -636,6 +636,8 @@ Comments are fetched on demand and never stored in the local database.
   - About text fix and the search box AutoFill change
   - First Android build without the location-sending report code (1.3.0 and earlier still send it; the server ignores it)
   - Test on an Android phone before uploading: at-sea switch and labels, a notification tap with the app open, in the background and closed
+- [x] **Google Play production access** applied for (2026-10-10), after closed testing via a tester service; survey answered with that service's suggested answers
+- [ ] Production access granted, then release 1.5.0 to Production in Play Console
 
 **At-sea (pelagic) birds.** From TestFlight feedback (2026-10-04): the rarest birds were often far offshore, seen from pelagic boat trips, and the app offered driving directions to a point in the ocean. Shared code, so both apps get it; the backend half is live as soon as it's pushed, and the app half ships with the next build of each. Older builds ignore the new field, so nothing changes for them until they update.
 - [x] Backend adds `at_sea` to each `/api/sightings` row: more than 2 km from land, using Natural Earth's 1:10m land and minor-islands polygons clipped to Southern California (`backend/src/atSea.js`, `backend/src/data/socal-land.json`, about 16 KB). Computed per response, so no migration. Catalina, San Clemente, Santa Barbara Island and the northern Channel Islands count as land, as do beaches, harbours and bays. A region outside lat 32.0–35.6, lng -120.5 to -116.5 needs the data re-clipped
