@@ -673,3 +673,8 @@ Not committed to. Each needs more thought before it's built.
 - [ ] **Advertise that Refound / Dipped are faster than eBird.** A tap reaches everyone within seconds. On 2026-10-08 an eBird upload took about 21 minutes to reach the app (about 19 of those were eBird's own delay). Say so in the guide, the What's new card or on the bird screen to encourage taps.
 - [ ] **Animated map marker for birds with a recent Refound / Dipped**, e.g. a pulse on a fresh refound, so the community reports stand out on the map and encourage participation.
 - [ ] **Public transit directions** alongside driving: a transit option for the trip and the Directions button (Apple Maps and Google Maps both support a transit mode).
+
+### Things to watch
+
+Known quirks we've decided to live with for now. Revisit if users notice them.
+- **Rarity is per county, not per area.** Tiers come from all-time iNaturalist counts for the whole county, so a mountain species seen in the lowlands can be under-rated. Example (2026-10-10): a White-headed Woodpecker at Wardlow Park, Long Beach, rated "Notable" (LA County has 452 records, nearly all from the San Gabriels), while one at Rush Park, Rossmoor, about 5 km away, rated "Exceptional" (Orange County has 0). The labels are accurate for each county. A possible fix is counting records within about 25 km of the sighting, which needs many more iNaturalist calls (`backend/src/rarity.js`).
