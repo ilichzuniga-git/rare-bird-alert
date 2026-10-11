@@ -18,7 +18,7 @@ export function openGuide(tab: GuideTab = 'tour') {
   }).catch(() => {});
 }
 
-/** "1.5.0", from app.json's expo.version (the same on iOS and Android). */
+/** "1.5.1", from app.json's expo.version (the same on iOS and Android). */
 export const APP_VERSION: string = Constants.expoConfig?.version ?? '';
 
 /**

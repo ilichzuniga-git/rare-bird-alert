@@ -52,10 +52,10 @@ function localDate(d: Date): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/** Start of the current week (Sunday), as a YYYY-MM-DD local date. */
+/** First day of the rolling 7-day window (today and the 6 days before), as a YYYY-MM-DD local date. */
 export function weekStart(now = new Date()): string {
   const d = new Date(now);
-  d.setDate(d.getDate() - d.getDay());
+  d.setDate(d.getDate() - 6);
   return localDate(d);
 }
 

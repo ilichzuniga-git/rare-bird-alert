@@ -20,7 +20,7 @@ import { formatDistance, formatSource } from './util';
 // ---------------------------------------------------------------------------
 
 const PERIODS: { key: Period; label: string }[] = [
-  { key: 'week', label: 'This week' },
+  { key: 'week', label: 'Last 7 days' },
   { key: 'month', label: 'Last 30 days' },
   { key: 'near', label: 'Near me' },
 ];
@@ -159,7 +159,7 @@ export function SheetList({
   }
 
   const [hero, ...rest] = birds;
-  const groupTitle = period === 'near' ? 'Also nearby' : period === 'week' ? 'Also this week' : 'Also in the last 30 days';
+  const groupTitle = period === 'near' ? 'Also nearby' : period === 'week' ? 'Also in the last 7 days' : 'Also in the last 30 days';
   // Rows after the hero that a tapped notification announced: their own card, then the usual group
   const split = Math.max(justCount - 1, 0);
 

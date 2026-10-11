@@ -178,7 +178,7 @@ function Main() {
     if (period === 'trip') {
       return { birds: route.map(t => t.bird).filter(b => matchesQuery(b, query)), seaCount: 0, justCount: 0 };
     }
-    // Announced birds show even when reported late (seen before this week) or at sea while those are hidden
+    // Announced birds show even when reported late (seen before the last 7 days) or at sea while those are hidden
     const isJust = (b: Bird) => justReported?.has(b.key) === true;
     const matching = allBirds.filter(b =>
       (inPeriod(b, period) || isJust(b)) &&
