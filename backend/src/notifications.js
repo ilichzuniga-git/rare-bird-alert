@@ -4,6 +4,11 @@ const { ensureLoaded: ensureRarity, rarityCountFor } = require('./rarity');
 const { isAtSea } = require('./atSea');
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+const EXPO_RECEIPTS_URL = 'https://exp.host/--/api/v2/push/getReceipts';
+
+// Expo hands messages on to Apple and Google afterwards; their errors (such as missing FCM
+// credentials) only show in the receipts, which are ready a few minutes after sending
+const RECEIPT_DELAY_MS = 5 * 60 * 1000;
 
 // Sighting ids sent with a notification, so tapping it opens those birds. Kept well under
 // the 4 KB push payload limit; the app shows whichever of them are still in its feed.
@@ -78,7 +83,7 @@ async function dispatchNotifications(sightingIds) {
 
   // Count this alert for each device's app-icon badge; only builds that clear it get a number
   const { rows: devices } = await db.query(
-    'UPDATE device_tokens SET unread = unread + CASE WHEN badges THEN 1 ELSE 0 END RETURNING token, badges, unread'
+    'UPDATE device_tokens SET unread = unread + CASE WHEN badges THEN 1 ELSE 0 END RETURNING token, platform, badges, unread'
   );
   const messages = devices.map(d => ({
     to: d.token, sound: 'default', title, body, data,
@@ -88,24 +93,56 @@ async function dispatchNotifications(sightingIds) {
   // Expo push API accepts batches of up to 100
   const BATCH = 100;
   const deadTokens = [];
+  const receiptIds = {}; // receipt id -> device platform, for the delivery check
+  const platformOf = new Map(devices.map(d => [d.token, d.platform || 'unknown']));
   for (let i = 0; i < messages.length; i += BATCH) {
     const batch = messages.slice(i, i + BATCH);
     const response = await _postJSON(EXPO_PUSH_URL, batch);
+    if (response?.errors) console.warn('[notifications] Expo rejected the batch:', JSON.stringify(response.errors));
     // Expo returns one ticket per message, in order. DeviceNotRegistered means
     // the app was uninstalled or the token expired — stop sending to it.
     (response?.data || []).forEach((ticket, j) => {
-      if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
-        deadTokens.push(batch[j].to);
-      }
+      const platform = platformOf.get(batch[j].to);
+      if (ticket.status === 'ok') receiptIds[ticket.id] = platform;
+      else if (ticket.details?.error === 'DeviceNotRegistered') deadTokens.push(batch[j].to);
+      else console.warn(`[notifications] Push to ${platform} device failed: ${ticket.details?.error ?? ''} ${ticket.message ?? ''}`);
     });
   }
 
-  console.log(`[notifications] Sent "${title}" to ${devices.length} device(s)`);
+  const perPlatform = {};
+  for (const d of devices) perPlatform[d.platform || 'unknown'] = (perPlatform[d.platform || 'unknown'] || 0) + 1;
+  const breakdown = Object.entries(perPlatform).map(([p, n]) => `${n} ${p}`).join(', ');
+  console.log(`[notifications] Sent "${title}" to ${devices.length} device(s) (${breakdown})`);
+  if (Object.keys(receiptIds).length) {
+    setTimeout(() => checkReceipts(receiptIds).catch(e =>
+      console.warn('[notifications] Receipt check failed:', e.message)), RECEIPT_DELAY_MS).unref();
+  }
 
   if (deadTokens.length) {
     await db.query('DELETE FROM device_tokens WHERE token = ANY($1)', [deadTokens]);
     console.log(`[notifications] Removed ${deadTokens.length} unregistered device token(s).`);
   }
+}
+
+/**
+ * Log the deliveries Apple or Google refused, grouped by platform and error.
+ * Expo accepts up to 1000 receipt ids per request.
+ * @param {Record<string, string>} receiptIds receipt id -> device platform
+ */
+async function checkReceipts(receiptIds) {
+  const ids = Object.keys(receiptIds);
+  const failed = {};
+  for (let i = 0; i < ids.length; i += 1000) {
+    const response = await _postJSON(EXPO_RECEIPTS_URL, { ids: ids.slice(i, i + 1000) });
+    for (const [id, receipt] of Object.entries(response?.data || {})) {
+      if (receipt.status !== 'error') continue;
+      const key = `${receiptIds[id]}: ${receipt.details?.error ?? ''} ${receipt.message ?? ''}`.trim();
+      failed[key] = (failed[key] || 0) + 1;
+    }
+  }
+  const lines = Object.entries(failed).map(([k, n]) => `${n} × ${k}`);
+  if (lines.length) console.warn(`[notifications] Delivery failures: ${lines.join(' | ')}`);
+  else console.log(`[notifications] All ${ids.length} deliveries accepted by Apple/Google`);
 }
 
 function _postJSON(url, body) {
