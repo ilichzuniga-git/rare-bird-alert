@@ -85,8 +85,10 @@ async function dispatchNotifications(sightingIds) {
   const { rows: devices } = await db.query(
     'UPDATE device_tokens SET unread = unread + CASE WHEN badges THEN 1 ELSE 0 END RETURNING token, platform, badges, unread'
   );
+  // High priority: Android holds normal-priority pushes back while the phone sits idle (Doze).
+  // channelId is the "Rare Bird Alerts" channel the app creates.
   const messages = devices.map(d => ({
-    to: d.token, sound: 'default', title, body, data,
+    to: d.token, sound: 'default', title, body, data, priority: 'high', channelId: 'default',
     ...(d.badges ? { badge: d.unread } : {}),
   }));
 
