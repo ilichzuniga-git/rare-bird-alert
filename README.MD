@@ -319,6 +319,8 @@ eas env:set --name GOOGLE_SERVICES_JSON --type file --value ./google-services.js
 
 Re-run the same command if the Firebase file ever changes (`env:set` creates or updates).
 
+**FCM V1 key for sending Android pushes.** `google-services.json` only lets the phone get a push token. For Expo to deliver to Android, the project also needs a Firebase service account key: Firebase console → project `birders-best-friend` → Project settings → Service accounts → Generate new private key, then upload the downloaded `…firebase-adminsdk….json` at expo.dev → Credentials → Android → `com.ilichzuniga.rarebirdalert` → FCM V1 service account key. Delete the downloaded file afterwards. It is a private key and must never go in the repo. Missing until 2026-10-11, so no Android phone had received an alert before then. No rebuild is needed after changing it.
+
 **Version codes.** Google Play rejects any upload whose version code it has seen before. `eas.json` sets `appVersionSource: "remote"` and `autoIncrement: true` on the production profile, so EAS stores the version code and bumps it on every production build. Check it with `eas build:version:get -p android`. If Play Console has ever received a higher code than EAS shows, raise it once with `eas build:version:set -p android`.
 
 The Android keystore (signing key) is managed by EAS and was generated via `eas credentials`. Do not delete it — it's required for all future Play Store uploads.
