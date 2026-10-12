@@ -645,8 +645,8 @@ Comments are fetched on demand and never stored in the local database.
 - [x] **Google Play production access** applied for (2026-10-10), after closed testing via a tester service; survey answered with that service's suggested answers
 - [x] Production access granted (2026-10-11)
 - [ ] Release 1.5.1 to Production in Play Console (built with the Last 7 days fix; first Android release since the FCM V1 key was added)
-- [x] iOS 1.5.1 build 6 (EAS b994bcbd) uploaded and submitted to App Review (2026-10-12), manual release
-- [ ] Release iOS 1.5.1 once Apple approves it
+- [x] iOS 1.5.1 build 6 (EAS b994bcbd) uploaded and submitted to App Review (2026-10-12), set to release automatically once approved
+- [ ] iOS 1.5.1 live on the App Store; then add the date to the guide's What's new
 
 **At-sea (pelagic) birds.** From TestFlight feedback (2026-10-04): the rarest birds were often far offshore, seen from pelagic boat trips, and the app offered driving directions to a point in the ocean. Shared code, so both apps get it; the backend half is live as soon as it's pushed, and the app half ships with the next build of each. Older builds ignore the new field, so nothing changes for them until they update.
 - [x] Backend adds `at_sea` to each `/api/sightings` row: more than 2 km from land, using Natural Earth's 1:10m land and minor-islands polygons clipped to Southern California (`backend/src/atSea.js`, `backend/src/data/socal-land.json`, about 16 KB). Computed per response, so no migration. Catalina, San Clemente, Santa Barbara Island and the northern Channel Islands count as land, as do beaches, harbours and bays. A region outside lat 32.0–35.6, lng -120.5 to -116.5 needs the data re-clipped
