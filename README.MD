@@ -690,6 +690,7 @@ Not committed to. Each needs more thought before it's built.
 - [ ] **Share a trip** with a friend via a link that carries the saved list, no accounts needed.
 - [ ] **Advertise that Refound / Dipped are faster than eBird.** A tap reaches everyone within seconds. On 2026-10-08 an eBird upload took about 21 minutes to reach the app (about 19 of those were eBird's own delay). Say so in the guide, the What's new card or on the bird screen to encourage taps.
 - [ ] **Animated map marker for birds with a recent Refound / Dipped**, e.g. a pulse on a fresh refound, so the community reports stand out on the map and encourage participation.
+- [ ] **Darker red as Dipped reports pile up.** One "Dipped" is weak evidence that a bird has left; five in a day is strong. Deepen the red (pin, list row, bird screen) with the number of recent dips. eBird sightings take priority: a new eBird report after the dips means the bird is still there, so it resets or outweighs them, and the red should only count dips since the latest eBird sighting.
 - [ ] **Public transit directions** alongside driving: a transit option for the trip and the Directions button (Apple Maps and Google Maps both support a transit mode).
 
 ### Things to watch
