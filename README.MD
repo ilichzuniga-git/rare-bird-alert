@@ -672,6 +672,11 @@ Comments are fetched on demand and never stored in the local database.
 - [x] Off unless `BIRDWEATHER_ENABLED=true`. Code: `backend/src/birdweather.js`, migration 016, `SightingDetail.tsx`; plan in [docs/BIRDWEATHER_PLAN.md](docs/BIRDWEATHER_PLAN.md)
 - [ ] Let Tim at BirdWeather know when it ships
 
+**Android code shrinking (R8), fix by February 2027.** Play Console (2026-10-11, on 1.5.0 vc 9) scores the bundle's obfuscation at 1% and says under 25% "may impact your visibility and publishing capabilities" after the deadline. Expo leaves R8 off by default. Do it in the next regular release, not a rushed point release.
+- [ ] Add `expo-build-properties` to `mobile/app.json` plugins with `android.enableMinifyInReleaseBuilds: true` and `android.enableShrinkResourcesInReleaseBuilds: true` (Android only; iOS builds are unaffected)
+- [ ] Build it and test the release build on a real phone before uploading: launch, map and pins, bird detail, search, trip, Refound / Dipped, guide links, a notification and a notification tap. Shrinking can strip code a library loads by reflection, which crashes only in release builds; add keep rules (`extraProguardRules`) for whatever breaks
+- [ ] Check the obfuscation score in Play Console once the build is uploaded
+
 ### Ideas worth exploring
 
 Not committed to. Each needs more thought before it's built.
