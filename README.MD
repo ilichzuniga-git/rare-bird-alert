@@ -623,7 +623,7 @@ Comments are fetched on demand and never stored in the local database.
 - [x] Submitted 1.5.0 (5) for App Store review (2026-10-07), set to manual release
 - [x] Added the product page header video (`icons/app-store-header.mp4`) and the search results image (`icons/app-store-search-result.png`) to the listing and resubmitted for review (2026-10-07). See [Store assets](#store-assets)
 - [x] Answered App Review's Guideline 2.1 request (2026-10-08): a simulator screen recording (no iPhone available; `AppStoreReview/`) plus the written answers in [docs/APP_REVIEW.md](docs/APP_REVIEW.md), also pasted into the App Review Notes field
-- [ ] Approved by App Review, then **Release This Version** in App Store Connect
+- [x] Approved by App Review, then **Release This Version** in App Store Connect (released 2026-10-12)
 
 **Both apps**
 - [x] Guide site live at `https://rba-backend.cloudedapps.org/guide/` (2026-10-04): Tour, What's new, Privacy; `/privacy` redirects to its Privacy tab. Source and screenshot how-to: `backend/src/site/README.md`. Add a What's new entry with every release
