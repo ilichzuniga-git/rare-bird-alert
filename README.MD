@@ -418,7 +418,7 @@ Artwork for the store listings. Each graphic is a plain HTML page sized to the e
 | `icons/app-store-header.html` → `.png`, `.mp4` | 3840×1646 | **App Store product page header** (2026-10-07; the `.mp4` is the one in use on the listing). Tagline "Every rare bird, on one map / Live rarities across LA & Orange County", the green pin, two framed phones (`backend/src/site/shots/home.jpg`, `detail.jpg`). The key art sits inside Apple's centered 1644×658 safe area, so it survives cropping. The `.mp4` is a 10 s loop at 30 fps: the pin shrinks away, a bird flies in, drops it with a bounce and a GPS pulse, and flies off. Its first frame matches the still |
 | `icons/app-store-search-result.html` → `.png` | 3840×2560 | **App Store search results asset** (2026-10-07; the `.png` is in use on the listing), per Apple's [asset best practices](https://developer.apple.com/app-store/asset-best-practices/): states what the app does ("Rare birds near you, live / Fresh reports across LA & Orange County, ranked by rarity") and shows the real UI (map, list and trip screens from `AppStoreScreenshots/iPhone/`). Key art inside the centered ~2160×1024 safe area measured from Apple's Photoshop template; `?guides` shows it. No prices, URLs, awards or other-platform logos |
 | `icons/featured-graphic.html` | 1024×500 | Google Play feature graphic |
-| `icons/screenshots/frame.html` → `1-map.png` … `4-about.png` | 1080×1920 | Google Play phone screenshots: a raw capture (`raw*.png`) inside a phone frame with a headline; `_all.png` shows them side by side |
+| `icons/screenshots/frame.html` → `1-map.png` … `5-about.png` | 1080×1920 | Google Play phone screenshots: a raw capture (`raw*.png`, `adb exec-out screencap -p` from the S25 Ultra at 1080×2340) inside a phone frame with a headline; `_all.png` shows them side by side. Retaken on 1.5.1 (2026-10-12): map, list, bird, trip, about. Render each with headless Chrome at `--window-size=1080,1920`, passing `?t=headline&s=subtitle&i=rawN-name.png` |
 | `AppStoreScreenshots/iPhone/` | 1206×2622 | App Store iPhone 6.3" screenshots from the iPhone 18 Pro simulator: map, bird, list, trip, about |
 | `AppStoreScreenshots/iPad/` | 2064×2752 | App Store iPad 13" screenshots from the iPad Pro 13" simulator: map, bird, trip, about. The iPadOS "Expo Go" status-bar label and the window-corner arc are edited out |
 | `icons/1-pin.svg` … `4b-pin-hero-green.svg`, `preview.html` | | App icon concepts; `preview.html` compares them. The shipped icon is in `mobile/assets/` |
@@ -644,7 +644,7 @@ Comments are fetched on demand and never stored in the local database.
   - Test on an Android phone before uploading: at-sea switch and labels, a notification tap with the app open, in the background and closed
 - [x] **Google Play production access** applied for (2026-10-10), after closed testing via a tester service; survey answered with that service's suggested answers
 - [x] Production access granted (2026-10-11)
-- [ ] Release 1.5.1 to Production in Play Console (built with the Last 7 days fix; first Android release since the FCM V1 key was added)
+- [x] Release 1.5.1 to Production in Play Console (live by 2026-10-12) (built with the Last 7 days fix; first Android release since the FCM V1 key was added)
 - [x] iOS 1.5.1 build 6 (EAS b994bcbd) uploaded and submitted to App Review (2026-10-12), set to release automatically once approved
 - [ ] iOS 1.5.1 live on the App Store; then add the date to the guide's What's new
 
