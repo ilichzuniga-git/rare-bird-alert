@@ -679,6 +679,10 @@ Comments are fetched on demand and never stored in the local database.
 - [ ] Build it and test the release build on a real phone before uploading: launch, map and pins, bird detail, search, trip, Refound / Dipped, guide links, a notification and a notification tap. Shrinking can strip code a library loads by reflection, which crashes only in release builds; add keep rules (`extraProguardRules`) for whatever breaks
 - [ ] Check the obfuscation score in Play Console once the build is uploaded
 
+**Island birds get walking directions.** Seen 2026-10-12: Directions for a rare bird on Santa Catalina Island opened walking directions, because there's no road from the mainland. Islands rightly count as land for the at-sea check, so they keep the Directions button. Plan: flag island sightings (the island polygons in `backend/src/data/socal-land.json` are separate from the mainland) and show "🏝️ Island · ferry needed" instead of driving directions. Possibly link to the ferry (Catalina Express from Long Beach, San Pedro or Dana Point; Island Packers for the Channel Islands). Trip directions should skip them, like at-sea birds.
+- [ ] Backend: add `on_island` to `/api/sightings` rows next to `at_sea`
+- [ ] App: island label and ferry note on the bird screen, no driving directions, skipped in trip routing
+
 ### Ideas worth exploring
 
 Not committed to. Each needs more thought before it's built.
