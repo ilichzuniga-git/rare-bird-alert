@@ -681,6 +681,14 @@ Comments are fetched on demand and never stored in the local database.
 - [ ] Build it and test the release build on a real phone before uploading: launch, map and pins, bird detail, search, trip, Refound / Dipped, guide links, a notification and a notification tap. Shrinking can strip code a library loads by reflection, which crashes only in release builds; add keep rules (`extraProguardRules`) for whatever breaks
 - [ ] Check the obfuscation score in Play Console once the build is uploaded
 
+**"Near me" has no distance limit. Fix soon.** Tester feedback (2026-10-13), from Long Beach: "I'm not sure I'd consider a bird in Lancaster near me. How far away is the app tracking?" It isn't tracking any distance. `period === 'near'` keeps every bird the API returns (the last 28 days; `inPeriod` in `mobile/src/birds.ts` returns true) and only sorts them by distance (`mobile/App.tsx`, the `birds` memo). The map then fits all of those pins plus you, so it covers both counties. The location is also read once per app session and never refreshed (`choosePeriod`), so it goes stale if you drive somewhere.
+- [ ] Limit Near me to a radius, e.g. 25 km (about 15 mi) by default, with a small 10 / 25 / 50 km chooser remembered in `mobile/src/prefs.ts`. Label it in the segment or under it ("Within 25 km")
+- [ ] Decide the time window: probably the last 7 days, matching the first tab, since a 3-week-old bird nearby is rarely still there
+- [ ] Map: fit to you plus the birds inside the radius, and draw the radius circle so it's clear what "near" means
+- [ ] Empty state: "No rare birds within 25 km in the last 7 days", with a button to widen the radius
+- [ ] Refresh the location when Near me is tapped again or the app comes back to the foreground, not just once per session
+- [ ] Update the guide's Near me step (`backend/src/site/index.html`) and the What's new entry
+
 **Island birds get walking directions.** Seen 2026-10-12: Directions for a rare bird on Santa Catalina Island opened walking directions, because there's no road from the mainland. Islands rightly count as land for the at-sea check, so they keep the Directions button. Plan: flag island sightings (the island polygons in `backend/src/data/socal-land.json` are separate from the mainland) and show "🏝️ Island · ferry needed" instead of driving directions. Possibly link to the ferry (Catalina Express from Long Beach, San Pedro or Dana Point; Island Packers for the Channel Islands). Trip directions should skip them, like at-sea birds.
 - [ ] Backend: add `on_island` to `/api/sightings` rows next to `at_sea`
 - [ ] App: island label and ferry note on the bird screen, no driving directions, skipped in trip routing
