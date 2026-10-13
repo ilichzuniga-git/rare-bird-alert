@@ -411,6 +411,8 @@ To put a build that's already uploaded on another track (Internal and Closed tes
 
 ## Store assets
 
+Store pages: App Store <https://apps.apple.com/us/app/birders-best-friend/id6818868964> (short form `https://apps.apple.com/app/id6818868964`), Google Play <https://play.google.com/store/apps/details?id=com.ilichzuniga.rarebirdalert>.
+
 Artwork for the store listings. Each graphic is a plain HTML page sized to the exact pixels the store wants: open it in Chrome and screenshot the page, or record it for the video. They share the app's colours (teal gradient `#0f5c7a` → `#1f8fa8`, tier-coloured pins, the green bird pin).
 
 | File | Size | What it is |
