@@ -40,6 +40,11 @@
     letter-spacing: -.5px; margin: 14px 0 0; }
   h1 em, h2 em { font-weight: 400; color: var(--rust); }
   .lede { color: var(--ink-2); max-width: 600px; margin: 12px 0 0; }
+  /* Official store badges. Google's PNG carries its own clear space, trimmed with negative margins so both read 44px tall */
+  .stores { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0 22px; }
+  .stores a { display: block; line-height: 0; border-radius: 8px; }
+  .stores img.apple { height: 44px; width: auto; }
+  .stores img.google { height: 66px; width: auto; margin: -11px -10px; }
   nav.tabs { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); }
   nav.tabs .wrap { display: flex; gap: 22px; overflow-x: auto; }
   nav.tabs a { flex: none; padding: 14px 0 10px; font-size: 14px; font-weight: 600; color: var(--ink-2); text-decoration: none;
@@ -141,6 +146,10 @@
     <h1>A field guide<br><em>to the app</em></h1>
     <p class="lede">Rare bird sightings in Los Angeles and Orange Counties, on one map. This page shows how it works,
       what changed in each update, and what the app does with your data.</p>
+    <div class="stores">
+      <a href="https://apps.apple.com/us/app/birders-best-friend/id6818868964"><img class="apple" src="badges/app-store.svg" alt="Download on the App Store" width="132" height="44"></a>
+      <a href="https://play.google.com/store/apps/details?id=com.ilichzuniga.rarebirdalert"><img class="google" src="badges/google-play.png" alt="Get it on Google Play" width="171" height="66"></a>
+    </div>
   </div>
 </header>
 
