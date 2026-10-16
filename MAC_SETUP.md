@@ -43,6 +43,8 @@ Simulator tips:
 - **iPad rotates:** Apple requires iPad apps to support every orientation, so the iPad build rotates even though iPhone is portrait-only. Check layouts in landscape too (⌘← / ⌘→).
 - The blue ⚙️ floating button is Expo Go's developer menu, not part of the app; drag it aside if it covers something.
 - **Push notifications** don't work in Expo Go, so test them in a TestFlight build (section 4).
+- **No Google Maps app:** the Simulator has only Apple Maps, so Google Maps links open Google's website in Safari. That site ignores the travel mode (transit links open on driving), which is why Transit on iPhone offers Google only when its app is installed. Test the Google app path on a real iPhone.
+- **Tapping from the terminal:** [AXe](https://github.com/cameroncooke/AXe) (`brew install cameroncooke/axe/axe`) taps the Simulator without macOS Accessibility permission: `axe touch -x X -y Y --down --up --delay 0.12 --udid <UDID>`, in points (screenshot pixels ÷ 3 on iPhone Pro). In Expo Go use `touch` with a delay; a plain `axe tap` can be missed.
 
 ## 3. Everyday: run the app on a real iPhone (Expo Go)
 
@@ -133,4 +135,5 @@ The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Androi
 | `ConfigError: … package.json does not exist` | You're in the repo root. `cd mobile` first |
 | iPhone can't load the app from the QR code | Network blocks device-to-device traffic: use `npx expo start --tunnel` |
 | Port 8081 already in use | An old Metro is still running: `npx kill-port 8081` |
+| A saved change doesn't show up | Expo Go's Fast Refresh may be off (developer menu → Fast refresh). Reload instead: `r` in Metro, or quit Expo Go and reopen the project. If it's still stale, restart Metro with `npx expo start --clear` |
 | `git push` asks for a password | Run `gh auth login` then `gh auth setup-git` |

@@ -1,7 +1,8 @@
 This is the Rare Bird Alert (RBA) project — a mobile app ("Birder's Best Friend") that surfaces
 rare bird sightings in Los Angeles and Orange Counties (extensible to
-other regions), with push notifications. Android is in Play Store
-testing; the iOS version is in TestFlight.
+other regions), with push notifications. It is live on Google Play and
+the App Store (1.5.x; 1.6.0 in review as of 2026-10-16). The to-do list
+is ROADMAP.md.
 
 Structure:
 - backend/ is an Express + Postgres server (Node 22 LTS)

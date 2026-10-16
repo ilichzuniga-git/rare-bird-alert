@@ -6,7 +6,7 @@ A small website that replaces an in-app tutorial. One page with three tabs:
 
 | Tab | URL hash | What it is |
 |---|---|---|
-| Tour | `#tour` | How the app works, with simulator screenshots of the real app (1.4.0) |
+| Tour | `#tour` | How the app works, with simulator screenshots of the real app (taken on 1.4.0/1.5.0; text current to 1.6.0) |
 | What's new | `#whats-new` | One entry per release, with the iOS build and Android version code |
 | Privacy | `#privacy` | The privacy policy. Change it here when data handling changes, with a new date |
 
@@ -14,8 +14,13 @@ Design follows `../01-field-guide.html`: warm paper, Fraunces serif headings wit
 half, small-caps labels, dashed rules. The rarity legend uses the app's own tier colours so it matches
 the pins people see.
 
-Still to do, in the next app build: a once-per-version "What's new" card that opens
-`/guide/#whats-new`, and a Guide link on the About screen. The site is also the App Store Support URL.
+The app links here from About (Take the tour, What's new) and from the once-per-version "What's new"
+card (`WHATS_NEW` in `mobile/src/guide.ts`), which opens `/guide/#whats-new`. Each release gets an entry
+in both. The site is also the App Store Support URL.
+
+Screenshots due for a retake (held until after the next round of updates, per the user): `near.jpg`
+(no 10/25/50 km pills or range circle), and a bird page with the Transit pill, an island bird with the
+Ferry pill, and the sparkle and faded pins, none of which are shown yet.
 
 The tab script is `guide.js`, not inline: the server's Content-Security-Policy (helmet) blocks
 inline scripts. Inline `style` attributes are allowed.

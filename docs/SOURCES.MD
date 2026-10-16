@@ -53,6 +53,13 @@ Photos are the photographers' work, each under its own license.
 - Tile usage policy: OSM's public tile servers are for light use only. Fine for a small free app, but if usage grows, switch to a hosted tile provider or self-hosted tiles.
 - Leaflet 1.9.4 loaded from unpkg (BSD-2-Clause).
 
+## Natural Earth land polygons
+- Used by: `backend/src/atSea.js`, with the data bundled in `backend/src/data/socal-land.json` (1:10m land and minor-islands polygons, clipped to lat 32.0–35.6, lng -120.5 to -116.5). Decides `at_sea` (since 1.4.0) and `island` (since 2026-10-16) on each `/api/sightings` row. Nothing is fetched at runtime.
+- License: public domain (naturalearthdata.com). No attribution required; credited in the code comment.
+
+## Ferry operator links
+- The bird page links to Catalina Express (catalinaexpress.com) for Santa Catalina and Island Packers (islandpackers.com) for the Channel Islands (`ISLAND_ACCESS` in `mobile/src/SightingDetail.tsx`). Plain links to their public websites: no data or logos taken, no agreement needed.
+
 ## All About Birds (Cornell Lab)
 - Links only: tapping a photo or placeholder opens `allaboutbirds.org/guide/{name}`. No data is fetched.
 

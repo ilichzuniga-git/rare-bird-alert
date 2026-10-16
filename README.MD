@@ -474,7 +474,7 @@ The `.gitignore` handles this automatically, but avoid:
 
 ## How it works
 
-- The **poller** runs every 10 minutes, fetches sightings from all enabled sources for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres. Only genuinely new sightings count as new and trigger push notifications. Sightings older than 28 days are skipped and purged.
+- The **poller** runs every 10 minutes, fetches sightings from all enabled sources for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres. Only genuinely new sightings count as new and trigger push notifications. Sightings older than 28 days are skipped and purged. Copies of a shared eBird checklist are skipped too (see eBird below).
 - After each poll, the **clustering engine** groups same-species sightings within 300m into continuing-bird clusters and updates their status
 - The **API** serves sightings and clusters to the mobile app
 - **Push notifications** fire via Expo's push service whenever new sightings arrive; tokens for uninstalled apps are pruned automatically
@@ -485,6 +485,12 @@ The app is **free and non-commercial**. That's what lets it use eBird's API unde
 ### Data sources
 
 **eBird** — pulls up to 100 notable sightings per region per poll from the eBird notable observations endpoint. Requires a free API key. Notable sightings can include reports not yet confirmed by eBird reviewers.
+
+Each sighting is keyed by its checklist id (`subId`). When a group birds together, eBird shares the checklist with every member, and each accepted copy gets its own `subId` but the same species, place and minute, often days later. The poller skips a report when one for that species, spot and minute is already stored under another checklist (`backend/src/poller/index.js`). Before this (fixed 2026-10-16) each copy was stored and alerted again; about a quarter of eBird rows were copies.
+
+**At sea and islands** — `/api/sightings` adds two fields per row, computed per response from Natural Earth land polygons clipped to Southern California (`backend/src/atSea.js`, `backend/src/data/socal-land.json`):
+- `at_sea`: more than 2 km from any land (a pelagic trip). The app labels these, hides them by default, and offers no directions or trip.
+- `island`: the island's name when the point is on, or within 2 km of, an island with no road (Santa Catalina, the five Channel Islands, San Clemente, San Nicolas, the Coronado Islands), else null. Terminal Island is bridged, so it counts as mainland. The app shows a ferry note and link in place of directions.
 
 **iNaturalist** — pulls rare, community-verified bird sightings. "Verified" means `quality_grade=research` (2+ agreeing community IDs). "Rare" means the species has fewer than `INAT_RARITY_THRESHOLD` total research-grade observations in that area. Each sighting stores iNaturalist's public location accuracy (`location_accuracy_m`) and whether the location is hidden (`location_obscured`, migration 017). No API key required. Each region needs an `inat_place_id` stored in the `regions` table — run `node src/scripts/fixInatPlaceIds.js` to verify or correct them.
 
@@ -557,6 +563,8 @@ The status label shown on each card and in the map modal is derived from these v
 
 ### Map tab
 
+- **The Rarities list** under the map leads with a hero card: the rarest bird seen in the last 3 days (`FEATURE_DAYS` in `mobile/src/birds.ts`), or on Near me the closest one. A bird last seen longer ago is listed but not featured; with none that recent there's no hero. After a notification tap, the announced birds lead instead.
+- **Pins that show what's fresh** (`shine` / `faded` on `MapPin`, CSS in `mobile/src/LeafletMap.tsx`): a gloss sweep and two gold sparkles when a user refound the bird in the last 24 h or a Rare-or-rarer bird was seen today; faded and greyed, with no motion, when a user dipped it in the last 24 h with no refound or report since (the dip wins). Reduce Motion stops the animation.
 - **One pin per bird.** Sightings in the same cluster collapse into a single pin, using their most recent report. For example, five observers' checklists of one Vesper Sparrow show as one pin.
 - **Tapping a pin** opens that bird's Refound/Dipped view.
 - **A spot with several birds** (a busy hotspot) shows a picker listing each bird with its report count and date, e.g. "Vesper Sparrow · 5 reports · Sep 17".
@@ -568,7 +576,8 @@ Opened by tapping a map pin, or the **location address** on any sighting card. I
 - **Header:** the bird's name, location and continuing status.
 - **Map:** the report's location with a dashed green circle for the 300m cluster stakeout zone, and trail dots for the other sightings of the same individual.
 - **✓ Refound** and **✗ Dipped** buttons.
-- **Link pills:** **➤ Directions** (green; to the observer's exact spot when the notes have one, otherwise the report's location, and hidden for a location iNaturalist has hidden), **Notes (N)** (blue; scrolls to the notes) and **eBird ↗** (teal; the species page).
+- **Link pills:** **➤ Directions** (green; to the observer's exact spot when the notes have one, otherwise the report's location, and hidden for a location iNaturalist has hidden), **🚌 Transit** (next to Directions, same rules; `openTransitDirections` in `mobile/src/util.ts`: Android opens Google Maps in transit mode, iOS opens Apple Maps transit, or offers Google Maps when its app is installed, because Google's mobile website ignores the travel mode), **Notes (N)** (blue; scrolls to the notes) and **eBird ↗** (teal; the species page).
+- **At sea or on an island:** an at-sea bird gets a "🚤 Seen at sea" card and no Directions, Transit or trip button. An island bird gets an "🏝️ On <island>" card saying how to get there (`ISLAND_ACCESS` in `mobile/src/SightingDetail.tsx`) and a **⛴️ Ferry ↗** pill (Catalina Express, or Island Packers for the Channel Islands) in place of Directions and Transit; it can't be saved to the trip.
 - **🎧 Also heard by a BirdWeather station**, when a nearby station corroborates the bird (see [ROADMAP.md](ROADMAP.md)).
 - **Report chips**, when the bird has several reports: one chip per report (date, time, source). Selecting a chip switches the map, coordinates and observer notes to that report.
 - **📍 The report's location**, labelled by source because it means different things, and opens the phone's maps app when tapped:
