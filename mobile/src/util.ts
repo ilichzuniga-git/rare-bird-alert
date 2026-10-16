@@ -73,13 +73,19 @@ export function openInMaps(lat: number, lng: number, label: string) {
  * iOS asks Apple Maps or Google Maps, like the trip's Directions. Single bird only: transit
  * routing doesn't take waypoints, so the trip stays driving.
  */
-export function openTransitDirections(lat: number, lng: number) {
+export async function openTransitDirections(lat: number, lng: number) {
   const q = `${lat},${lng}`;
-  const google = `https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=${encodeURIComponent(q)}`;
-  if (Platform.OS !== 'ios') { Linking.openURL(google); return; }
+  if (Platform.OS !== 'ios') {
+    Linking.openURL(`https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=${encodeURIComponent(q)}`);
+    return;
+  }
 
   // Classic Maps URL (daddr + dirflg=r for transit) works on every iOS version
   const apple = `https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=r`;
+  // Google's mobile website ignores the travel mode and always opens on driving, so
+  // offer Google only when its app is installed (comgooglemaps is in LSApplicationQueriesSchemes)
+  const google = `comgooglemaps://?daddr=${encodeURIComponent(q)}&directionsmode=transit`;
+  if (!(await Linking.canOpenURL(google).catch(() => false))) { Linking.openURL(apple); return; }
   ActionSheetIOS.showActionSheetWithOptions(
     { title: 'Transit directions', options: ['Apple Maps', 'Google Maps', 'Cancel'], cancelButtonIndex: 2 },
     i => { if (i === 0) Linking.openURL(apple); else if (i === 1) Linking.openURL(google); },

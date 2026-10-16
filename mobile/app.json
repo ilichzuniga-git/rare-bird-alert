@@ -13,7 +13,10 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Your location is used to show how far you are from a rare bird sighting when reporting a Refound or Dip."
+        "NSLocationWhenInUseUsageDescription": "Your location is used to show how far you are from a rare bird sighting when reporting a Refound or Dip.",
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps"
+        ]
       }
     },
     "android": {
