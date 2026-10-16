@@ -27,11 +27,11 @@ export const APP_VERSION: string = Constants.expoConfig?.version ?? '';
  * Releases without a matching entry here show no card.
  */
 export const WHATS_NEW = {
-  version: '1.5.0',
-  title: 'A guide to the app',
+  version: '1.6.0',
+  title: 'Closer, fresher, by bus or boat',
   highlights: [
-    { icon: '📖', text: 'A guide with a tour of every screen, plus what changed in each update. It\'s under About too.' },
-    { icon: '🔴', text: 'The app icon shows how many rare-bird alerts came in since you last opened the app.' },
-    { icon: '✨', text: 'A cleaner About screen, with the sources and your data at a glance.' },
+    { icon: '📍', text: 'Near me shows birds within 10, 25 or 50 km from the last 7 days, with the range drawn on the map.' },
+    { icon: '✨', text: 'Pins sparkle for a bird refound today or a rare one seen today, and fade after a dip. The top card goes to a bird seen in the last 3 days.' },
+    { icon: '🚌', text: 'Transit directions to a bird, and a ferry link for birds on Catalina and the Channel Islands.' },
   ],
 };

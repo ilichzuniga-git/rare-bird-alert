@@ -198,7 +198,7 @@
       <ul>
         <li><b>Last 7 days</b> shows birds reported today and the six days before, with a count.</li>
         <li><b>Last 30 days</b> shows everything still on file.</li>
-        <li><b>Near me</b> sorts birds by distance from you and marks your spot on the map. It needs location access, and your location never leaves the phone.</li>
+        <li><b>Near me</b> shows birds from the last 7 days within 10, 25 or 50 km of you, closest first, with the range drawn on the map. It needs location access, and your location never leaves the phone.</li>
       </ul>
     </div>
     <div class="phones">
@@ -242,7 +242,7 @@
       <ul>
         <li><b>The day strip</b> covers the last week. Green means it was reported that day, and red means people only dipped.</li>
         <li><b>Refound</b> or <b>Dipped</b>: if you go, tell other birders whether you saw it. Reports are anonymous.</li>
-        <li><b>Directions</b>, <b>Notes</b> (what observers wrote) and a link to the <b>eBird</b> report.</li>
+        <li><b>Directions</b>, <b>Transit</b> (public transit directions), <b>Notes</b> (what observers wrote) and a link to the <b>eBird</b> report.</li>
         <li>The report chips: tap one to see its exact spot.</li>
       </ul>
       <h3>Is it still there?</h3>
@@ -264,6 +264,7 @@
       <span class="no">06</span><span class="tier">New in 1.4</span>
       <h2>Seen <em>at sea</em></h2>
       <p>An offshore bird's page says so. It has no Directions or trip button, because you can't drive to it.</p>
+      <p>A bird on an island with no road, such as Catalina or the Channel Islands, is marked "🏝️ Island". Its page says how to get there and has a <b>Ferry</b> link in place of Directions.</p>
     </div>
     <div class="phones">
       <figure><div class="shot"><img class="phone" src="shots/detail-sea.jpg" alt="Craveri's Murrelet page with a Seen at sea note" loading="lazy" width="603" height="1311"><span class="hand" style="--x:36%;--y:77.3%;--f:-1"><svg><use href="#hand"/></svg></span></div><figcaption>At-sea bird</figcaption></figure>
@@ -329,6 +330,19 @@
 <!-- ============================================================= WHAT'S NEW -->
 <section class="page" id="p-whats-new">
   <div class="chapter">October 2026</div>
+
+  <article class="release">
+    <h2>1.6.0 <em>Closer and fresher</em></h2>
+    <div class="meta"><span>October 16, 2026</span></div>
+    <ul>
+      <li><b>Near me has a range.</b> Pick 10, 25 or 50 km. It shows birds from the last 7 days, closest first, with the range drawn on the map, and the top card reads "Closest to you". Your spot updates when you come back to the app.</li>
+      <li><b>Pins that show what's fresh.</b> A pin sparkles when someone refound the bird today, or when a Rare, Very Rare or Exceptional bird was seen today. After a dip, with no sighting since, the pin fades.</li>
+      <li><b>The top card is recent.</b> It goes to a bird seen in the last 3 days. Older birds are still listed, just not featured.</li>
+      <li><b>Transit directions.</b> A bird's page has a Transit button for bus and train directions. On iPhone you can pick Google Maps when its app is installed.</li>
+      <li><b>Island birds.</b> Birds on Catalina and the Channel Islands are marked "🏝️ Island", with how to get there and a Ferry link in place of driving directions.</li>
+      <li><b>No more repeat alerts.</b> When a group shares an eBird checklist, each member's copy used to send the same alert again. Since October 16 that's fixed on the server, for every version of the app.</li>
+    </ul>
+  </article>
 
   <article class="release">
     <h2>1.5.1 <em>Last 7 days</em></h2>
