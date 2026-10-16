@@ -4,6 +4,11 @@ What is planned, being considered and being watched for Birder's Best Friend (An
 
 ## Planned
 
+**Repeat alerts for the same bird (fixed 2026-10-16).** Seen on Oct 11 (Pine Siskin) and Oct 12 (Catalina Red Crossbill and Clay-colored Sparrow alerted at 12:00, 12:50, 1:10 and 1:50 PM). eBird shares a group's checklist with each member, and every copy gets its own checklist id, often days later, with the same species, place and minute. Each copy was inserted as a new sighting and alerted again. The poller now skips a report when eBird already gave one for that species, spot and minute under another checklist (`backend/src/poller/index.js`). 133 of the 496 eBird rows live on Oct 16 were such copies.
+- [x] Poller skips shared-checklist copies, so they neither alert nor count as extra reports
+- [ ] Confirm no repeats over the next few days of alerts
+- [ ] Copies stored before the fix still inflate "N reports" until they age out (28 days); delete them if that bothers anyone
+
 **Trip drawer: save birds for a day trip.** Saved birds stay on the phone only: no accounts, nothing sent to the server, no change to the Data safety form or App Store privacy answers. Code: `mobile/src/trip.ts`, `TripSheet.tsx`, `CarIcon.tsx`.
 - [x] Car button on the bird detail card saves it to the trip (turns green with a check)
 - [x] Car button next to the search bar opens the trip, with a count badge

@@ -33,6 +33,17 @@ async function pollAll() {
         let newCount = 0;
         for (const s of sightings) {
           if (new Date(s.observed_at).getTime() < cutoff) continue;
+          // eBird shares a group's checklist with each member, and every copy gets its own
+          // checklist id (often days later) but the same species, place and minute. That's
+          // one bird, already stored: inserting the copies sent the same alert again and again.
+          const copy = await db.query(
+            `SELECT 1 FROM sightings
+              WHERE source = $1 AND source_id <> $2 AND COALESCE(species_code, '') = COALESCE($3, '')
+                AND observed_at = $4 AND lat = ROUND($5::numeric, 6) AND lng = ROUND($6::numeric, 6)
+              LIMIT 1`,
+            [s.source, s.source_id, s.species_code, s.observed_at, s.lat, s.lng]
+          );
+          if (copy.rows.length) continue;
           // xmax = 0 only for freshly inserted rows; rowCount alone also counts
           // ON CONFLICT updates, which made every re-fetched sighting look new.
           const result = await db.query(
