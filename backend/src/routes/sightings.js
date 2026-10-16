@@ -5,7 +5,7 @@ const db = require('../db');
 const config = require('../config');
 const { ensureLoaded: ensureTaxonomy, ebirdCodeFor } = require('../ebirdTaxonomy');
 const { ensureLoaded: ensureRarity, rarityCountFor } = require('../rarity');
-const { isAtSea } = require('../atSea');
+const { isAtSea, islandAt } = require('../atSea');
 
 /** Minimal HTTPS GET → parsed JSON. */
 function httpsGet(url, headers = {}) {
@@ -89,8 +89,12 @@ router.get('/', async (req, res) => {
       for (const r of unrated) r.rarity_count = rarityCountFor(r.region_code, r.scientific_name);
     }
 
-    // Out on the ocean (a pelagic trip): the app labels these and offers no driving directions
-    for (const r of rows) r.at_sea = isAtSea(r.lat, r.lng);
+    // Out on the ocean (a pelagic trip), or on an island only a boat reaches: the app labels
+    // these and offers no driving directions
+    for (const r of rows) {
+      r.at_sea = isAtSea(r.lat, r.lng);
+      r.island = r.at_sea ? null : islandAt(r.lat, r.lng);
+    }
 
     res.json({ sightings: rows, count: rows.length });
   } catch (err) {
