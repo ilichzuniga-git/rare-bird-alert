@@ -39,6 +39,8 @@ export interface UserSpot {
   accuracyM?: number | null;
   /** Glyph in the pin: binoculars ("Near me") or a car (trip) */
   icon?: 'binoculars' | 'car';
+  /** "Near me" radius: drawn as a dashed circle, and the map fits to it */
+  radiusM?: number | null;
 }
 
 export interface ClusterCircle {
@@ -211,10 +213,15 @@ function buildHtml(
   var focusLayer = L.layerGroup().addTo(map);
   var me = null;          // user's position, included when fitting the pins
   var lastPins = [];
+  var focused = false;    // a bird is open; don't pull the map away from it
 
   function fitAll(pins) {
     var bounds = pins.map(function(p) { return [Number(p.lat), Number(p.lng)]; });
     if (me) bounds.push([me.lat, me.lng]);
+    if (me && me.radiusM) {
+      var r = L.latLng(me.lat, me.lng).toBounds(me.radiusM * 2);
+      bounds.push([r.getSouth(), r.getWest()], [r.getNorth(), r.getEast()]);
+    }
     if (center || bounds.length === 0) return;
     // Jump rather than animate: a fit that lands mid-animation (e.g. the user's
     // location arriving just after the pins) would otherwise be dropped.
@@ -233,22 +240,31 @@ function buildHtml(
   // "Near me": binoculars pin with a soft halo for the location's uncertainty
   function showMe(m) {
     meLayer.clearLayers();
-    var wasShown = !!me;
-    me = m ? { lat: Number(m.lat), lng: Number(m.lng) } : null;
+    var was = me;
+    me = m ? { lat: Number(m.lat), lng: Number(m.lng), radiusM: Number(m.radiusM) || 0 } : null;
     if (!me) return;
+    if (me.radiusM) {
+      L.circle([me.lat, me.lng], {
+        radius: me.radiusM, color: '#101a15', weight: 1.5, opacity: 0.45, dashArray: '6 6',
+        fillColor: '#101a15', fillOpacity: 0.03, interactive: false,
+      }).addTo(meLayer);
+    }
     L.circle([me.lat, me.lng], {
       radius: Math.max(Number(m.accuracyM) || 0, 150), color: '#101a15', weight: 1,
       opacity: 0.25, fillColor: '#101a15', fillOpacity: 0.07, interactive: false,
     }).addTo(meLayer);
     L.marker([me.lat, me.lng], { icon: meIcon(m.icon), zIndexOffset: 1000 })
       .bindPopup('You are about here').addTo(meLayer);
-    if (!wasShown) fitAll(lastPins);
+    // Refit when the spot first appears, moves (a refreshed location) or the radius changes
+    var moved = !was || was.lat !== me.lat || was.lng !== me.lng || was.radiusM !== me.radiusM;
+    if (moved && !focused) fitAll(lastPins);
   }
   window.__me = showMe;
 
   // Selected bird: stakeout circle, trail of earlier reports, observer's exact spot
   function focus(f) {
     focusLayer.clearLayers();
+    focused = !!f;
     if (!f) return;
     var pt = L.latLng(Number(f.lat), Number(f.lng));
     var bounds = pt.toBounds(500);

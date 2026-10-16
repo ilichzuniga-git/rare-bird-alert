@@ -117,12 +117,10 @@ function Main() {
   const [userLoc, setUserLoc] = useState<UserSpot | null>(null);
   const [nearState, setNearState] = useState<'idle' | 'locating' | 'denied' | 'ready'>('idle');
   const lastList = useRef<Period>('week'); // where closing the trip returns to
-  const choosePeriod = useCallback(async (p: Period) => {
-    setJustReported(null);
-    if (p !== 'trip') lastList.current = p;
-    setPeriod(p);
-    if ((p !== 'near' && p !== 'trip') || userLoc || nearState === 'locating') return;
-    setNearState('locating');
+  const locating = useRef(false);
+  const locate = useCallback(async () => {
+    if (locating.current) return;
+    locating.current = true;
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setNearState('denied'); return; }
@@ -130,9 +128,29 @@ function Main() {
       setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: pos.coords.accuracy });
       setNearState('ready');
     } catch {
-      setNearState('denied');
+      setNearState(s => (s === 'ready' ? s : 'denied')); // a failed refresh keeps the last fix
+    } finally {
+      locating.current = false;
     }
-  }, [userLoc, nearState]);
+  }, []);
+  const choosePeriod = useCallback((p: Period) => {
+    setJustReported(null);
+    if (p !== 'trip') lastList.current = p;
+    setPeriod(p);
+    if (p !== 'near' && p !== 'trip') return;
+    // The first time shows "Finding your location…"; after that it refreshes quietly
+    // (the user may have driven somewhere), keeping the last fix until the new one arrives
+    if (!userLoc) setNearState('locating');
+    locate();
+  }, [userLoc, locate]);
+  // Back in the app on Near me or the trip: the user may have moved
+  useEffect(() => {
+    if (period !== 'near' && period !== 'trip') return;
+    const sub = AppState.addEventListener('change', s => { if (s === 'active') locate(); });
+    return () => sub.remove();
+  }, [period, locate]);
+  const nearRadiusKm = prefs.nearRadiusKm;
+  const setNearRadius = useCallback((km: number) => setPref('nearRadiusKm', km), [setPref]);
   const closeTrip = useCallback(() => setPeriod(lastList.current), []);
 
   const sources = useMemo(
@@ -180,8 +198,11 @@ function Main() {
     }
     // Announced birds show even when reported late (seen before the last 7 days) or at sea while those are hidden
     const isJust = (b: Bird) => justReported?.has(b.key) === true;
+    // Near me: only birds inside the chosen radius
+    const inReach = (b: Bird) =>
+      period !== 'near' || !userLoc || (distanceTo(b, userLoc) ?? Infinity) <= nearRadiusKm * 1000;
     const matching = allBirds.filter(b =>
-      (inPeriod(b, period) || isJust(b)) &&
+      (inPeriod(b, period) || isJust(b)) && inReach(b) &&
       (!source || b.reports.some(r => r.source === source)) &&
       matchesQuery(b, query));
     const seaCount = matching.filter(atSea).length;
@@ -198,7 +219,7 @@ function Main() {
     const ranked = [...visible].sort(byRarity);
     const hero = ranked.find(b => !atSea(b)) ?? ranked[0];
     return { birds: hero ? [hero, ...visible.filter(b => b !== hero)] : visible, seaCount, justCount: 0 };
-  }, [allBirds, period, source, query, userLoc, route, prefs.hideAtSea, justReported]);
+  }, [allBirds, period, source, query, userLoc, nearRadiusKm, route, prefs.hideAtSea, justReported]);
 
   const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
     const { lat, lng } = b.latest;
@@ -307,9 +328,10 @@ function Main() {
 
   const mins = updatedAt ? Math.floor((now - updatedAt) / 60000) : null;
   const updatedLabel = mins == null ? 'loading…' : mins < 1 ? 'updated just now' : `updated ${mins} min ago`;
-  const fitKey = `${loading ? 'loading' : 'ready'}|${period}|${source}|${query}|${period === 'trip' ? trip.count : ''}`;
+  const fitKey = `${loading ? 'loading' : 'ready'}|${period}|${source}|${query}|${period === 'trip' ? trip.count : ''}`
+    + `|${period === 'near' ? nearRadiusKm : ''}`;
   const me: UserSpot | null = (period === 'near' || period === 'trip') && userLoc
-    ? { ...userLoc, icon: period === 'trip' ? 'car' : 'binoculars' }
+    ? { ...userLoc, icon: period === 'trip' ? 'car' : 'binoculars', radiusM: period === 'near' ? nearRadiusKm * 1000 : null }
     : null;
 
   return (
@@ -402,6 +424,8 @@ function Main() {
             seaCount={seaCount}
             hideAtSea={prefs.hideAtSea}
             onHideAtSea={hideAtSea}
+            nearRadiusKm={nearRadiusKm}
+            onNearRadius={setNearRadius}
           />
         )}
       >
@@ -434,6 +458,8 @@ function Main() {
             onSelect={b => selectBird(b)}
             distanceOf={distanceOf}
             nearState={nearState}
+            nearRadiusKm={nearRadiusKm}
+            onNearRadius={setNearRadius}
             bottomPadding={hidden + insets.bottom}
           />
         )}

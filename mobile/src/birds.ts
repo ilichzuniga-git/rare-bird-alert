@@ -17,6 +17,9 @@ export interface Bird {
 /** 'trip' shows the saved birds (the trip drawer) instead of a time window */
 export type Period = 'week' | 'month' | 'near' | 'trip';
 
+/** "Near me" radius choices, in km; the chosen one is kept in prefs */
+export const NEAR_RADII_KM = [10, 25, 50];
+
 export function groupBirds(sightings: Sighting[], clusters: Map<number, ClusterData>): Bird[] {
   const groups = new Map<string, Sighting[]>();
   for (const s of sightings) {
@@ -60,7 +63,8 @@ export function weekStart(now = new Date()): string {
 }
 
 export function inPeriod(bird: Bird, period: Period, now = new Date()): boolean {
-  if (period === 'week') return wallDate(bird.latest.observed_at) >= weekStart(now);
+  // Near me keeps to the last 7 days too: a bird seen weeks ago nearby is rarely still there
+  if (period === 'week' || period === 'near') return wallDate(bird.latest.observed_at) >= weekStart(now);
   return true; // the API only keeps the last 28 days
 }
 

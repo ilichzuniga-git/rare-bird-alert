@@ -11,10 +11,12 @@ export interface Prefs {
   hideAtSea: boolean;
   /** The app version whose "What's new" card was last shown (or skipped), null before the first */
   lastSeenVersion: string | null;
+  /** "Near me" radius in km, one of NEAR_RADII_KM */
+  nearRadiusKm: number;
 }
 
 // At-sea birds start hidden: pelagic trips are rare next to land birding
-const DEFAULTS: Prefs = { hideAtSea: true, lastSeenVersion: null };
+const DEFAULTS: Prefs = { hideAtSea: true, lastSeenVersion: null, nearRadiusKm: 25 };
 
 const prefsFile = () => new File(Paths.document, 'prefs.json');
 

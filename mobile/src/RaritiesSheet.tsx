@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { parseCredit, usePhoto } from './BirdPhoto';
-import { atSea, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
+import { atSea, NEAR_RADII_KM, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
 import { colors, radius, STATUS_DOT } from './theme';
 import { formatDistance, formatSource } from './util';
 
@@ -36,6 +36,8 @@ export function SheetHeader({
   seaCount,
   hideAtSea,
   onHideAtSea,
+  nearRadiusKm,
+  onNearRadius,
 }: {
   updatedLabel: string;
   period: Period;
@@ -48,6 +50,8 @@ export function SheetHeader({
   seaCount: number;
   hideAtSea: boolean;
   onHideAtSea: (hide: boolean) => void;
+  nearRadiusKm: number;
+  onNearRadius: (km: number) => void;
 }) {
   return (
     <View>
@@ -68,6 +72,26 @@ export function SheetHeader({
           );
         })}
       </View>
+
+      {period === 'near' ? (
+        <View style={styles.pills}>
+          <Text style={styles.within}>Within</Text>
+          {NEAR_RADII_KM.map(km => {
+            const on = km === nearRadiusKm;
+            return (
+              <Pressable
+                key={km}
+                style={[styles.pill, on && styles.pillOn]}
+                onPress={() => onNearRadius(km)}
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`Within ${km} kilometres`}
+              >
+                <Text style={[styles.pillText, on && styles.pillTextOn]}>{km} km</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       {sources.length > 1 || seaCount > 0 ? (
         <View style={styles.pills}>
@@ -118,6 +142,8 @@ export function SheetList({
   onSelect,
   distanceOf,
   nearState,
+  nearRadiusKm,
+  onNearRadius,
   bottomPadding,
 }: {
   /** Already filtered and sorted; the first one becomes the hero card */
@@ -133,6 +159,8 @@ export function SheetList({
   onSelect: (b: Bird) => void;
   distanceOf: DistanceOf;
   nearState: 'idle' | 'locating' | 'denied' | 'ready';
+  nearRadiusKm: number;
+  onNearRadius: (km: number) => void;
   bottomPadding: number;
 }) {
   if (loading && birds.length === 0) {
@@ -159,7 +187,8 @@ export function SheetList({
   }
 
   const [hero, ...rest] = birds;
-  const groupTitle = period === 'near' ? 'Also nearby' : period === 'week' ? 'Also in the last 7 days' : 'Also in the last 30 days';
+  const groupTitle = period === 'near' ? `Also within ${nearRadiusKm} km` : period === 'week' ? 'Also in the last 7 days' : 'Also in the last 30 days';
+  const wider = NEAR_RADII_KM.find(km => km > nearRadiusKm);
   // Rows after the hero that a tapped notification announced: their own card, then the usual group
   const split = Math.max(justCount - 1, 0);
 
@@ -188,7 +217,16 @@ export function SheetList({
         ) : null
       }
       ListEmptyComponent={
-        hero ? null : <View style={styles.center}><Text style={styles.emptyText}>No rarities match.</Text></View>
+        hero ? null : period === 'near' ? (
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>No rare birds within {nearRadiusKm} km in the last 7 days.</Text>
+            {wider ? (
+              <Pressable style={styles.retry} onPress={() => onNearRadius(wider)}>
+                <Text style={styles.retryText}>Widen to {wider} km</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : <View style={styles.center}><Text style={styles.emptyText}>No rarities match.</Text></View>
       }
       contentContainerStyle={{ paddingBottom: bottomPadding + 24 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} />}
@@ -324,7 +362,8 @@ const styles = StyleSheet.create({
   segOn: { backgroundColor: colors.card, elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } },
   segText: { fontSize: 13, fontWeight: '700', color: colors.muted },
   segTextOn: { color: colors.text },
-  pills: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
+  pills: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
+  within: { fontSize: 12, fontWeight: '700', color: colors.muted },
   pill: { paddingHorizontal: 11, paddingVertical: 6, borderRadius: 10, backgroundColor: colors.bg },
   pillOn: { backgroundColor: colors.accentSoft },
   pillText: { fontSize: 12, fontWeight: '700', color: colors.muted },
