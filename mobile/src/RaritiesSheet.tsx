@@ -133,6 +133,7 @@ type DistanceOf = (b: Bird) => number | null;
 export function SheetList({
   birds,
   justCount,
+  featured,
   period,
   loading,
   error,
@@ -150,6 +151,8 @@ export function SheetList({
   birds: Bird[];
   /** The first this many birds are from a tapped notification ("Just reported") */
   justCount: number;
+  /** The first bird leads as the hero card; false when none was seen in the last few days */
+  featured: boolean;
   period: Period;
   loading: boolean;
   error: string | null;
@@ -186,7 +189,8 @@ export function SheetList({
     );
   }
 
-  const [hero, ...rest] = birds;
+  const hero = featured ? birds[0] : undefined;
+  const rest = featured ? birds.slice(1) : birds;
   const groupTitle = period === 'near' ? `Also within ${nearRadiusKm} km` : period === 'week' ? 'Also in the last 7 days' : 'Also in the last 30 days';
   const wider = NEAR_RADII_KM.find(km => km > nearRadiusKm);
   // Rows after the hero that a tapped notification announced: their own card, then the usual group

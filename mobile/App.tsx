@@ -25,7 +25,7 @@ import { SheetHeader, SheetList } from './src/RaritiesSheet';
 import { TripHeader, TripList } from './src/TripSheet';
 import CarIcon from './src/CarIcon';
 import { MAX_STOPS, openTripDirections, routable, routeOrder, useTrip } from './src/trip';
-import { atSea, byRarity, islandOf, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
+import { atSea, byRarity, featurable, islandOf, rareToday, recentlyDipped, recentlyRefound, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
 import { usePrefs } from './src/prefs';
 import { colors } from './src/theme';
 import { API_BASE, formatDate } from './src/util';
@@ -189,12 +189,13 @@ function Main() {
     [period, userLoc],
   );
 
-  // Birds shown in the sheet and on the map: first one is the hero card.
+  // Birds shown in the sheet and on the map: when featured, the first one is the hero card.
   // seaCount: how many of them are out on the ocean, counted before the at-sea switch hides them.
   // justCount: how many lead the list because a tapped notification announced them.
-  const { birds, seaCount, justCount } = useMemo(() => {
+  // featured: a bird seen in the last few days leads as the hero; older ones are only listed.
+  const { birds, seaCount, justCount, featured } = useMemo(() => {
     if (period === 'trip') {
-      return { birds: route.map(t => t.bird).filter(b => matchesQuery(b, query)), seaCount: 0, justCount: 0 };
+      return { birds: route.map(t => t.bird).filter(b => matchesQuery(b, query)), seaCount: 0, justCount: 0, featured: true };
     }
     // Announced birds show even when reported late (seen before the last 7 days) or at sea while those are hidden
     const isJust = (b: Bird) => justReported?.has(b.key) === true;
@@ -209,16 +210,18 @@ function Main() {
     const visible = prefs.hideAtSea ? matching.filter(b => !atSea(b) || isJust(b)) : matching;
     if (period === 'near' && userLoc) {
       visible.sort((a, b) => (distanceTo(a, userLoc) ?? Infinity) - (distanceTo(b, userLoc) ?? Infinity));
-      return { birds: visible, seaCount, justCount: 0 };
+      // The closest bird seen in the last few days leads; the rest stay closest-first
+      const hero = visible.find(b => featurable(b));
+      return { birds: hero ? [hero, ...visible.filter(b => b !== hero)] : visible, seaCount, justCount: 0, featured: !!hero };
     }
     // After a notification tap: its birds first, rarest leading as the hero, then the rest newest-first
     const just = visible.filter(isJust).sort(byRarity);
-    if (just.length) return { birds: [...just, ...visible.filter(b => !isJust(b))], seaCount, justCount: just.length };
-    // Rarest bird you can get to leads as the hero (one at sea only if that's all there is);
-    // the rest stay newest-first
-    const ranked = [...visible].sort(byRarity);
+    if (just.length) return { birds: [...just, ...visible.filter(b => !isJust(b))], seaCount, justCount: just.length, featured: true };
+    // Rarest bird seen in the last few days that you can get to leads as the hero (one at sea
+    // only if that's all there is); the rest stay newest-first. None that recent: no hero.
+    const ranked = visible.filter(b => featurable(b)).sort(byRarity);
     const hero = ranked.find(b => !atSea(b)) ?? ranked[0];
-    return { birds: hero ? [hero, ...visible.filter(b => b !== hero)] : visible, seaCount, justCount: 0 };
+    return { birds: hero ? [hero, ...visible.filter(b => b !== hero)] : visible, seaCount, justCount: 0, featured: !!hero };
   }, [allBirds, period, source, query, userLoc, nearRadiusKm, route, prefs.hideAtSea, justReported]);
 
   const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
@@ -232,6 +235,9 @@ function Main() {
       sublabel: b.reports.length > 1 ? `${b.reports.length} reports · ${date}` : date,
       color: b.tier.color,
       selected: b.key === selected?.key,
+      // A dip newer than the last report wins over a refound or a rare bird seen today
+      shine: !recentlyDipped(b) && (recentlyRefound(b) || rareToday(b)),
+      faded: recentlyDipped(b),
       tag: stop != null || b.tier.rank === 3 || b.key === selected?.key,
     }];
   }), [birds, selected?.key, period, stopOf]);
@@ -449,6 +455,7 @@ function Main() {
           <SheetList
             birds={birds}
             justCount={justCount}
+            featured={featured}
             period={period}
             loading={loading}
             error={error}

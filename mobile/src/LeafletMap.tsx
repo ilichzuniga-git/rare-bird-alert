@@ -21,6 +21,10 @@ export interface MapPin {
   tag?: boolean;
   /** Highlight as the currently selected bird */
   selected?: boolean;
+  /** Refound by a user in the last day: a shine sweeps across the pin */
+  shine?: boolean;
+  /** Dipped in the last day with no report since: the pin is faded */
+  faded?: boolean;
 }
 
 /** A bird shown in detail on the main map: stakeout circle, earlier reports, observer's spot. */
@@ -116,11 +120,28 @@ function buildHtml(
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #map { width: 100%; height: 100%; }
-    .tp { width: 30px; height: 30px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg);
+    .tp { position: relative; width: 30px; height: 30px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg);
           border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,.25);
           display: flex; align-items: center; justify-content: center; }
     .tp svg { width: 16px; height: 16px; transform: rotate(45deg); }
     .tp.sel { box-shadow: 0 0 0 6px rgba(31,122,85,.28), 0 4px 10px rgba(0,0,0,.25); }
+    /* Refound: a gloss sweeps across the pin (diagonally, as the pin is rotated) and a sparkle twinkles */
+    .tp.shine { overflow: hidden; }
+    .tp.shine::after { content: ''; position: absolute; top: -50%; bottom: -50%; left: -50%; width: 60%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.95), transparent);
+          transform: translateX(-120%); animation: shine 3s ease-in-out infinite; }
+    @keyframes shine { 0% { transform: translateX(-120%); } 45%, 100% { transform: translateX(330%); } }
+    .glint { position: absolute; left: 20px; top: -16px; font: 20px/1 system-ui, sans-serif; color: #f59e0b;
+          text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 1px 3px rgba(0,0,0,.35); animation: glint 3s ease-in-out infinite; }
+    .glint.g2 { left: -9px; top: 2px; font-size: 13px; animation-delay: .35s; }
+    @keyframes glint { 0%, 30% { transform: scale(.5); opacity: 0; } 45% { transform: scale(1.15); opacity: 1; }
+          70%, 100% { transform: scale(.5); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .tp.shine::after { display: none; }
+      .glint { animation: none; }
+    }
+    /* Dipped: faded and greyed, no motion, so it doesn't draw the eye */
+    .tp.faded { opacity: .45; filter: grayscale(.7); }
     .me { width: 34px; height: 34px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg);
           background: #101a15; border: 3px solid #fff;
           box-shadow: 0 0 0 5px rgba(16,26,21,.18), 0 4px 10px rgba(0,0,0,.3);
@@ -192,8 +213,10 @@ function buildHtml(
   function teardrop(pin) {
     return L.divIcon({
       className: '',
-      html: '<div style="position:relative"><div class="tp' + (pin.selected ? ' sel' : '') + '" style="background:' + esc(pin.color) + '">'
+      html: '<div style="position:relative"><div class="tp' + (pin.selected ? ' sel' : '')
+        + (pin.shine ? ' shine' : pin.faded && !pin.selected ? ' faded' : '') + '" style="background:' + esc(pin.color) + '">'
         + '<svg viewBox="0 0 64 64"><path fill="#fff" d="${BIRD_PATH}"/></svg></div>'
+        + (pin.shine ? '<div class="glint">✦</div><div class="glint g2">✦</div>' : '')
         + (pin.tag ? '<div class="tag">' + esc(pin.label) + '</div>' : '') + '</div>',
       // the rotated square's sharp corner sits ~36px below its top edge
       iconSize: [30, 30], iconAnchor: [15, 36], popupAnchor: [0, -34],
@@ -312,7 +335,12 @@ function buildHtml(
     Object.keys(groups).forEach(function(key) {
       var group = groups[key];
       var first = group[0];
-      var icon = first.color ? teardrop(first) : birdIcon;
+      // One pin for the spot: it shines if any bird there was refound, fades only if all were dipped
+      var spot = Object.assign({}, first, {
+        shine: group.some(function(p) { return p.shine; }),
+        faded: group.every(function(p) { return p.faded; }),
+      });
+      var icon = first.color ? teardrop(spot) : birdIcon;
       var marker = L.marker([Number(first.lat), Number(first.lng)], { icon: icon }).addTo(layer);
       if (group.length === 1) {
         marker.on('click', function() { openSighting(first.id); });

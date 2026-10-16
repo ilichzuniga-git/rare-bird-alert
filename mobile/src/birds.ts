@@ -68,6 +68,22 @@ export function inPeriod(bird: Bird, period: Period, now = new Date()): boolean 
   return true; // the API only keeps the last 28 days
 }
 
+/** A bird last seen this many days back or fewer (today is day 1) can be featured as the hero card. */
+export const FEATURE_DAYS = 3;
+
+/** Last seen today or in the 2 days before: likely still findable, so it can be featured.
+ *  Older birds are still listed, just not headlined. */
+export function featurable(bird: Bird, now = new Date()): boolean {
+  const d = new Date(now);
+  d.setDate(d.getDate() - (FEATURE_DAYS - 1));
+  return wallDate(bird.latest.observed_at) >= localDate(d);
+}
+
+/** Rare or rarer (not just Notable) and seen today: the map pin shines. */
+export function rareToday(bird: Bird, now = new Date()): boolean {
+  return bird.tier.rank > 0 && wallDate(bird.latest.observed_at) === localDate(now);
+}
+
 /** "Today", "Yesterday", or "Sep 21". */
 export function whenLabel(iso: string, now = new Date()): string {
   const day = wallDate(iso);
@@ -116,6 +132,26 @@ export function byRarity(a: Bird, b: Bird): number {
 /** The cluster's status, e.g. "Continuing · 2h ago" or "Single report · 1d ago". */
 export function statusWord(bird: Bird): string | null {
   return bird.cluster ? bird.cluster.status.label : null;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A user refound it in the last day: the map pin shines. */
+export function recentlyRefound(bird: Bird, now = Date.now()): boolean {
+  return refoundLabel(bird, now) != null;
+}
+
+/**
+ * A user dipped it in the last day and nobody has seen it since (no refound, no new report):
+ * the map pin fades, without drawing attention.
+ */
+export function recentlyDipped(bird: Bird, now = Date.now()): boolean {
+  const at = bird.cluster?.last_dipped_at;
+  if (!at) return false;
+  const dipped = new Date(at).getTime();
+  if (now - dipped > DAY_MS) return false;
+  const refound = bird.cluster?.last_refound_at ? new Date(bird.cluster.last_refound_at).getTime() : 0;
+  return dipped > refound && dipped > new Date(bird.latest.observed_at).getTime();
 }
 
 /** "Refound 38 min ago" when a user refound it in the last day (server time, so accurate). */

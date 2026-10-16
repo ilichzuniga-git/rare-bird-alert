@@ -4,6 +4,14 @@ What is planned, being considered and being watched for Birder's Best Friend (An
 
 ## Planned
 
+**Map pins that show what's fresh; featured card only for recent birds (2026-10-16).** User-requested.
+- [x] A pin shines (a gloss sweep and two gold sparkles, every 3 s) when a user refound the bird in the last 24 h, or when a Rare, Very Rare or Exceptional bird was seen today. Notable birds seen today don't shine (14 birds today vs 3 rare ones). Still under Reduce Motion (`LeafletMap.tsx` `.shine` / `.glint`)
+- [x] A pin is faded and greyed, with no motion, when a user dipped the bird in the last 24 h and there's been no refound or report since. The dip wins over the shine
+- [x] The featured (hero) card goes only to a bird seen in the last 3 days (`FEATURE_DAYS` in `birds.ts`): the rarest on Last 7 / 30 days, the closest on Near me. With none that recent there's no hero, just the list. Was: an Evening Grosbeak last seen 5 days ago headlined
+- [x] Checked in the iPhone simulator (shine, sparkles and fade forced on for two pins; hero on Last 7 days)
+- [ ] Test on real phones, both platforms
+- [ ] Guide and What's new entry
+
 **Repeat alerts for the same bird (fixed 2026-10-16).** Seen on Oct 11 (Pine Siskin) and Oct 12 (Catalina Red Crossbill and Clay-colored Sparrow alerted at 12:00, 12:50, 1:10 and 1:50 PM). eBird shares a group's checklist with each member, and every copy gets its own checklist id, often days later, with the same species, place and minute. Each copy was inserted as a new sighting and alerted again. The poller now skips a report when eBird already gave one for that species, spot and minute under another checklist (`backend/src/poller/index.js`). 133 of the 496 eBird rows live on Oct 16 were such copies.
 - [x] Poller skips shared-checklist copies, so they neither alert nor count as extra reports
 - [ ] Confirm no repeats over the next few days of alerts
