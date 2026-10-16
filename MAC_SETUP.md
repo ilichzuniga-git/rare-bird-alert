@@ -123,7 +123,7 @@ The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Androi
 - [ ] App Store listing: screenshots (6.9" iPhone and 13" iPad), privacy policy URL (`https://rba-backend.cloudedapps.org/privacy`), support URL (`https://rba-backend.cloudedapps.org/guide/`), App Privacy answers matching the Play Data safety form
 - [ ] Submit for App Store review
 
-The README Roadmap ("iOS version" and "Both apps") tracks the same items alongside Android work.
+[ROADMAP.md](ROADMAP.md) ("iOS version" and "Both apps") tracks the same items alongside Android work.
 
 ## 6. Troubleshooting
 

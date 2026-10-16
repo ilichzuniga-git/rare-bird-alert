@@ -142,7 +142,7 @@ species; detections never create reports or alerts on their own; no audio is sto
     where the code lives (`backend/src/birdweather.js`, migration 016, BIRDWEATHER_ENABLED env var).
     The existing README.md anchor `#birdweather-permission-granted-not-yet-integrated` must then be
     updated to match the new heading.
-11. `README.md` roadmap: tick the implemented BirdWeather items (leave "Let Tim know" unticked).
+11. `ROADMAP.md`: tick the implemented BirdWeather items (leave "Let Tim know" unticked).
     Add `BIRDWEATHER_ENABLED=true` to wherever backend env vars are documented.
 
 ## Not in scope (explicitly)
