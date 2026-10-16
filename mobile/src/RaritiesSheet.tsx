@@ -211,7 +211,7 @@ export function SheetList({
       ListHeaderComponent={
         hero ? (
           <>
-            <Hero bird={hero} fresh={justCount > 0} distance={distanceOf(hero)} onPress={() => onSelect(hero)} />
+            <Hero bird={hero} fresh={justCount > 0} nearest={period === 'near'} distance={distanceOf(hero)} onPress={() => onSelect(hero)} />
             {rest.length ? <Text style={styles.groupTitle}>{split ? 'Just reported' : groupTitle}</Text> : null}
           </>
         ) : null
@@ -241,10 +241,12 @@ export function SheetList({
 const WIDE_HERO = 700;
 const HERO_PANEL_W = 330;
 
-function Hero({ bird, fresh, distance, onPress }: {
+function Hero({ bird, fresh, nearest, distance, onPress }: {
   bird: Bird;
   /** From a tapped notification */
   fresh: boolean;
+  /** Near me: the hero is the closest bird, not the rarest */
+  nearest: boolean;
   distance: number | null;
   onPress: () => void;
 }) {
@@ -276,7 +278,7 @@ function Hero({ bird, fresh, distance, onPress }: {
       )}
       <View style={styles.kicker}>
         <Text style={styles.chip}>
-          ★ {fresh ? `NEW${bird.tier.rank > 0 ? ` · ${bird.tier.name.toUpperCase()}` : ''}`
+          ★ {fresh || nearest ? `${fresh ? 'NEW' : 'CLOSEST TO YOU'}${bird.tier.rank > 0 ? ` · ${bird.tier.name.toUpperCase()}` : ''}`
             : bird.tier.rank > 0 ? bird.tier.name.toUpperCase() : 'RAREST RIGHT NOW'}
         </Text>
         {status ? <Text style={styles.chip}>● {status}</Text> : null}
