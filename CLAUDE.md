@@ -12,3 +12,7 @@ This repo is worked on from two machines that both push to `main`: **Windows** (
 One codebase builds both apps. Platform differences live in `Platform.OS` checks and the `ios` / `android` sections of `mobile/app.json`; every change to shared code must keep working on both. Mac/iOS workflow: `MAC_SETUP.md`. Windows/Android workflow: `README.MD`.
 
 Pushing changes under `backend/` deploys to production automatically (Dokploy).
+
+## Docs and memory
+
+When the user asks to update the readmes, docs or guide, use the `update-docs` skill (`.claude/skills/update-docs/`). Updating the docs always includes syncing the mem0 MCP, which carries context between the two machines.
