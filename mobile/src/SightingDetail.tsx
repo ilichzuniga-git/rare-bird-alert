@@ -13,7 +13,7 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 import BirdPhoto from './BirdPhoto';
 import CarIcon from './CarIcon';
-import { atSea, refoundLabel, statusWord, type Bird } from './birds';
+import { atSea, islandOf, refoundLabel, statusWord, type Bird } from './birds';
 import { colors, radius, STATUS_DOT } from './theme';
 import {
   API_BASE, distanceMetres, findNoteCoordinates, formatDate, formatDateTime, formatDistance, formatSource, openInMaps,
@@ -38,6 +38,27 @@ async function playChirp() {
     // Sound is best-effort — never block the UI
   }
 }
+
+// How to reach each island the backend names (backend/src/atSea.js)
+const CHANNEL_ISLANDS = {
+  text: 'Island Packers runs boats from Ventura and Oxnard (Channel Islands National Park).',
+  ferry: { name: 'Island Packers', url: 'https://islandpackers.com' },
+};
+const NAVY_ISLAND = { text: 'It is owned by the US Navy and closed to the public.' };
+const ISLAND_ACCESS: Record<string, { text: string; ferry?: { name: string; url: string } }> = {
+  'Santa Catalina Island': {
+    text: 'Catalina Express runs ferries from Long Beach, San Pedro and Dana Point; the Catalina Flyer leaves from Newport Beach.',
+    ferry: { name: 'Catalina Express', url: 'https://www.catalinaexpress.com' },
+  },
+  'Anacapa Island': CHANNEL_ISLANDS,
+  'Santa Cruz Island': CHANNEL_ISLANDS,
+  'Santa Rosa Island': CHANNEL_ISLANDS,
+  'San Miguel Island': CHANNEL_ISLANDS,
+  'Santa Barbara Island': CHANNEL_ISLANDS,
+  'San Clemente Island': NAVY_ISLAND,
+  'San Nicolas Island': NAVY_ISLAND,
+  'Coronado Islands': { text: 'These Mexican islands allow no landing; birders see them from boat trips out of San Diego.' },
+};
 
 /** 'YYYY-MM-DD' as 'Sep 29'. A bare date parses as UTC midnight (the day before, in
  *  California), so parse it as local midnight instead. */
@@ -156,12 +177,12 @@ export function DetailHeader({ bird, sighting, distance, onClose, onTrip, onTogg
   onToggleTrip: () => void;
 }) {
   const place = [
-    sighting.at_sea ? '🚤 At sea' : null,
+    sighting.at_sea ? '🚤 At sea' : sighting.island ? '🏝️ Island' : null,
     sighting.location_name ?? sighting.region_name,
     distance != null ? formatDistance(distance) : null,
   ].filter(Boolean).join(' · ');
-  // A bird out on the ocean can't be driven to, so it can't be added; one saved earlier can still be removed
-  const canSave = onTrip || !atSea(bird);
+  // A bird out on the ocean or on an island can't be driven to, so it can't be added; one saved earlier can still be removed
+  const canSave = onTrip || !(atSea(bird) || islandOf(bird));
   return (
     <View style={styles.hdr}>
       {/* 64px photo with its credit + license (list avatars are too small for one) */}
@@ -296,7 +317,9 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
   // Nor to a spot out on the ocean, which no road reaches.
   const obscured = sighting.location_obscured === true;
   const offshore = sighting.at_sea === true;
-  const target = offshore ? null : exactSpot ?? (obscured ? null : reportPoint);
+  const island = offshore ? null : sighting.island ?? null;
+  const access = island ? ISLAND_ACCESS[island] : undefined;
+  const target = offshore || island ? null : exactSpot ?? (obscured ? null : reportPoint);
 
   return (
     <>
@@ -330,6 +353,16 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
           </View>
         ) : null}
 
+        {island ? (
+          <View style={styles.seaCard}>
+            <Text style={styles.seaTitle}>🏝️ On {island}</Text>
+            <Text style={styles.seaText}>
+              No road reaches the island, so there are no driving or transit directions.{' '}
+              {access?.text ?? 'You need a boat to get there.'}
+            </Text>
+          </View>
+        ) : null}
+
         {cluster?.birdweather?.length ? <BirdWeatherCard matches={cluster.birdweather} /> : null}
 
         <View style={styles.links}>
@@ -350,6 +383,16 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
               style={({ pressed }) => [styles.pill, styles.pillDirections, pressed && styles.pillPressed]}
             >
               <Text style={[styles.pillText, styles.pillDirectionsText]}>🚌 Transit</Text>
+            </Pressable>
+          ) : null}
+          {access?.ferry ? (
+            <Pressable
+              onPress={() => Linking.openURL(access.ferry!.url)}
+              accessibilityRole="link"
+              accessibilityLabel={`Ferry: ${access.ferry.name}`}
+              style={({ pressed }) => [styles.pill, styles.pillDirections, pressed && styles.pillPressed]}
+            >
+              <Text style={[styles.pillText, styles.pillDirectionsText]}>⛴️ Ferry ↗</Text>
             </Pressable>
           ) : null}
           {noteCount ? (

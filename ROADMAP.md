@@ -94,13 +94,14 @@ What is planned, being considered and being watched for Birder's Best Friend (An
 - [ ] Update the guide's Near me step (`backend/src/site/index.html`) and the What's new entry
 
 **Island birds get walking directions.** Seen 2026-10-12: Directions for a rare bird on Santa Catalina Island opened walking directions, because there's no road from the mainland. Islands rightly count as land for the at-sea check, so they keep the Directions button. Plan: flag island sightings (the island polygons in `backend/src/data/socal-land.json` are separate from the mainland) and show "🏝️ Island · ferry needed" instead of driving directions. Possibly link to the ferry (Catalina Express from Long Beach, San Pedro or Dana Point; Island Packers for the Channel Islands). Trip directions should skip them, like at-sea birds.
-- [ ] Backend: add `on_island` to `/api/sightings` rows next to `at_sea`
-- [ ] App: island label and ferry note on the bird screen, no driving directions, skipped in trip routing
+- [x] Backend: `island` (the island's name, or null) on `/api/sightings` rows next to `at_sea` (`islandAt` in `backend/src/atSea.js`). On an island ring or within the same 2 km coast buffer, so Two Harbors counts. Terminal Island is bridged, so it stays mainland. Live 2026-10-16; `at_sea` matched the old result on all 500 rows
+- [x] App: "🏝️ Island" in the lists and header, an "On <island>" card with how to get there, a "⛴️ Ferry ↗" pill (Catalina Express; Island Packers for the Channel Islands) in place of Directions and Transit. San Clemente and San Nicolas say Navy, closed to the public; the Coronado Islands say no landing. Can't be saved to the trip; one saved earlier is skipped in routing. Checked in the iPhone simulator on a Catalina Red-headed Woodpecker (2026-10-16)
+- [ ] Test on real phones, both platforms
 
 **Public transit directions for one bird.** Requested by a user. Only on a single bird's Directions button, not the trip: someone on transit is unlikely to cross the city for several birds the way a driver does, and transit routing doesn't handle multiple stops anyway. Plain links, no API key, like driving.
-- [x] Bird screen: a "🚌 Transit" pill next to Directions (`openTransitDirections` in `mobile/src/util.ts`). Android opens Google Maps (`travelmode=transit`); iOS asks Apple Maps (`daddr` + `dirflg=r`, works on every iOS version) or Google Maps. Apple link checked in the simulator: opens Directions in transit mode from My Location (2026-10-16)
+- [x] Bird screen: a "🚌 Transit" pill next to Directions (`openTransitDirections` in `mobile/src/util.ts`). Android opens Google Maps (`travelmode=transit`); iOS asks Apple Maps (`daddr` + `dirflg=r`, works on every iOS version) or Google Maps, offering Google only when its app is installed (`comgooglemaps://` with `directionsmode=transit`): Google's mobile website ignores the travel mode and opens on driving. Without the app, Transit goes straight to Apple Maps. Apple link checked in the simulator: opens Directions in transit mode from My Location (2026-10-16)
 - [x] None for at-sea birds or obscured iNaturalist locations (same rule as Directions)
-- [ ] Island birds get the ferry note instead (with the island work above)
+- [x] Island birds get the ferry note instead (with the island work above)
 - [x] Trip directions stay driving only
 - [ ] Test on real phones: the pill on a bird page, both map apps on iPhone, Google Maps on Android
 - [ ] Update the guide and the What's new entry

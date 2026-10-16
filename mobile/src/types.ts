@@ -27,6 +27,9 @@ export interface Sighting {
   // Out on the ocean, more than 2 km from any land (a pelagic trip); islands count as land.
   // Missing from older backends.
   at_sea?: boolean;
+  // The island's name when no road reaches it (Catalina, the Channel Islands…); null on the
+  // mainland and at sea. Missing from older backends.
+  island?: string | null;
 }
 
 // ---- Cluster types ----

@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { parseCredit, usePhoto } from './BirdPhoto';
-import { atSea, NEAR_RADII_KM, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
+import { atSea, islandOf, NEAR_RADII_KM, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
 import { colors, radius, STATUS_DOT } from './theme';
 import { formatDistance, formatSource } from './util';
 
@@ -256,7 +256,7 @@ function Hero({ bird, fresh, nearest, distance, onPress }: {
   const credit = photo.url ? parseCredit(photo.attribution) : null;
   const status = refoundLabel(bird) ?? statusWord(bird);
   const meta = [
-    atSea(bird) ? '🚤 At sea' : null,
+    atSea(bird) ? '🚤 At sea' : islandOf(bird) ? '🏝️ Island' : null,
     s.location_name ?? s.region_name,
     bird.reports.length > 1 ? `${bird.reports.length} reports` : whenLabel(s.observed_at),
     distance != null ? formatDistance(distance) : null,
@@ -319,7 +319,7 @@ export const BirdRow = memo(function BirdRow({
   const dot = STATUS_DOT[bird.cluster?.status.level ?? 'gray'];
   const place = s.location_name ?? s.region_name;
   const sub = [
-    atSea(bird) ? '🚤 At sea' : null,
+    atSea(bird) ? '🚤 At sea' : islandOf(bird) ? '🏝️ Island' : null,
     distance != null ? formatDistance(distance) : null,
     place,
     stale ? 'No recent reports' : bird.reports.length > 1 ? `${bird.reports.length} reports` : null,

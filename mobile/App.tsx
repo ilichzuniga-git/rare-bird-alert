@@ -25,7 +25,7 @@ import { SheetHeader, SheetList } from './src/RaritiesSheet';
 import { TripHeader, TripList } from './src/TripSheet';
 import CarIcon from './src/CarIcon';
 import { MAX_STOPS, openTripDirections, routable, routeOrder, useTrip } from './src/trip';
-import { atSea, byRarity, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
+import { atSea, byRarity, islandOf, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
 import { usePrefs } from './src/prefs';
 import { colors } from './src/theme';
 import { API_BASE, formatDate } from './src/util';
@@ -224,7 +224,7 @@ function Main() {
   const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
     const { lat, lng } = b.latest;
     if (lat == null || lng == null) return [];
-    const date = (atSea(b) ? 'At sea · ' : '') + formatDate(b.latest.observed_at);
+    const date = (atSea(b) ? 'At sea · ' : islandOf(b) ? 'Island · ' : '') + formatDate(b.latest.observed_at);
     const stop = period === 'trip' ? stopOf.get(b.key) : undefined;
     return [{
       lat, lng, id: b.latest.id,

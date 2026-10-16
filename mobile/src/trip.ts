@@ -106,10 +106,10 @@ export function useTrip(allBirds: Bird[]) {
 
 type Point = { lat: number; lng: number };
 
-/** Where to drive for this bird: none without coordinates, or when it was last seen out on the ocean. */
+/** Where to drive for this bird: none without coordinates, or when it was last seen out on the ocean or on an island. */
 function pointOf(b: Bird): Point | null {
-  const { lat, lng, at_sea } = b.latest;
-  return lat == null || lng == null || at_sea ? null : { lat: Number(lat), lng: Number(lng) };
+  const { lat, lng, at_sea, island } = b.latest;
+  return lat == null || lng == null || at_sea || island ? null : { lat: Number(lat), lng: Number(lng) };
 }
 
 /** Directions can route to this bird. */

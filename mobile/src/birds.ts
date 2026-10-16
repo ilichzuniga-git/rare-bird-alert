@@ -99,6 +99,11 @@ export function atSea(bird: Bird): boolean {
   return bird.latest.at_sea === true;
 }
 
+/** The island it was last seen on when no road reaches it (a ferry ride), else null. */
+export function islandOf(bird: Bird): string | null {
+  return bird.latest.island ?? null;
+}
+
 /** Rarest first, then most-reported, then most recent: picks the hero card. */
 export function byRarity(a: Bird, b: Bird): number {
   return (
