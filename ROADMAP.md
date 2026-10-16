@@ -96,9 +96,11 @@ What is planned, being considered and being watched for Birder's Best Friend (An
 - [ ] App: island label and ferry note on the bird screen, no driving directions, skipped in trip routing
 
 **Public transit directions for one bird.** Requested by a user. Only on a single bird's Directions button, not the trip: someone on transit is unlikely to cross the city for several birds the way a driver does, and transit routing doesn't handle multiple stops anyway. Plain links, no API key, like driving.
-- [ ] Bird screen: a transit option next to Directions (Google Maps `travelmode=transit`; Apple Maps `dirflg=r` on iOS, which already offers Apple or Google)
-- [ ] None for at-sea birds; island birds get the ferry note instead
-- [ ] Trip directions stay driving only
+- [x] Bird screen: a "🚌 Transit" pill next to Directions (`openTransitDirections` in `mobile/src/util.ts`). Android opens Google Maps (`travelmode=transit`); iOS asks Apple Maps (`daddr` + `dirflg=r`, works on every iOS version) or Google Maps. Apple link checked in the simulator: opens Directions in transit mode from My Location (2026-10-16)
+- [x] None for at-sea birds or obscured iNaturalist locations (same rule as Directions)
+- [ ] Island birds get the ferry note instead (with the island work above)
+- [x] Trip directions stay driving only
+- [ ] Test on real phones: the pill on a bird page, both map apps on iPhone, Google Maps on Android
 - [ ] Update the guide and the What's new entry
 
 ## Ideas worth exploring

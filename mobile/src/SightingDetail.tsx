@@ -17,6 +17,7 @@ import { atSea, refoundLabel, statusWord, type Bird } from './birds';
 import { colors, radius, STATUS_DOT } from './theme';
 import {
   API_BASE, distanceMetres, findNoteCoordinates, formatDate, formatDateTime, formatDistance, formatSource, openInMaps,
+  openTransitDirections,
 } from './util';
 import type { BirdWeatherMatch, ClusterData, ClusterDay, CommentsPayload, Sighting } from './types';
 
@@ -339,6 +340,16 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
               style={({ pressed }) => [styles.pill, styles.pillDirections, pressed && styles.pillPressed]}
             >
               <Text style={[styles.pillText, styles.pillDirectionsText]}>➤ Directions</Text>
+            </Pressable>
+          ) : null}
+          {target ? (
+            <Pressable
+              onPress={() => openTransitDirections(target.lat, target.lng)}
+              accessibilityRole="button"
+              accessibilityLabel="Public transit directions"
+              style={({ pressed }) => [styles.pill, styles.pillDirections, pressed && styles.pillPressed]}
+            >
+              <Text style={[styles.pillText, styles.pillDirectionsText]}>🚌 Transit</Text>
             </Pressable>
           ) : null}
           {noteCount ? (

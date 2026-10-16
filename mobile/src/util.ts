@@ -1,4 +1,5 @@
 import {
+  ActionSheetIOS,
   Linking,
   Platform,
 } from 'react-native';
@@ -64,6 +65,24 @@ export function openInMaps(lat: number, lng: number, label: string) {
     Platform.OS === 'ios'
       ? `https://maps.apple.com/?ll=${q}&q=${encodeURIComponent(label)}`
       : `geo:${q}?q=${q}(${encodeURIComponent(label)})`
+  );
+}
+
+/**
+ * Public transit directions from the user's location to one point. Android opens Google Maps;
+ * iOS asks Apple Maps or Google Maps, like the trip's Directions. Single bird only: transit
+ * routing doesn't take waypoints, so the trip stays driving.
+ */
+export function openTransitDirections(lat: number, lng: number) {
+  const q = `${lat},${lng}`;
+  const google = `https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=${encodeURIComponent(q)}`;
+  if (Platform.OS !== 'ios') { Linking.openURL(google); return; }
+
+  // Classic Maps URL (daddr + dirflg=r for transit) works on every iOS version
+  const apple = `https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=r`;
+  ActionSheetIOS.showActionSheetWithOptions(
+    { title: 'Transit directions', options: ['Apple Maps', 'Google Maps', 'Cancel'], cancelButtonIndex: 2 },
+    i => { if (i === 0) Linking.openURL(apple); else if (i === 1) Linking.openURL(google); },
   );
 }
 
