@@ -693,6 +693,12 @@ Comments are fetched on demand and never stored in the local database.
 - [ ] Backend: add `on_island` to `/api/sightings` rows next to `at_sea`
 - [ ] App: island label and ferry note on the bird screen, no driving directions, skipped in trip routing
 
+**Public transit directions for one bird.** Requested by a user. Only on a single bird's Directions button, not the trip: someone on transit is unlikely to cross the city for several birds the way a driver does, and transit routing doesn't handle multiple stops anyway. Plain links, no API key, like driving.
+- [ ] Bird screen: a transit option next to Directions (Google Maps `travelmode=transit`; Apple Maps `dirflg=r` on iOS, which already offers Apple or Google)
+- [ ] None for at-sea birds; island birds get the ferry note instead
+- [ ] Trip directions stay driving only
+- [ ] Update the guide and the What's new entry
+
 ### Ideas worth exploring
 
 Not committed to. Each needs more thought before it's built.
@@ -706,7 +712,6 @@ Not committed to. Each needs more thought before it's built.
   - **Poll only the counties someone picked**, and slow the poll for counties nobody has opened in a while.
   - **Rarity is per county today** (the guide explains this). Statewide data would still need a county per sighting to rank it, and eBird's notable list is per region, so check whether "notable for California" misses birds that are only rare locally.
   - **Alerts:** the push token would need its chosen counties or radius stored next to it so each phone only hears about its area. That changes the privacy page, the Data safety form and the App Store privacy answers (still no account and no exact location if it stores counties, not coordinates).
-- [ ] **Public transit directions** alongside driving: a transit option for the trip and the Directions button (Apple Maps and Google Maps both support a transit mode).
 
 ### Things to watch
 
