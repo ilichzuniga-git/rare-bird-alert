@@ -64,6 +64,9 @@ What is planned, being considered and being watched for Birder's Best Friend (An
 - [x] Release 1.5.1 to Production in Play Console (live by 2026-10-12) (built with the Last 7 days fix; first Android release since the FCM V1 key was added)
 - [x] iOS 1.5.1 build 6 (EAS b994bcbd) uploaded and submitted to App Review (2026-10-12), set to release automatically once approved
 - [ ] iOS 1.5.1 live on the App Store; then add the date to the guide's What's new
+- [x] **1.6.0** (Near me range, Closest to you, Transit, island ferry note, sparkle/fade pins, 3-day hero) built 2026-10-16: iOS build 7 (EAS 3b0862a4) submitted to App Review, Android vc 11 (EAS c78b9a12) sent to Play Production review. Guide entry live
+- [ ] 1.6.0 live on both stores; then add the dates to the guide's What's new
+- [ ] Retake the guide screenshots (Near me with the range, island and Transit on a bird page) after the next round of updates
 
 **At-sea (pelagic) birds.** From TestFlight feedback (2026-10-04): the rarest birds were often far offshore, seen from pelagic boat trips, and the app offered driving directions to a point in the ocean. Shared code, so both apps get it; the backend half is live as soon as it's pushed, and the app half ships with the next build of each. Older builds ignore the new field, so nothing changes for them until they update.
 - [x] Backend adds `at_sea` to each `/api/sightings` row: more than 2 km from land, using Natural Earth's 1:10m land and minor-islands polygons clipped to Southern California (`backend/src/atSea.js`, `backend/src/data/socal-land.json`, about 16 KB). Computed per response, so no migration. Catalina, San Clemente, Santa Barbara Island and the northern Channel Islands count as land, as do beaches, harbours and bays. A region outside lat 32.0–35.6, lng -120.5 to -116.5 needs the data re-clipped
