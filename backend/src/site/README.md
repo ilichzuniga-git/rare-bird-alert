@@ -6,7 +6,7 @@ A small website that replaces an in-app tutorial. One page with three tabs:
 
 | Tab | URL hash | What it is |
 |---|---|---|
-| Tour | `#tour` | How the app works, with simulator screenshots of the real app (taken on 1.4.0/1.5.0; text current to 1.6.0) |
+| Tour | `#tour` | How the app works, with simulator screenshots of the real app (taken on 1.4.0/1.5.0; text current to 1.7.0) |
 | What's new | `#whats-new` | One entry per release, with the iOS build and Android version code |
 | Privacy | `#privacy` | The privacy policy. Change it here when data handling changes, with a new date |
 
@@ -20,7 +20,9 @@ in both. The site is also the App Store Support URL.
 
 Screenshots due for a retake (held until after the next round of updates, per the user): `near.jpg`
 (no 10/25/50 km pills or range circle), and a bird page with the Transit pill, an island bird with the
-Ferry pill, and the sparkle and faded pins, none of which are shown yet.
+Ferry pill, the sparkle pins and the pale red-outlined dip pins (1.7.0 replaced the old fade), the
+Newest / Rarest switch above the list, and "✗ Dipped ×N" on a bird page, none of which are shown yet.
+1.7.0 also added dark mode; the tour shots stay light, but a dark one could go in the 1.7.0 entry.
 
 The tab script is `guide.js`, not inline: the server's Content-Security-Policy (helmet) blocks
 inline scripts. Inline `style` attributes are allowed.

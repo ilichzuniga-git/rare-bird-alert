@@ -50,6 +50,7 @@ Photos are the photographers' work, each under its own license.
 - Used by: `mobile/src/LeafletMap.tsx` (map tab and sighting maps, in a WebView)
 - Tiles: `https://{s}.tile.openstreetmap.org` — data © OpenStreetMap contributors, ODbL.
 - Attribution (required): "© OpenStreetMap contributors" — shown on every map (Leaflet's attribution control) and on the About screen.
+- Dark mode (1.7.0) inverts these same tiles on the phone with a CSS filter; no other tile provider is used, so the attribution and license are unchanged.
 - Tile usage policy: OSM's public tile servers are for light use only. Fine for a small free app, but if usage grows, switch to a hosted tile provider or self-hosted tiles.
 - Leaflet 1.9.4 loaded from unpkg (BSD-2-Clause).
 

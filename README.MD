@@ -476,7 +476,8 @@ The `.gitignore` handles this automatically, but avoid:
 
 - The **poller** runs every 10 minutes, fetches sightings from all enabled sources for LA County (US-CA-037) and Orange County (US-CA-059), and upserts them into Postgres. Only genuinely new sightings count as new and trigger push notifications. Sightings older than 28 days are skipped and purged. Copies of a shared eBird checklist are skipped too (see eBird below).
 - After each poll, the **clustering engine** groups same-species sightings within 300m into continuing-bird clusters and updates their status
-- The **API** serves sightings and clusters to the mobile app
+- The **API** serves sightings and clusters to the mobile app. `/api/sightings` returns the whole 28-day window (safety cap 5000 rows, `FEED_MAX` in `backend/src/routes/sightings.js`) and ignores `limit`: builds up to 1.6.0 send `limit=500`, which used to cut "Last 30 days" to about 9 days. Responses are gzipped (`compression`); the full feed is about 120 KB. `/api/clusters` adds `recent_dips`: dips in the last 3 days made after the latest sighting or refound
+- The **app keeps the last feed** that loaded in `feed.json` in its private documents folder (`mobile/src/feed.ts`), next to the trip and prefs. With no signal it opens on that copy, and the header says "offline · data from 6:12 AM" instead of an error
 - **Push notifications** fire via Expo's push service whenever new sightings arrive; tokens for uninstalled apps are pruned automatically
 - The **map** uses OpenStreetMap + Leaflet (free, no API key) rendered inside a WebView
 
@@ -531,7 +532,7 @@ Allowing NC licenses raised photo coverage from 3 to 30 out of 40 sampled specie
 
 The filter lives in two places that must stay in sync:
 - `USABLE_LICENSES` in `backend/src/sources/INaturalistSource.js`: photos stored with iNaturalist sightings at poll time
-- `USABLE_LICENSES` in `mobile/App.tsx`: photos looked up lazily for eBird sightings
+- `USABLE_LICENSES` in `mobile/src/BirdPhoto.tsx`: photos looked up lazily for eBird sightings
 
 ### Rarity badges
 
@@ -564,10 +565,22 @@ The status label shown on each card and in the map modal is derived from these v
 ### Map tab
 
 - **The Rarities list** under the map leads with a hero card: the rarest bird seen in the last 3 days (`FEATURE_DAYS` in `mobile/src/birds.ts`), or on Near me the closest one. A bird last seen longer ago is listed but not featured; with none that recent there's no hero. After a notification tap, the announced birds lead instead.
-- **Pins that show what's fresh** (`shine` / `faded` on `MapPin`, CSS in `mobile/src/LeafletMap.tsx`): a gloss sweep and two gold sparkles when a user refound the bird in the last 24 h or a Rare-or-rarer bird was seen today; faded and greyed, with no motion, when a user dipped it in the last 24 h with no refound or report since (the dip wins). Reduce Motion stops the animation.
+- **Newest / Rarest:** a switch beside the list title orders the rows under the hero by date or by rarity (`prefs.listSort`, kept between launches). Near me is always closest first.
+- **Pins that show what's fresh** (`shine` / `dips` on `MapPin`, CSS in `mobile/src/LeafletMap.tsx`): a gloss sweep and two gold sparkles when a user refound the bird in the last 24 h or a Rare-or-rarer bird was seen today. A dip since the last sighting or refound (counted by the server as `recent_dips`, last 3 days) pales the pin's fill and gives it a red outline, deeper at 1, 2–3 and 4+ dips (`dipLevel` in `mobile/src/birds.ts`, `DIP_PIN` in `theme.ts`); the dip wins over a sparkle. List rows and the bird page say "✗ Dipped ×3" in the same deepening red. Reduce Motion stops the animation.
+- **Name tags:** the selected bird, trip stops and Exceptional birds show their names next to the pin. Tags that would overlap are placed in priority order (selected, trip stops in order, then the most recent Exceptional) and the rest hidden; this re-runs after every zoom or pan (`declutter()` and `tagPriority`), so more names appear as you zoom in.
 - **One pin per bird.** Sightings in the same cluster collapse into a single pin, using their most recent report. For example, five observers' checklists of one Vesper Sparrow show as one pin.
 - **Tapping a pin** opens that bird's Refound/Dipped view.
 - **A spot with several birds** (a busy hotspot) shows a picker listing each bird with its report count and date, e.g. "Vesper Sparrow · 5 reports · Sep 17".
+
+### Light and dark mode
+
+The app follows the phone's setting (`"userInterfaceStyle": "automatic"` in `mobile/app.json`; Android needs the `expo-system-ui` package for it). `mobile/src/theme.ts` has two palettes with the same keys, `LIGHT` and `DARK`. Screens build their styles with `makeStyles(colors => …)` and call `useStyles()`, and use `useColors()` for colours set inline. Don't hard-code a colour: add a token to both palettes. Rarity pins keep the tier colour in both themes; badges use `tierSoft` / `tierInk`.
+
+OpenStreetMap has no dark tiles, so in dark mode the map inverts its tile layer with a CSS filter (`invert` + `hue-rotate`, which keeps water blue and parks green); pins and circles aren't filtered. Switching themes restyles the live map without reloading it (`window.__dark`). The guide website stays light.
+
+### Accessibility
+
+List rows and the hero card read as one sentence for VoiceOver and TalkBack (`birdLabel` in `mobile/src/RaritiesSheet.tsx`): name, rarity, when, where, distance, status and dips. Tabs, pills, report chips and buttons have roles and selected state.
 
 ### Refound/Dipped view
 
@@ -575,7 +588,7 @@ Opened by tapping a map pin, or the **location address** on any sighting card. I
 
 - **Header:** the bird's name, location and continuing status.
 - **Map:** the report's location with a dashed green circle for the 300m cluster stakeout zone, and trail dots for the other sightings of the same individual.
-- **✓ Refound** and **✗ Dipped** buttons.
+- **✓ Refound** and **✗ Dipped** buttons. The status line adds "✗ Dipped ×N" when people dipped since the last sighting.
 - **Link pills:** **➤ Directions** (green; to the observer's exact spot when the notes have one, otherwise the report's location, and hidden for a location iNaturalist has hidden), **🚌 Transit** (next to Directions, same rules; `openTransitDirections` in `mobile/src/util.ts`: Android opens Google Maps in transit mode, iOS opens Apple Maps transit, or offers Google Maps when its app is installed, because Google's mobile website ignores the travel mode), **Notes (N)** (blue; scrolls to the notes) and **eBird ↗** (teal; the species page).
 - **At sea or on an island:** an at-sea bird gets a "🚤 Seen at sea" card and no Directions, Transit or trip button. An island bird gets an "🏝️ On <island>" card saying how to get there (`ISLAND_ACCESS` in `mobile/src/SightingDetail.tsx`) and a **⛴️ Ferry ↗** pill (Catalina Express, or Island Packers for the Channel Islands) in place of Directions and Transit; it can't be saved to the trip.
 - **🎧 Also heard by a BirdWeather station**, when a nearby station corroborates the bird (see [ROADMAP.md](ROADMAP.md)).

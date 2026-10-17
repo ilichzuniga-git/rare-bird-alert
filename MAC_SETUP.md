@@ -44,7 +44,10 @@ Simulator tips:
 - The blue ⚙️ floating button is Expo Go's developer menu, not part of the app; drag it aside if it covers something.
 - **Push notifications** don't work in Expo Go, so test them in a TestFlight build (section 4).
 - **No Google Maps app:** the Simulator has only Apple Maps, so Google Maps links open Google's website in Safari. That site ignores the travel mode (transit links open on driving), which is why Transit on iPhone offers Google only when its app is installed. Test the Google app path on a real iPhone.
-- **Tapping from the terminal:** [AXe](https://github.com/cameroncooke/AXe) (`brew install cameroncooke/axe/axe`) taps the Simulator without macOS Accessibility permission: `axe touch -x X -y Y --down --up --delay 0.12 --udid <UDID>`, in points (screenshot pixels ÷ 3 on iPhone Pro). In Expo Go use `touch` with a delay; a plain `axe tap` can be missed.
+- **Tapping from the terminal:** [AXe](https://github.com/cameroncooke/AXe) (`brew install cameroncooke/axe/axe`) taps the Simulator without macOS Accessibility permission: `axe touch -x X -y Y --down --up --delay 0.12 --udid <UDID>`, in points (screenshot pixels ÷ 3 on iPhone Pro). In Expo Go use `touch` with a delay; a plain `axe tap` can be missed. **On 2026-10-17 (iOS 27 Simulator in DeviceHub) AXe reported every tap and button press as successful but none landed, even after rebooting the Simulator.** To check a screen without tapping, temporarily change the app's starting state in code (e.g. open on a tab, open a bird or About), mark those lines `TEMP-TEST`, and remove them before committing.
+- **Dark mode:** `xcrun simctl ui booted appearance dark` (or `light`). The app switches live, map included.
+- **No signal:** start Metro with `EXPO_PUBLIC_API_BASE=http://127.0.0.1:9 npx expo start` after the app has loaded once normally. Every request then fails, and the app should open on its saved feed with "offline · data from …" in the header.
+- **Accessibility labels:** `axe describe-ui --udid <UDID>` dumps what VoiceOver reads (`AXLabel`), which works even when taps don't.
 
 ## 3. Everyday: run the app on a real iPhone (Expo Go)
 
@@ -136,4 +139,5 @@ The bundle identifier is `com.ilichzuniga.rarebirdalert`, the same as the Androi
 | iPhone can't load the app from the QR code | Network blocks device-to-device traffic: use `npx expo start --tunnel` |
 | Port 8081 already in use | An old Metro is still running: `npx kill-port 8081` |
 | A saved change doesn't show up | Expo Go's Fast Refresh may be off (developer menu → Fast refresh). Reload instead: `r` in Metro, or quit Expo Go and reopen the project. If it's still stale, restart Metro with `npx expo start --clear` |
+| Builds from the main checkout fail on a missing native module | After pulling, run `npm install` in `mobile/` (1.7.0 added `expo-system-ui`) |
 | `git push` asks for a password | Run `gh auth login` then `gh auth setup-git` |
