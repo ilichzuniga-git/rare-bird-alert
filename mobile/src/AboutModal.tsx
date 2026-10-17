@@ -115,6 +115,14 @@ export default function AboutModal({ visible, onClose }: { visible: boolean; onC
             <View style={styles.pills}><Pill label="ebird.org ↗" tint="teal" onPress={open('https://ebird.org')} /></View>
           </Card>
 
+          <Card icon="🙋" title="Birders in this app" role="Refound and Dipped reports">
+            <Text style={styles.p}>
+              Refound and Dipped reports are usually the fastest news on a bird. Birders tend to send their
+              eBird checklists at the end of an outing, often hours later, but a Refound or Dipped tap reaches
+              everyone the next time they open or refresh the app.
+            </Text>
+          </Card>
+
           <Card icon="🔍" title="iNaturalist" role="Rare observations and bird photos">
             <Text style={styles.p}>
               Rare-bird observations and bird photos come from the iNaturalist community. Only "research grade"
