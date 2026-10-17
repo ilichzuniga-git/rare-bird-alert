@@ -114,6 +114,7 @@
   .release h2 { font-size: 24px; margin: 0; }
   .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; font-size: 13px; color: var(--ink-2); margin: 4px 0 10px; }
   .build { font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; font-weight: 700; color: var(--forest); }
+  .build .rollout { color: var(--ochre); } /* a release still on its way to a store */
   .release ul { padding-left: 20px; margin: 0; }
   .release li { margin-bottom: 6px; }
 
@@ -341,7 +342,7 @@
 
   <article class="release">
     <h2>1.7.0 <em>Day and night</em></h2>
-    <div class="meta"><span>October 17, 2026</span><span class="build">iPhone build 8</span><span class="build">Android 12</span></div>
+    <div class="meta"><span>October 17, 2026</span><span class="build">iPhone build 8 · <span class="rollout">in progress</span></span><span class="build">Android 12 · <span class="rollout">queued</span></span></div>
     <ul>
       <li><b>Dark mode.</b> The app follows your phone's light or dark setting, map included, and switches as soon as you change it.</li>
       <li><b>Works with no signal.</b> The app keeps the last birds it loaded, so at a trailhead or on Catalina it opens on them and says how old they are, instead of an error.</li>
