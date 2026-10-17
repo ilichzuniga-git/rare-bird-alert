@@ -128,6 +128,7 @@ What is planned, being considered and being watched for Birder's Best Friend (An
 - [x] Accessibility: list rows and the hero read one sentence (name, rarity, when, where, distance, status, dips); roles and selected state on the period tabs, source and radius pills, report chips, Refound / Dipped, trip and About buttons. Labels checked in the simulator's accessibility tree.
 - [x] Push registration used its own hard-coded server address (`notifications.ts`); it now shares `API_BASE` from `util.ts`
 - [x] Trip directions on iPhones older than iOS 18.4 (no Apple multi-stop link) go straight to Google Maps
+- [x] Map name tags no longer pile up (seen on the full 30-day feed): tags are placed in priority order (selected bird, trip stops, then the most recent Exceptional birds) and any that would touch one already placed is hidden; it re-runs after every zoom or pan, so more names appear as you zoom in (`declutter()` in `LeafletMap.tsx`, `tagPriority` on pins). Pins showing a name sit above the others, and a shared pin takes the colour of the bird it names. Checked in the simulator zoomed out and on a selected bird.
 - [ ] Test on real phones, both platforms, including VoiceOver / TalkBack and airplane mode
 - [x] "Last 30 days" was cut off at 500 sightings (about 9 days on 2026-10-17). The server now returns the whole 28-day window (safety cap 5000) and ignores `limit`, so 1.6.0 and older builds get the full feed too; responses are gzipped (`compression`). The app no longer sends `limit=500`.
 

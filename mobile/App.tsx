@@ -232,6 +232,13 @@ function Main() {
     return { birds: hero ? [hero, ...rest] : rest, seaCount, justCount: 0, featured: !!hero };
   }, [allBirds, period, source, query, userLoc, nearRadiusKm, route, prefs.hideAtSea, prefs.listSort, justReported]);
 
+  // Exceptional birds, most recent first: when their map tags collide, the newest keep theirs
+  const recentRank = useMemo(() => new Map(
+    birds.filter(b => b.tier.rank === 3)
+      .sort((a, b) => (a.latest.observed_at < b.latest.observed_at ? 1 : -1))
+      .map((b, i) => [b.key, i]),
+  ), [birds]);
+
   const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
     const { lat, lng } = b.latest;
     if (lat == null || lng == null) return [];
@@ -247,8 +254,10 @@ function Main() {
       shine: dipLevel(b) === 0 && (recentlyRefound(b) || rareToday(b)),
       dips: dipLevel(b),
       tag: stop != null || b.tier.rank === 3 || b.key === selected?.key,
+      // Overlapping tags: the selected bird always keeps its name, then trip stops in order, then the newest Exceptional
+      tagPriority: b.key === selected?.key ? 0 : stop != null ? stop : 1000 + (recentRank.get(b.key) ?? 0),
     }];
-  }), [birds, selected?.key, period, stopOf]);
+  }), [birds, selected?.key, period, stopOf, recentRank]);
 
   // ---- selected bird (detail view in the sheet) ----
   // A saved bird may have dropped out of the feed; then it only exists in the trip

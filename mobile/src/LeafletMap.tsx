@@ -20,6 +20,8 @@ export interface MapPin {
   color?: string;
   /** Show the bird's name in a tag next to the pin */
   tag?: boolean;
+  /** When tags would overlap, lower numbers keep theirs (declutter() in the page) */
+  tagPriority?: number;
   /** Highlight as the currently selected bird */
   selected?: boolean;
   /** Refound by a user in the last day: a shine sweeps across the pin */
@@ -244,7 +246,7 @@ function buildHtml(
         + (pin.shine ? ' shine' : faded && !pin.selected ? ' faded' : '') + '" style="' + style + '">'
         + '<svg viewBox="0 0 64 64"><path fill="#fff" d="${BIRD_PATH}"/></svg></div>'
         + (pin.shine ? '<div class="glint">✦</div><div class="glint g2">✦</div>' : '')
-        + (pin.tag ? '<div class="tag">' + esc(pin.label) + '</div>' : '') + '</div>',
+        + (pin.tag ? '<div class="tag" data-p="' + Number(pin.tagPriority != null ? pin.tagPriority : 9999) + '">' + esc(pin.label) + '</div>' : '') + '</div>',
       // the rotated square's sharp corner sits ~36px below its top edge
       iconSize: [30, 30], iconAnchor: [15, 36], popupAnchor: [0, -34],
     });
@@ -365,7 +367,11 @@ function buildHtml(
       // One pin for the spot: it shines if any bird there was refound, fades only if all were dipped
       // (then its red follows the most-dipped bird)
       var allDipped = group.every(function(p) { return p.dips > 0; });
-      var spot = Object.assign({}, first, {
+      // Its tag (if any bird there has one) names the bird with the highest tag priority,
+      // and the pin takes that bird's rarity colour so the two match
+      var tagged = group.filter(function(p) { return p.tag; })
+        .sort(function(a, b) { return (a.tagPriority || 0) - (b.tagPriority || 0); })[0];
+      var spot = Object.assign({}, first, tagged ? { tag: true, label: tagged.label, tagPriority: tagged.tagPriority, color: tagged.color } : null, {
         shine: group.some(function(p) { return p.shine; }),
         dips: allDipped ? Math.max.apply(null, group.map(function(p) { return p.dips; })) : 0,
       });
@@ -389,8 +395,34 @@ function buildHtml(
     });
 
     if (fit) fitAll(pins);
+    setTimeout(declutter, 0); // after the new markers are laid out
   }
   window.__render = render;
+
+  // Name tags that would overlap: place them in priority order (selected bird, trip stops,
+  // then the most recent Exceptional birds) and hide any that touch one already placed.
+  // Runs again after every zoom or pan, so more names appear as the birds spread apart.
+  // Pins showing a name sit above the rest, so neighbouring pins don't cover it.
+  function declutter() {
+    var items = [];
+    layer.eachLayer(function(m) {
+      var t = m._icon && m._icon.querySelector('.tag');
+      if (t) items.push({ marker: m, tag: t });
+    });
+    items.sort(function(a, b) { return Number(a.tag.dataset.p) - Number(b.tag.dataset.p); });
+    var placed = [];
+    items.forEach(function(it) {
+      it.tag.style.visibility = 'visible';
+      var r = it.tag.getBoundingClientRect();
+      var hit = placed.some(function(q) {
+        return r.left < q.right + 4 && r.right > q.left - 4 && r.top < q.bottom + 2 && r.bottom > q.top - 2;
+      });
+      it.tag.style.visibility = hit ? 'hidden' : 'visible';
+      if (!hit) placed.push(r);
+      it.marker.setZIndexOffset(hit ? 0 : 1000);
+    });
+  }
+  map.on('zoomend moveend', declutter);
   window.__dark = function(on) {
     document.documentElement.classList.toggle('dark', on);
     render(lastPins, false); // dipped pins pale towards the new background
