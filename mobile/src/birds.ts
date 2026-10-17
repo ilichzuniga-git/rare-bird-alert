@@ -142,16 +142,23 @@ export function recentlyRefound(bird: Bird, now = Date.now()): boolean {
 }
 
 /**
- * A user dipped it in the last day and nobody has seen it since (no refound, no new report):
- * the map pin fades, without drawing attention.
+ * Dips in the last 3 days since anyone last saw it (a new report or a refound resets it,
+ * counted by the server). Any dip fades the map pin; more of them deepen the red.
  */
-export function recentlyDipped(bird: Bird, now = Date.now()): boolean {
-  const at = bird.cluster?.last_dipped_at;
-  if (!at) return false;
-  const dipped = new Date(at).getTime();
-  if (now - dipped > DAY_MS) return false;
-  const refound = bird.cluster?.last_refound_at ? new Date(bird.cluster.last_refound_at).getTime() : 0;
-  return dipped > refound && dipped > new Date(bird.latest.observed_at).getTime();
+export function dipCount(bird: Bird): number {
+  return bird.cluster?.recent_dips ?? 0;
+}
+
+/** "✗ Dipped" or "✗ Dipped ×3" while dips are piling up since the last report, else null. */
+export function dipLabel(bird: Bird): string | null {
+  const n = dipCount(bird);
+  return n === 0 ? null : n === 1 ? '✗ Dipped' : `✗ Dipped ×${n}`;
+}
+
+/** 0 for no dips, 1 for one, 2 for two or three, 3 for four or more: picks a DIP_RED shade. */
+export function dipLevel(bird: Bird): 0 | 1 | 2 | 3 {
+  const n = dipCount(bird);
+  return n >= 4 ? 3 : n >= 2 ? 2 : n === 1 ? 1 : 0;
 }
 
 /** "Refound 38 min ago" when a user refound it in the last day (server time, so accurate). */

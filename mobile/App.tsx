@@ -25,7 +25,7 @@ import { SheetHeader, SheetList } from './src/RaritiesSheet';
 import { TripHeader, TripList } from './src/TripSheet';
 import CarIcon from './src/CarIcon';
 import { MAX_STOPS, openTripDirections, routable, routeOrder, useTrip } from './src/trip';
-import { atSea, byRarity, featurable, islandOf, rareToday, recentlyDipped, recentlyRefound, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
+import { atSea, byRarity, featurable, islandOf, rareToday, dipLevel, recentlyRefound, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
 import { usePrefs } from './src/prefs';
 import { colors } from './src/theme';
 import { API_BASE, formatDate } from './src/util';
@@ -236,8 +236,8 @@ function Main() {
       color: b.tier.color,
       selected: b.key === selected?.key,
       // A dip newer than the last report wins over a refound or a rare bird seen today
-      shine: !recentlyDipped(b) && (recentlyRefound(b) || rareToday(b)),
-      faded: recentlyDipped(b),
+      shine: dipLevel(b) === 0 && (recentlyRefound(b) || rareToday(b)),
+      dips: dipLevel(b),
       tag: stop != null || b.tier.rank === 3 || b.key === selected?.key,
     }];
   }), [birds, selected?.key, period, stopOf]);

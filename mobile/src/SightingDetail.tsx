@@ -13,8 +13,8 @@ import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 import BirdPhoto from './BirdPhoto';
 import CarIcon from './CarIcon';
-import { atSea, islandOf, refoundLabel, statusWord, type Bird } from './birds';
-import { colors, radius, STATUS_DOT } from './theme';
+import { atSea, dipLabel, dipLevel, islandOf, refoundLabel, statusWord, type Bird } from './birds';
+import { colors, DIP_RED, radius, STATUS_DOT } from './theme';
 import {
   API_BASE, distanceMetres, findNoteCoordinates, formatDate, formatDateTime, formatDistance, formatSource, openInMaps,
   openTransitDirections,
@@ -310,6 +310,9 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
 
   const status = refoundLabel(bird) ?? (cluster ? cluster.status.label : statusWord(bird));
   const level = cluster?.status.level ?? bird.cluster?.status.level ?? 'gray';
+  // The freshly loaded cluster (after the user's own report) beats the one from the list
+  const dipBird = cluster ? { ...bird, cluster } : bird;
+  const dips = dipLevel(dipBird);
   const weekReports = cluster?.days?.reduce((n, d) => n + d.sightings, 0);
   const noteCount = (payload?.observer_note ? 1 : 0) + comments.length;
   // For an obscured iNaturalist location we must never offer Directions to the
@@ -329,6 +332,7 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
         {status ? (
           <Text style={[styles.status, { color: STATUS_DOT[level] }]}>
             ● {status}{weekReports ? ` · ${weekReports} report${weekReports === 1 ? '' : 's'} this week` : ''}
+            {dips ? <Text style={[styles.statusDips, { color: DIP_RED[dips].text }]}> · {dipLabel(dipBird)}</Text> : null}
           </Text>
         ) : null}
 
@@ -544,6 +548,7 @@ const styles = StyleSheet.create({
   day: { flex: 1, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: 10.5, fontWeight: '700' },
   status: { fontSize: 13, fontWeight: '600', marginBottom: 12 },
+  statusDips: { fontWeight: '800' },
 
   // actions
   cta: { flexDirection: 'row', gap: 10 },

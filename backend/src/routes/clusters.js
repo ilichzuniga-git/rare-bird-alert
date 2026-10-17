@@ -39,6 +39,14 @@ function isRateLimited(ip) {
   return false;
 }
 
+// Dips in the last 3 days made after the bird was last seen (sighting or refound):
+// the app deepens the red as they pile up, and a new sighting resets the count.
+const RECENT_DIPS_SQL = `
+  (SELECT COUNT(*)::int FROM cluster_reports r
+    WHERE r.cluster_id = c.id AND r.type = 'dipped'
+      AND r.created_at > NOW() - INTERVAL '3 days'
+      AND r.created_at > GREATEST(c.last_seen, COALESCE(c.last_refound_at, c.last_seen))) AS recent_dips`;
+
 /**
  * Derive a human-readable status label from cluster data.
  * Returns { label, level } where level is 'green' | 'amber' | 'red' | 'gray'
@@ -94,7 +102,7 @@ function clusterStatus(cluster) {
 router.get('/', async (req, res) => {
   try {
     const { rows: clusters } = await db.query(`
-      SELECT c.*,
+      SELECT c.*, ${RECENT_DIPS_SQL},
              json_agg(
                json_build_object('lat', s.lat, 'lng', s.lng, 'observed_at', s.observed_at, 'source', s.source)
                ORDER BY s.observed_at ASC
@@ -127,7 +135,7 @@ router.get('/:id', async (req, res) => {
   }
   try {
     const { rows } = await db.query(`
-      SELECT c.*,
+      SELECT c.*, ${RECENT_DIPS_SQL},
              json_agg(
                json_build_object('lat', s.lat, 'lng', s.lng, 'observed_at', s.observed_at, 'source', s.source)
                ORDER BY s.observed_at ASC

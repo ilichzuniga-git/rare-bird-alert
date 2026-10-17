@@ -53,4 +53,11 @@ export const STATUS_DOT: Record<string, string> = {
   gray: colors.gray,
 };
 
+/** Reds for piled-up dips, by dipLevel(): the pin outline and the "Dipped ×N" text deepen. */
+export const DIP_RED: Record<1 | 2 | 3, { pin: string; text: string }> = {
+  1: { pin: '#f19a9a', text: '#d64545' },
+  2: { pin: '#d64545', text: '#b42323' },
+  3: { pin: '#8f1d1d', text: '#7f1d1d' },
+};
+
 export const radius = { sheet: 28, card: 18, hero: 22, control: 12, badge: 7 };

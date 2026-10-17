@@ -11,8 +11,8 @@ import {
   View,
 } from 'react-native';
 import { parseCredit, usePhoto } from './BirdPhoto';
-import { atSea, islandOf, NEAR_RADII_KM, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
-import { colors, radius, STATUS_DOT } from './theme';
+import { atSea, dipLabel, dipLevel, islandOf, NEAR_RADII_KM, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
+import { colors, DIP_RED, radius, STATUS_DOT } from './theme';
 import { formatDistance, formatSource } from './util';
 
 // ---------------------------------------------------------------------------
@@ -285,7 +285,7 @@ function Hero({ bird, fresh, nearest, distance, onPress }: {
           ★ {fresh || nearest ? `${fresh ? 'NEW' : 'CLOSEST TO YOU'}${bird.tier.rank > 0 ? ` · ${bird.tier.name.toUpperCase()}` : ''}`
             : bird.tier.rank > 0 ? bird.tier.name.toUpperCase() : 'RAREST RIGHT NOW'}
         </Text>
-        {status ? <Text style={styles.chip}>● {status}</Text> : null}
+        {status ? <Text style={styles.chip}>● {status}{dipLabel(bird) ? ` · ${dipLabel(bird)}` : ''}</Text> : null}
       </View>
       <Text style={styles.heroName} numberOfLines={1}>{bird.count && bird.count > 1 ? `${bird.count}× ` : ''}{s.common_name}</Text>
       <Text style={styles.heroMeta} numberOfLines={1}>{meta}</Text>
@@ -321,6 +321,7 @@ export const BirdRow = memo(function BirdRow({
   const s = bird.latest;
   const photo = usePhoto(s.photo_url, s.photo_attribution, s.scientific_name);
   const dot = STATUS_DOT[bird.cluster?.status.level ?? 'gray'];
+  const dips = stale ? 0 : dipLevel(bird);
   const place = s.location_name ?? s.region_name;
   const sub = [
     atSea(bird) ? '🚤 At sea' : islandOf(bird) ? '🏝️ Island' : null,
@@ -348,7 +349,10 @@ export const BirdRow = memo(function BirdRow({
         <Text style={styles.rowName} numberOfLines={1}>
           {bird.count && bird.count > 1 ? `${bird.count}× ` : ''}{s.common_name}
         </Text>
-        <Text style={styles.rowSub} numberOfLines={1}>{sub}</Text>
+        <Text style={styles.rowSub} numberOfLines={1}>
+          {dips ? <Text style={[styles.rowDips, { color: DIP_RED[dips].text }]}>{dipLabel(bird)}{sub ? ' · ' : ''}</Text> : null}
+          {sub}
+        </Text>
       </View>
       <View style={styles.rowEnd}>
         <Text style={[styles.badge, { backgroundColor: bird.tier.soft, color: bird.tier.color }]}>{bird.tier.name}</Text>
@@ -433,6 +437,7 @@ const styles = StyleSheet.create({
   rowMain: { flex: 1, minWidth: 0 },
   rowName: { fontSize: 15, fontWeight: '700', color: colors.text },
   rowSub: { fontSize: 12, color: colors.muted, marginTop: 2, fontWeight: '500' },
+  rowDips: { fontWeight: '800' },
   rowEnd: { alignItems: 'flex-end', flexShrink: 0 },
   badge: { fontSize: 10.5, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.badge, overflow: 'hidden' },
   when: { fontSize: 11, color: colors.muted, marginTop: 4, fontWeight: '600' },

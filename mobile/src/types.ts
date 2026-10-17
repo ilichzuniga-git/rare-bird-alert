@@ -57,6 +57,8 @@ export interface ClusterData {
   dip_count: number;
   last_refound_at: string | null;
   last_dipped_at: string | null;
+  /** Dips in the last 3 days made after the latest sighting or refound */
+  recent_dips?: number;
   sighting_pins: ClusterPin[] | null;
   status: { label: string; level: 'green' | 'amber' | 'red' | 'gray' };
   /** Last 7 days, oldest first (single-cluster endpoint only) */

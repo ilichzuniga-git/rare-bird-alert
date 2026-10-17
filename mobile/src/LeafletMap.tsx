@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { DIP_RED } from './theme';
 
 export interface MapPin {
   lat: number;
@@ -23,8 +24,8 @@ export interface MapPin {
   selected?: boolean;
   /** Refound by a user in the last day: a shine sweeps across the pin */
   shine?: boolean;
-  /** Dipped in the last day with no report since: the pin is faded */
-  faded?: boolean;
+  /** Dipped since the last report (dipLevel): the pin fades and gets a red outline, deeper with more dips */
+  dips?: 0 | 1 | 2 | 3;
 }
 
 /** A bird shown in detail on the main map: stakeout circle, earlier reports, observer's spot. */
@@ -140,8 +141,9 @@ function buildHtml(
       .tp.shine::after { display: none; }
       .glint { animation: none; }
     }
-    /* Dipped: faded and greyed, no motion, so it doesn't draw the eye */
-    .tp.faded { opacity: .45; filter: grayscale(.7); }
+    /* Dipped: the fill pales towards grey (in teardrop()) and the outline turns red, deeper with more dips.
+       No motion, and no opacity, which would wash out the red. */
+    .tp.faded { box-shadow: 0 2px 6px rgba(0,0,0,.15); }
     .me { width: 34px; height: 34px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg);
           background: #101a15; border: 3px solid #fff;
           box-shadow: 0 0 0 5px rgba(16,26,21,.18), 0 4px 10px rgba(0,0,0,.3);
@@ -210,11 +212,22 @@ function buildHtml(
     html: '<div style="width:22px;height:22px;border-radius:50%;background:rgba(234,88,12,0.25);border:3px solid #ea580c;display:flex;align-items:center;justify-content:center;"><div style="width:6px;height:6px;border-radius:50%;background:#ea580c;"></div></div>',
     iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -11],
   });
+  var DIP_RED = ${JSON.stringify(Object.fromEntries(Object.entries(DIP_RED).map(([k, v]) => [k, v.pin])))};
+  // A #rrggbb colour mixed most of the way towards pale grey: the fill of a dipped pin
+  function pale(hex) {
+    var n = parseInt(String(hex).slice(1), 16);
+    if (isNaN(n)) return hex;
+    var mix = function(c, g) { return Math.round(c + (g - c) * 0.65); };
+    return 'rgb(' + mix(n >> 16, 214) + ',' + mix((n >> 8) & 255, 219) + ',' + mix(n & 255, 215) + ')';
+  }
   function teardrop(pin) {
+    var faded = pin.dips > 0 && !pin.shine;
+    var style = 'background:' + esc(faded && !pin.selected ? pale(pin.color) : pin.color)
+      + (faded ? ';border-color:' + DIP_RED[pin.dips] : '');
     return L.divIcon({
       className: '',
       html: '<div style="position:relative"><div class="tp' + (pin.selected ? ' sel' : '')
-        + (pin.shine ? ' shine' : pin.faded && !pin.selected ? ' faded' : '') + '" style="background:' + esc(pin.color) + '">'
+        + (pin.shine ? ' shine' : faded && !pin.selected ? ' faded' : '') + '" style="' + style + '">'
         + '<svg viewBox="0 0 64 64"><path fill="#fff" d="${BIRD_PATH}"/></svg></div>'
         + (pin.shine ? '<div class="glint">✦</div><div class="glint g2">✦</div>' : '')
         + (pin.tag ? '<div class="tag">' + esc(pin.label) + '</div>' : '') + '</div>',
@@ -336,9 +349,11 @@ function buildHtml(
       var group = groups[key];
       var first = group[0];
       // One pin for the spot: it shines if any bird there was refound, fades only if all were dipped
+      // (then its red follows the most-dipped bird)
+      var allDipped = group.every(function(p) { return p.dips > 0; });
       var spot = Object.assign({}, first, {
         shine: group.some(function(p) { return p.shine; }),
-        faded: group.every(function(p) { return p.faded; }),
+        dips: allDipped ? Math.max.apply(null, group.map(function(p) { return p.dips; })) : 0,
       });
       var icon = first.color ? teardrop(spot) : birdIcon;
       var marker = L.marker([Number(first.lat), Number(first.lng)], { icon: icon }).addTo(layer);
