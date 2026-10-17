@@ -1,5 +1,6 @@
 const path = require('path');
 const express = require('express');
+const compression = require('compression');
 const cors = require('cors');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
@@ -18,6 +19,8 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(helmet());
+// The sightings feed is ~1 MB of JSON for 28 days; gzip cuts it to a small fraction
+app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '10kb' })); // request bodies are tiny ({ type } / { token, platform })
 

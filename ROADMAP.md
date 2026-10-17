@@ -129,7 +129,7 @@ What is planned, being considered and being watched for Birder's Best Friend (An
 - [x] Push registration used its own hard-coded server address (`notifications.ts`); it now shares `API_BASE` from `util.ts`
 - [x] Trip directions on iPhones older than iOS 18.4 (no Apple multi-stop link) go straight to Google Maps
 - [ ] Test on real phones, both platforms, including VoiceOver / TalkBack and airplane mode
-- [ ] Still open from the review: "Last 30 days" is cut off at 500 sightings (about 9 days on 2026-10-17)
+- [x] "Last 30 days" was cut off at 500 sightings (about 9 days on 2026-10-17). The server now returns the whole 28-day window (safety cap 5000) and ignores `limit`, so 1.6.0 and older builds get the full feed too; responses are gzipped (`compression`). The app no longer sends `limit=500`.
 
 ## Ideas worth exploring
 

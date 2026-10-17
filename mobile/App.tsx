@@ -62,7 +62,7 @@ function Main() {
   const fetchSightings = useCallback(async () => {
     try {
       const [sRes, cRes] = await Promise.all([
-        fetch(`${API_BASE}/api/sightings?limit=500`),
+        fetch(`${API_BASE}/api/sightings`),
         fetch(`${API_BASE}/api/clusters`),
       ]);
       if (!sRes.ok) throw new Error(`Server returned ${sRes.status}`);

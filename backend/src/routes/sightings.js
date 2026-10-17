@@ -28,11 +28,15 @@ function httpsGet(url, headers = {}) {
 // GET /api/sightings
 // Query params:
 //   region - eBird region code (e.g. 'US-CA-037'), or comma-separated list
-//   limit  - max results (default 50, max 200)
 //   since  - ISO 8601 timestamp; only return sightings observed after this
+// Returns the whole retention window (28 days, see the poller), so "Last 30 days" in the
+// app is complete. A `limit` param is ignored: app builds up to 1.6.0 send limit=500, which
+// cut the feed to about the last 9 days. FEED_MAX is only a safety cap.
+const FEED_MAX = 5000;
+
 router.get('/', async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit, 10) || 500, 500);
+    const limit = FEED_MAX;
     const conditions = [];
     const params = [];
 
