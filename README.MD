@@ -287,8 +287,10 @@ node src/db/migrate.js
 
 1. Make your changes in `mobile/`
 2. Commit and push to GitHub
-3. **Android:** run `eas build -p android --profile production`, download the `.aab`, and upload it to Play Console → Internal Testing → Create new release. Testers get the update automatically through the Play Store
-4. **iOS:** run `eas build -p ios --profile production`, then `eas submit -p ios --latest`. Testers get the update through TestFlight (see [Build for iOS](#build-for-ios-testflight--app-store))
+3. **Release prep:** bump `expo.version` in `mobile/app.json`, write `WHATS_NEW` in `mobile/src/guide.ts` (3 highlights), and add the matching entry to the guide's What's new (`backend/src/site/index.html`) with the iPhone build and Android version code. While a store is still reviewing it, the entry's build label carries a status: `iPhone build 8 · <span class="rollout">in progress</span>`, `Android 12 · <span class="rollout">queued</span>`. Remove the status and add the date when it goes live. Pushing `backend/` deploys the guide
+4. **Build both:** from the main checkout's `mobile/` (run `npm install` after pulling), `eas build -p all --profile production --non-interactive --no-wait`. Build numbers auto-increment on EAS
+5. **Android:** download the `.aab` and upload it in Play Console → **Production** → Create new release. Play publishes it as soon as review passes, unless **Managed publishing** is on; to try it on a phone first, put the same `.aab` on **Internal testing** too
+6. **iOS:** `eas submit -p ios --id <build id> --non-interactive` uploads it to App Store Connect. Only one version can be in App Review at a time, so wait for the previous one to be approved. Create the version, attach the build, and submit with **Manually release this version**; testers check the build in TestFlight meanwhile, and you press **Release This Version** once both are happy (see [Build for iOS](#build-for-ios-testflight--app-store))
 
 Each store only needs a new upload when you want that platform's users to get the change. An iOS-only change (a `Platform.OS === 'ios'` branch or the `ios` section of `app.json`) doesn't need an Android upload, and vice versa; the next build of the other platform picks the code up but behaves as before.
 

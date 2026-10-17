@@ -7,7 +7,7 @@ A small website that replaces an in-app tutorial. One page with three tabs:
 | Tab | URL hash | What it is |
 |---|---|---|
 | Tour | `#tour` | How the app works, with simulator screenshots of the real app (taken on 1.4.0/1.5.0; text current to 1.7.0) |
-| What's new | `#whats-new` | One entry per release, with the iOS build and Android version code |
+| What's new | `#whats-new` | One entry per release, with the iOS build and Android version code. While a store is still reviewing it, the build label adds a status in ochre (`<span class="rollout">in progress</span>` / `queued`); remove it when that version goes live |
 | Privacy | `#privacy` | The privacy policy. Change it here when data handling changes, with a new date |
 
 Design follows `../01-field-guide.html`: warm paper, Fraunces serif headings with a rust italic second
