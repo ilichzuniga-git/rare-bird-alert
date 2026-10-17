@@ -122,6 +122,15 @@ What is planned, being considered and being watched for Birder's Best Friend (An
 - [ ] Test on real phones: the pill on a bird page, both map apps on iPhone, Google Maps on Android
 - [ ] Update the guide and the What's new entry
 
+**Code review fixes (from `mcode_review.md`, 2026-10-17).** Built 2026-10-17, unreleased:
+- [x] Offline: the last feed that loaded is kept in `feed.json` (`mobile/src/feed.ts`, like the trip and prefs). With no signal the app opens on it, and the header says "offline · data from 6:12 AM" instead of an error. Checked in the simulator against an unreachable server. Photos for eBird birds still need the network (iNaturalist lookups).
+- [x] Newest / Rarest toggle beside the list title on Last 7 / 30 days, kept in prefs (`listSort`). Near me stays closest-first; "Just reported" keeps its order.
+- [x] Accessibility: list rows and the hero read one sentence (name, rarity, when, where, distance, status, dips); roles and selected state on the period tabs, source and radius pills, report chips, Refound / Dipped, trip and About buttons. Labels checked in the simulator's accessibility tree.
+- [x] Push registration used its own hard-coded server address (`notifications.ts`); it now shares `API_BASE` from `util.ts`
+- [x] Trip directions on iPhones older than iOS 18.4 (no Apple multi-stop link) go straight to Google Maps
+- [ ] Test on real phones, both platforms, including VoiceOver / TalkBack and airplane mode
+- [ ] Still open from the review: "Last 30 days" is cut off at 500 sightings (about 9 days on 2026-10-17)
+
 ## Ideas worth exploring
 
 Not committed to. Each needs more thought before it's built.

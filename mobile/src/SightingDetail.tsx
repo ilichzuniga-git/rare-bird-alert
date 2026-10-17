@@ -207,6 +207,7 @@ export function DetailHeader({ bird, sighting, distance, onClose, onTrip, onTogg
             style={[styles.close, onTrip && styles.tripOn]}
             onPress={onToggleTrip}
             hitSlop={8}
+            accessibilityRole="button"
             accessibilityLabel={onTrip ? 'Remove from trip' : 'Save to trip'}
             accessibilityState={{ selected: onTrip }}
           >
@@ -346,10 +347,12 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
 
         {sighting.cluster_id ? (
           <View style={styles.cta}>
-            <Pressable style={[styles.ctaBtn, styles.ctaYes]} onPress={() => detail.openConfirm('refound')} disabled={detail.reporting}>
+            <Pressable style={[styles.ctaBtn, styles.ctaYes]} onPress={() => detail.openConfirm('refound')} disabled={detail.reporting}
+              accessibilityRole="button" accessibilityLabel="Refound: I saw this bird">
               <Text style={styles.ctaYesText}>✓ Refound</Text>
             </Pressable>
-            <Pressable style={[styles.ctaBtn, styles.ctaNo]} onPress={() => detail.openConfirm('dipped')} disabled={detail.reporting}>
+            <Pressable style={[styles.ctaBtn, styles.ctaNo]} onPress={() => detail.openConfirm('dipped')} disabled={detail.reporting}
+              accessibilityRole="button" accessibilityLabel="Dipped: I looked and didn't find it">
               <Text style={styles.ctaNoText}>✗ Dipped</Text>
             </Pressable>
           </View>
@@ -435,7 +438,9 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
               {bird.reports.map(r => {
                 const active = r.id === sighting.id;
                 return (
-                  <Pressable key={r.id} style={[styles.chip, active && styles.chipOn]} onPress={() => onSelectReport(r)}>
+                  <Pressable key={r.id} style={[styles.chip, active && styles.chipOn]} onPress={() => onSelectReport(r)}
+                    accessibilityRole="button" accessibilityState={{ selected: active }}
+                    accessibilityLabel={`Report ${formatDateTime(r.observed_at)}, ${formatSource(r.source)}`}>
                     <Text style={[styles.chipText, active && styles.chipTextOn]}>{formatDateTime(r.observed_at)}</Text>
                     <Text style={[styles.chipSub, active && styles.chipTextOn]}>{formatSource(r.source)}</Text>
                   </Pressable>

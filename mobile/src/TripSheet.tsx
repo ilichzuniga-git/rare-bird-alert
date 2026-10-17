@@ -49,7 +49,8 @@ export function TripHeader({ count, stops, fromYou, onDirections, onClear, onClo
       </View>
       {count > 0 ? (
         <View style={styles.actions}>
-          <Pressable style={[styles.btn, styles.go, !routed && styles.off]} onPress={onDirections} disabled={!routed}>
+          <Pressable style={[styles.btn, styles.go, !routed && styles.off]} onPress={onDirections} disabled={!routed}
+            accessibilityRole="button" accessibilityState={{ disabled: !routed }}>
             <Text style={styles.goText}>
               ➤ Directions · {routed} stop{routed === 1 ? '' : 's'}
             </Text>
@@ -57,6 +58,8 @@ export function TripHeader({ count, stops, fromYou, onDirections, onClear, onClo
           <Pressable
             style={[styles.btn, arming ? styles.clearArmed : styles.clear]}
             onPress={() => { if (arming) { setArming(false); onClear(); } else setArming(true); }}
+            accessibilityRole="button"
+            accessibilityLabel={arming ? 'Tap again to clear the trip' : 'Clear the trip'}
           >
             <Text style={[styles.clearText, arming && styles.clearTextArmed]}>{arming ? 'Tap to clear' : 'Clear'}</Text>
           </Pressable>

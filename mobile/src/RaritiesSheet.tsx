@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { parseCredit, usePhoto } from './BirdPhoto';
+import type { ListSort } from './prefs';
 import { atSea, dipLabel, dipLevel, islandOf, NEAR_RADII_KM, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
 import { makeStyles, statusColor, radius, useColors } from './theme';
 import { formatDistance, formatSource } from './util';
@@ -65,7 +66,14 @@ export function SheetHeader({
         {PERIODS.map(p => {
           const on = p.key === period;
           return (
-            <Pressable key={p.key} style={[styles.segItem, on && styles.segOn]} onPress={() => onPeriod(p.key)}>
+            <Pressable
+              key={p.key}
+              style={[styles.segItem, on && styles.segOn]}
+              onPress={() => onPeriod(p.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={p.key === 'week' ? `${p.label}, ${weekCount} birds` : p.label}
+            >
               <Text style={[styles.segText, on && styles.segTextOn]} numberOfLines={1}>
                 {p.key === 'week' ? `${p.label} · ${weekCount}` : p.label}
               </Text>
@@ -84,6 +92,7 @@ export function SheetHeader({
                 key={km}
                 style={[styles.pill, on && styles.pillOn]}
                 onPress={() => onNearRadius(km)}
+                accessibilityRole="button"
                 accessibilityState={{ selected: on }}
                 accessibilityLabel={`Within ${km} kilometres`}
               >
@@ -99,7 +108,14 @@ export function SheetHeader({
           {sources.length > 1 ? [null, ...sources].map(s => {
             const on = s === source;
             return (
-              <Pressable key={s ?? 'all'} style={[styles.pill, on && styles.pillOn]} onPress={() => onSource(s)}>
+              <Pressable
+                key={s ?? 'all'}
+                style={[styles.pill, on && styles.pillOn]}
+                onPress={() => onSource(s)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={s ? `${formatSource(s)} only` : 'All sources'}
+              >
                 <Text style={[styles.pillText, on && styles.pillTextOn]}>{s ? formatSource(s) : 'All sources'}</Text>
               </Pressable>
             );
@@ -146,6 +162,8 @@ export function SheetList({
   nearState,
   nearRadiusKm,
   onNearRadius,
+  listSort,
+  onListSort,
   bottomPadding,
 }: {
   /** Already filtered and sorted; the first one becomes the hero card */
@@ -165,6 +183,8 @@ export function SheetList({
   nearState: 'idle' | 'locating' | 'denied' | 'ready';
   nearRadiusKm: number;
   onNearRadius: (km: number) => void;
+  listSort: ListSort;
+  onListSort: (s: ListSort) => void;
   bottomPadding: number;
 }) {
   const styles = useStyles();
@@ -194,7 +214,8 @@ export function SheetList({
 
   const hero = featured ? birds[0] : undefined;
   const rest = featured ? birds.slice(1) : birds;
-  const groupTitle = period === 'near' ? `Also within ${nearRadiusKm} km` : period === 'week' ? 'Also in the last 7 days' : 'Also in the last 30 days';
+  const also = hero ? 'Also in' : 'In';
+  const groupTitle = period === 'near' ? `${hero ? 'Also within' : 'Within'} ${nearRadiusKm} km` : period === 'week' ? `${also} the last 7 days` : `${also} the last 30 days`;
   const wider = NEAR_RADII_KM.find(km => km > nearRadiusKm);
   // Rows after the hero that a tapped notification announced: their own card, then the usual group
   const split = Math.max(justCount - 1, 0);
@@ -216,10 +237,16 @@ export function SheetList({
         </>
       )}
       ListHeaderComponent={
-        hero ? (
+        hero || rest.length ? (
           <>
-            <Hero bird={hero} fresh={justCount > 0} nearest={period === 'near'} distance={distanceOf(hero)} onPress={() => onSelect(hero)} />
-            {rest.length ? <Text style={styles.groupTitle}>{split ? 'Just reported' : groupTitle}</Text> : null}
+            {hero ? <Hero bird={hero} fresh={justCount > 0} nearest={period === 'near'} distance={distanceOf(hero)} onPress={() => onSelect(hero)} /> : null}
+            {rest.length ? (
+              <View style={styles.groupRow}>
+                <Text style={[styles.groupTitle, styles.groupTitleFlex]} numberOfLines={1}>{split ? 'Just reported' : groupTitle}</Text>
+                {/* Near me is always closest first, and "Just reported" keeps its own order */}
+                {period !== 'near' && !split ? <SortToggle value={listSort} onChange={onListSort} /> : null}
+              </View>
+            ) : null}
           </>
         ) : null
       }
@@ -241,6 +268,51 @@ export function SheetList({
       initialNumToRender={12}
       windowSize={7}
     />
+  );
+}
+
+/**
+ * What VoiceOver / TalkBack reads for a bird card or row, in place of the jumble of
+ * badges and chips: "Stop 2, 3 × Ferruginous Duck, Exceptional, Yesterday, Bolsa Chica, 4.2 km, Continuing · 2h ago".
+ */
+function birdLabel(bird: Bird, distance: number | null, lead?: string, stale?: boolean): string {
+  const s = bird.latest;
+  return [
+    lead,
+    `${bird.count && bird.count > 1 ? `${bird.count} × ` : ''}${s.common_name}`,
+    bird.tier.name,
+    whenLabel(s.observed_at),
+    atSea(bird) ? 'At sea' : islandOf(bird) ? 'On an island' : null,
+    s.location_name ?? s.region_name,
+    distance != null ? formatDistance(distance) : null,
+    bird.reports.length > 1 ? `${bird.reports.length} reports` : null,
+    stale ? 'No recent reports' : refoundLabel(bird) ?? statusWord(bird),
+    dipLabel(bird)?.replace('✗ ', '').replace('×', 'times'),
+  ].filter(Boolean).join(', ');
+}
+
+/** Newest / Rarest: the order of the rows under the hero. */
+function SortToggle({ value, onChange }: { value: ListSort; onChange: (s: ListSort) => void }) {
+  const styles = useStyles();
+  return (
+    <View style={styles.sort} accessibilityRole="radiogroup" accessibilityLabel="Sort the list">
+      {(['newest', 'rarest'] as const).map(s => {
+        const on = s === value;
+        return (
+          <Pressable
+            key={s}
+            style={[styles.sortItem, on && styles.sortOn]}
+            onPress={() => onChange(s)}
+            hitSlop={6}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on }}
+            accessibilityLabel={s === 'newest' ? 'Newest first' : 'Rarest first'}
+          >
+            <Text style={[styles.sortText, on && styles.sortTextOn]}>{s === 'newest' ? 'Newest' : 'Rarest'}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -271,7 +343,12 @@ function Hero({ bird, fresh, nearest, distance, onPress }: {
   ].filter(Boolean).join(' · ');
 
   return (
-    <Pressable style={[styles.hero, wide && styles.heroWide, wide && photo.url ? styles.heroWideText : null]} onPress={onPress}>
+    <Pressable
+      style={[styles.hero, wide && styles.heroWide, wide && photo.url ? styles.heroWideText : null]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={birdLabel(bird, distance, fresh ? 'New' : nearest ? 'Closest to you' : 'Rarest right now')}
+    >
       {photo.url && wide ? (
         // 3:2 panel on the right, so the whole bird shows instead of a thin crop across the card
         <Image source={{ uri: photo.url.replace(/\/square\.(\w+)$/, '/large.$1') }} style={styles.heroPanel} resizeMode="cover" />
@@ -341,6 +418,8 @@ export const BirdRow = memo(function BirdRow({
       onPress={onPress}
       android_ripple={{ color: colors.line }}
       style={[styles.row, first && styles.rowFirst, last && styles.rowLast, !first && styles.rowDivider]}
+      accessibilityRole="button"
+      accessibilityLabel={birdLabel(bird, distance, stop != null ? `Stop ${stop}` : undefined, stale)}
     >
       <View style={[styles.ava, { backgroundColor: colors.tierSoft[bird.tier.name] }]}>
         {photo.url ? (
@@ -424,6 +503,13 @@ const useStyles = makeStyles(colors => ({
     letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted,
   },
   groupGap: { paddingTop: 18 },
+  groupRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 16 },
+  groupTitleFlex: { flex: 1 },
+  sort: { flexDirection: 'row', backgroundColor: colors.line, borderRadius: 9, padding: 2, marginBottom: 6 },
+  sortItem: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 7 },
+  sortOn: { backgroundColor: colors.card },
+  sortText: { fontSize: 12, fontWeight: '700', color: colors.muted },
+  sortTextOn: { color: colors.text },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14,
     marginHorizontal: 16, backgroundColor: colors.card, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.line,

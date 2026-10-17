@@ -28,7 +28,8 @@ import { MAX_STOPS, openTripDirections, routable, routeOrder, useTrip } from './
 import { atSea, byRarity, featurable, islandOf, rareToday, dipLevel, recentlyRefound, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
 import { usePrefs } from './src/prefs';
 import { makeStyles, useColors } from './src/theme';
-import { API_BASE, formatDate } from './src/util';
+import { API_BASE, formatDate, formatTime } from './src/util';
+import { loadFeed, saveFeed } from './src/feed';
 import type { ClusterData, Sighting } from './src/types';
 
 const SEARCH_BAR_H = 48;
@@ -48,12 +49,14 @@ function Main() {
   const { height } = useWindowDimensions();
 
   // ---- data ----
-  const [sightings, setSightings] = useState<Sighting[]>([]);
-  const [clusters, setClusters] = useState<Map<number, ClusterData>>(new Map());
-  const [loading, setLoading] = useState(true);
+  // Open on the last feed that loaded, so the app still works with no signal
+  const [saved] = useState(loadFeed);
+  const [sightings, setSightings] = useState<Sighting[]>(() => saved?.sightings ?? []);
+  const [clusters, setClusters] = useState<Map<number, ClusterData>>(() => new Map((saved?.clusters ?? []).map(c => [c.id, c])));
+  const [loading, setLoading] = useState(!saved);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(saved?.savedAt ?? null);
   const [now, setNow] = useState(Date.now());
 
   const fetchSightings = useCallback(async () => {
@@ -65,14 +68,15 @@ function Main() {
       if (!sRes.ok) throw new Error(`Server returned ${sRes.status}`);
       const sData = await sRes.json();
       setSightings(sData.sightings);
+      const savedAt = Date.now();
       if (cRes.ok) {
         const cData = await cRes.json();
-        const map = new Map<number, ClusterData>();
-        for (const c of (cData.clusters ?? [])) map.set(c.id, c);
-        setClusters(map);
+        const list: ClusterData[] = cData.clusters ?? [];
+        setClusters(new Map(list.map(c => [c.id, c])));
+        saveFeed({ sightings: sData.sightings, clusters: list, savedAt });
       }
       setError(null);
-      setUpdatedAt(Date.now());
+      setUpdatedAt(savedAt);
     } catch (e: any) {
       setError(e.message ?? 'Failed to load sightings');
     }
@@ -220,11 +224,13 @@ function Main() {
     const just = visible.filter(isJust).sort(byRarity);
     if (just.length) return { birds: [...just, ...visible.filter(b => !isJust(b))], seaCount, justCount: just.length, featured: true };
     // Rarest bird seen in the last few days that you can get to leads as the hero (one at sea
-    // only if that's all there is); the rest stay newest-first. None that recent: no hero.
+    // only if that's all there is); the rest are newest-first, or rarest-first if chosen. None that recent: no hero.
     const ranked = visible.filter(b => featurable(b)).sort(byRarity);
     const hero = ranked.find(b => !atSea(b)) ?? ranked[0];
-    return { birds: hero ? [hero, ...visible.filter(b => b !== hero)] : visible, seaCount, justCount: 0, featured: !!hero };
-  }, [allBirds, period, source, query, userLoc, nearRadiusKm, route, prefs.hideAtSea, justReported]);
+    const rest = visible.filter(b => b !== hero);
+    if (prefs.listSort === 'rarest') rest.sort(byRarity);
+    return { birds: hero ? [hero, ...rest] : rest, seaCount, justCount: 0, featured: !!hero };
+  }, [allBirds, period, source, query, userLoc, nearRadiusKm, route, prefs.hideAtSea, prefs.listSort, justReported]);
 
   const pins: MapPin[] = useMemo(() => birds.flatMap(b => {
     const { lat, lng } = b.latest;
@@ -335,7 +341,10 @@ function Main() {
   }, [queryText, selected, period, closeTrip]);
 
   const mins = updatedAt ? Math.floor((now - updatedAt) / 60000) : null;
-  const updatedLabel = mins == null ? 'loading…' : mins < 1 ? 'updated just now' : `updated ${mins} min ago`;
+  const updatedLabel = mins == null ? 'loading…'
+    // A failed refresh with a feed on screen (no signal): say how old it is rather than an error
+    : error && updatedAt ? `offline · data from ${offlineFrom(updatedAt, now)}`
+    : mins < 1 ? 'updated just now' : `updated ${mins} min ago`;
   const fitKey = `${loading ? 'loading' : 'ready'}|${period}|${source}|${query}|${period === 'trip' ? trip.count : ''}`
     + `|${period === 'near' ? nearRadiusKm : ''}`;
   const me: UserSpot | null = (period === 'near' || period === 'trip') && userLoc
@@ -359,7 +368,7 @@ function Main() {
 
       {/* Floating search bar */}
       <View style={[styles.topBar, { top: insets.top + 8 }]}>
-        <Pressable style={styles.logo} onPress={() => setAboutOpen(true)} accessibilityLabel="About and data sources">
+        <Pressable style={styles.logo} onPress={() => setAboutOpen(true)} accessibilityRole="button" accessibilityLabel="About and data sources">
           <Image source={require('./assets/icon.png')} style={styles.logoImage} />
         </Pressable>
         <View style={styles.search}>
@@ -386,6 +395,7 @@ function Main() {
         <Pressable
           style={[styles.tripBtn, period === 'trip' && styles.tripBtnOn]}
           onPress={openOrCloseTrip}
+          accessibilityRole="button"
           accessibilityLabel={`Trip, ${trip.count} saved bird${trip.count === 1 ? '' : 's'}`}
         >
           <CarIcon size={26} cut={period === 'trip' ? colors.accent : colors.inverse} />
@@ -470,6 +480,8 @@ function Main() {
             nearState={nearState}
             nearRadiusKm={nearRadiusKm}
             onNearRadius={setNearRadius}
+            listSort={prefs.listSort}
+            onListSort={s => setPref('listSort', s)}
             bottomPadding={hidden + insets.bottom}
           />
         )}
@@ -515,3 +527,10 @@ const useStyles = makeStyles(colors => ({
   },
   toastText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 }));
+
+/** "6:12 AM" for earlier today, "Oct 15 6:12 AM" for an older saved feed. */
+function offlineFrom(at: number, now: number): string {
+  const d = new Date(at);
+  const time = formatTime(d);
+  return d.toDateString() === new Date(now).toDateString() ? time : `${formatDate(d.toISOString())} ${time}`;
+}

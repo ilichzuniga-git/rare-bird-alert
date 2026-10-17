@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import type * as NotificationsModule from 'expo-notifications';
 import Constants from 'expo-constants';
 
-const API_BASE = 'https://rba-backend.cloudedapps.org';
+import { API_BASE } from './util';
 
 // This install's push token, once registered; markAlertsSeen needs it
 let pushToken: string | null = null;

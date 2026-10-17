@@ -13,10 +13,14 @@ export interface Prefs {
   lastSeenVersion: string | null;
   /** "Near me" radius in km, one of NEAR_RADII_KM */
   nearRadiusKm: number;
+  /** Order of the list under the hero on Last 7 / 30 days (Near me is always closest first) */
+  listSort: ListSort;
 }
 
+export type ListSort = 'newest' | 'rarest';
+
 // At-sea birds start hidden: pelagic trips are rare next to land birding
-const DEFAULTS: Prefs = { hideAtSea: true, lastSeenVersion: null, nearRadiusKm: 25 };
+const DEFAULTS: Prefs = { hideAtSea: true, lastSeenVersion: null, nearRadiusKm: 25, listSort: 'newest' };
 
 const prefsFile = () => new File(Paths.document, 'prefs.json');
 

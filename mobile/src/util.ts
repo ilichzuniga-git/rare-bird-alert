@@ -48,14 +48,18 @@ export function formatDate(iso: string): string {
   return MONTHS[d.getMonth()] + ' ' + d.getDate().toString();
 }
 
+/** "11:15 AM" */
+export function formatTime(d: Date): string {
+  const h = d.getHours(), m = d.getMinutes();
+  return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
 /** "Sep 17 · 11:15 AM"; date only when the report has no time (midnight). */
 export function formatDateTime(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return formatDate(iso);
-  const h = d.getHours(), m = d.getMinutes();
-  if (h === 0 && m === 0) return formatDate(iso);
-  const time = `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-  return `${formatDate(iso)} · ${time}`;
+  if (d.getHours() === 0 && d.getMinutes() === 0) return formatDate(iso);
+  return `${formatDate(iso)} · ${formatTime(d)}`;
 }
 
 /** Open the phone's maps app at an exact point (Android geo: intent, Apple Maps on iOS). */

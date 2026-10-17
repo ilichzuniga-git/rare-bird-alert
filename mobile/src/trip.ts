@@ -147,6 +147,12 @@ export const MAX_STOPS = 10;
  * Driving directions from the user's location through every stop. Android opens Google Maps;
  * iOS asks Apple Maps or Google Maps (the Google link opens its app when installed, else Safari).
  */
+/** iOS version check; Platform.Version is a string like "18.4.1" on iOS. */
+function iosAtLeast(major: number, minor: number): boolean {
+  const [ma = 0, mi = 0] = String(Platform.Version).split('.').map(Number);
+  return ma > major || (ma === major && mi >= minor);
+}
+
 export function openTripDirections(route: TripBird[]) {
   const pts = route.map(t => pointOf(t.bird)).filter((p): p is Point => !!p).slice(0, MAX_STOPS)
     .map(p => `${p.lat},${p.lng}`);
@@ -156,7 +162,8 @@ export function openTripDirections(route: TripBird[]) {
 
   let google = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(destination)}`;
   if (waypoints.length) google += `&waypoints=${encodeURIComponent(waypoints.join('|'))}`;
-  if (Platform.OS !== 'ios') { Linking.openURL(google); return; }
+  // Apple's multi-stop link needs iOS 18.4; older iPhones go straight to Google (app or website)
+  if (Platform.OS !== 'ios' || !iosAtLeast(18, 4)) { Linking.openURL(google); return; }
 
   // Unified Maps URL (iOS 18.4+): one `waypoint` per stop, no source = from the user's location
   const apple = `https://maps.apple.com/directions?mode=driving&destination=${encodeURIComponent(destination)}`
