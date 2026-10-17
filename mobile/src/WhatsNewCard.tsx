@@ -2,13 +2,14 @@ import { useRef } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { openGuide, WHATS_NEW, type GuideTab } from './guide';
-import { colors, radius } from './theme';
+import { makeStyles, radius, useColors } from './theme';
 
 /**
  * Shown once after an update (see WHATS_NEW in guide.ts): the release's highlights and a way
  * into the guide website. Any button, or tapping outside, counts as seen.
  */
 export default function WhatsNewCard({ visible, onDone }: { visible: boolean; onDone: () => void }) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   // iOS won't present the browser while this modal is still closing, so wait for onDismiss there
   const pending = useRef<GuideTab | null>(null);
@@ -55,8 +56,8 @@ export default function WhatsNewCard({ visible, onDone }: { visible: boolean; on
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(16,26,21,0.45)', justifyContent: 'flex-end', paddingHorizontal: 12 },
+const useStyles = makeStyles(colors => ({
+  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end', paddingHorizontal: 12 },
   card: {
     backgroundColor: colors.card, borderRadius: radius.sheet, padding: 22, paddingTop: 24,
     width: '100%', maxWidth: 480, alignSelf: 'center',
@@ -76,4 +77,4 @@ const styles = StyleSheet.create({
   secondaryText: { color: colors.accent, fontWeight: '700', fontSize: 14 },
   muted: { color: colors.muted },
   pressed: { opacity: 0.7 },
-});
+}));

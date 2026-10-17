@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { parseCredit, usePhoto } from './BirdPhoto';
 import { atSea, dipLabel, dipLevel, islandOf, NEAR_RADII_KM, refoundLabel, statusWord, whenLabel, type Bird, type Period } from './birds';
-import { colors, DIP_RED, radius, STATUS_DOT } from './theme';
+import { makeStyles, statusColor, radius, useColors } from './theme';
 import { formatDistance, formatSource } from './util';
 
 // ---------------------------------------------------------------------------
@@ -53,6 +53,7 @@ export function SheetHeader({
   nearRadiusKm: number;
   onNearRadius: (km: number) => void;
 }) {
+  const styles = useStyles();
   return (
     <View>
       <View style={styles.hd}>
@@ -166,6 +167,8 @@ export function SheetList({
   onNearRadius: (km: number) => void;
   bottomPadding: number;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   if (loading && birds.length === 0) {
     return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;
   }
@@ -233,7 +236,7 @@ export function SheetList({
         ) : <View style={styles.center}><Text style={styles.emptyText}>No rarities match.</Text></View>
       }
       contentContainerStyle={{ paddingBottom: bottomPadding + 24 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} tintColor={colors.muted} progressBackgroundColor={colors.card} />}
       keyboardShouldPersistTaps="handled"
       initialNumToRender={12}
       windowSize={7}
@@ -254,6 +257,7 @@ function Hero({ bird, fresh, nearest, distance, onPress }: {
   distance: number | null;
   onPress: () => void;
 }) {
+  const styles = useStyles();
   const wide = useWindowDimensions().width >= WIDE_HERO;
   const s = bird.latest;
   const photo = usePhoto(s.photo_url, s.photo_attribution, s.scientific_name);
@@ -318,9 +322,11 @@ export const BirdRow = memo(function BirdRow({
   /** Saved bird that has dropped out of the live feed */
   stale?: boolean;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   const s = bird.latest;
   const photo = usePhoto(s.photo_url, s.photo_attribution, s.scientific_name);
-  const dot = STATUS_DOT[bird.cluster?.status.level ?? 'gray'];
+  const dot = statusColor(colors, bird.cluster?.status.level ?? 'gray');
   const dips = stale ? 0 : dipLevel(bird);
   const place = s.location_name ?? s.region_name;
   const sub = [
@@ -336,7 +342,7 @@ export const BirdRow = memo(function BirdRow({
       android_ripple={{ color: colors.line }}
       style={[styles.row, first && styles.rowFirst, last && styles.rowLast, !first && styles.rowDivider]}
     >
-      <View style={[styles.ava, { backgroundColor: bird.tier.soft }]}>
+      <View style={[styles.ava, { backgroundColor: colors.tierSoft[bird.tier.name] }]}>
         {photo.url ? (
           <Image source={{ uri: photo.url }} style={styles.avaImg} />
         ) : (
@@ -350,19 +356,19 @@ export const BirdRow = memo(function BirdRow({
           {bird.count && bird.count > 1 ? `${bird.count}× ` : ''}{s.common_name}
         </Text>
         <Text style={styles.rowSub} numberOfLines={1}>
-          {dips ? <Text style={[styles.rowDips, { color: DIP_RED[dips].text }]}>{dipLabel(bird)}{sub ? ' · ' : ''}</Text> : null}
+          {dips ? <Text style={[styles.rowDips, { color: colors.dipText[dips] }]}>{dipLabel(bird)}{sub ? ' · ' : ''}</Text> : null}
           {sub}
         </Text>
       </View>
       <View style={styles.rowEnd}>
-        <Text style={[styles.badge, { backgroundColor: bird.tier.soft, color: bird.tier.color }]}>{bird.tier.name}</Text>
+        <Text style={[styles.badge, { backgroundColor: colors.tierSoft[bird.tier.name], color: colors.tierInk[bird.tier.name] }]}>{bird.tier.name}</Text>
         <Text style={styles.when}>{whenLabel(s.observed_at)}</Text>
       </View>
     </Pressable>
   );
 });
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
   // header
   hd: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10 },
   title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.6 },
@@ -428,11 +434,11 @@ const styles = StyleSheet.create({
   ava: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   avaImg: { width: 48, height: 48, borderRadius: 24 },
   avaGlyph: { fontSize: 24 },
-  dot: { position: 'absolute', right: 0, bottom: 0, width: 13, height: 13, borderRadius: 7, borderWidth: 2.5, borderColor: '#fff' },
+  dot: { position: 'absolute', right: 0, bottom: 0, width: 13, height: 13, borderRadius: 7, borderWidth: 2.5, borderColor: colors.ring },
   stop: {
     position: 'absolute', left: -4, top: -4, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5,
-    backgroundColor: colors.text, color: '#fff', fontSize: 11, fontWeight: '800', textAlign: 'center',
-    lineHeight: 17, borderWidth: 1.5, borderColor: '#fff', overflow: 'hidden',
+    backgroundColor: colors.inverse, color: '#fff', fontSize: 11, fontWeight: '800', textAlign: 'center',
+    lineHeight: 17, borderWidth: 1.5, borderColor: colors.ring, overflow: 'hidden',
   },
   rowMain: { flex: 1, minWidth: 0 },
   rowName: { fontSize: 15, fontWeight: '700', color: colors.text },
@@ -441,4 +447,4 @@ const styles = StyleSheet.create({
   rowEnd: { alignItems: 'flex-end', flexShrink: 0 },
   badge: { fontSize: 10.5, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.badge, overflow: 'hidden' },
   when: { fontSize: 11, color: colors.muted, marginTop: 4, fontWeight: '600' },
-});
+}));

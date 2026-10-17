@@ -14,7 +14,7 @@ import * as Location from 'expo-location';
 import BirdPhoto from './BirdPhoto';
 import CarIcon from './CarIcon';
 import { atSea, dipLabel, dipLevel, islandOf, refoundLabel, statusWord, type Bird } from './birds';
-import { colors, DIP_RED, radius, STATUS_DOT } from './theme';
+import { makeStyles, statusColor, radius, useColors } from './theme';
 import {
   API_BASE, distanceMetres, findNoteCoordinates, formatDate, formatDateTime, formatDistance, formatSource, openInMaps,
   openTransitDirections,
@@ -176,6 +176,8 @@ export function DetailHeader({ bird, sighting, distance, onClose, onTrip, onTogg
   onTrip: boolean;
   onToggleTrip: () => void;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   const place = [
     sighting.at_sea ? '🚤 At sea' : sighting.island ? '🏝️ Island' : null,
     sighting.location_name ?? sighting.region_name,
@@ -193,7 +195,7 @@ export function DetailHeader({ bird, sighting, distance, onClose, onTrip, onTogg
         commonName={sighting.common_name}
       />
       <View style={styles.hdrMain}>
-        <Text style={[styles.badge, { backgroundColor: bird.tier.soft, color: bird.tier.color }]}>{bird.tier.name}</Text>
+        <Text style={[styles.badge, { backgroundColor: colors.tierSoft[bird.tier.name], color: colors.tierInk[bird.tier.name] }]}>{bird.tier.name}</Text>
         <Text style={styles.name} numberOfLines={2}>
           {bird.count && bird.count > 1 ? `${bird.count}× ` : ''}{sighting.common_name}
         </Text>
@@ -225,6 +227,8 @@ export function DetailHeader({ bird, sighting, distance, onClose, onTrip, onTogg
 // ---------------------------------------------------------------------------
 
 function DayStrip({ days }: { days: ClusterDay[] }) {
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <View style={styles.strip}>
       {days.map((d, i) => {
@@ -248,6 +252,7 @@ function DayStrip({ days }: { days: ClusterDay[] }) {
 }
 
 function BirdWeatherCard({ matches }: { matches: BirdWeatherMatch[] }) {
+  const styles = useStyles();
   if (!matches.length) return null;
   const shown = matches.slice(0, 3);
   return (
@@ -275,6 +280,7 @@ function BirdWeatherCard({ matches }: { matches: BirdWeatherMatch[] }) {
  *  location is often a hotspot for the whole site, an iNaturalist one carries an
  *  accuracy, and a hidden iNaturalist one is a random point that must not open Maps. */
 function ReportLocationLabel({ sighting, point }: { sighting: Sighting; point: { lat: number; lng: number } | null }) {
+  const styles = useStyles();
   if (!point) return null;
   const accuracy = sighting.location_accuracy_m;
   if (sighting.location_obscured === true) {
@@ -304,6 +310,8 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
   onSelectReport: (s: Sighting) => void;
   bottomPadding: number;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   const { cluster, payload, comments, commentsState, exactSpot, reportPoint } = detail;
   const scrollRef = useRef<ScrollView>(null);
   const notesY = useRef(0);
@@ -330,9 +338,9 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
         {cluster?.days?.length ? <DayStrip days={cluster.days} /> : null}
 
         {status ? (
-          <Text style={[styles.status, { color: STATUS_DOT[level] }]}>
+          <Text style={[styles.status, { color: statusColor(colors, level) }]}>
             ● {status}{weekReports ? ` · ${weekReports} report${weekReports === 1 ? '' : 's'} this week` : ''}
-            {dips ? <Text style={[styles.statusDips, { color: DIP_RED[dips].text }]}> · {dipLabel(dipBird)}</Text> : null}
+            {dips ? <Text style={[styles.statusDips, { color: colors.dipText[dips] }]}> · {dipLabel(dipBird)}</Text> : null}
           </Text>
         ) : null}
 
@@ -483,6 +491,8 @@ export function DetailBody({ detail, bird, sighting, onSelectReport, bottomPaddi
 }
 
 function ConfirmReport({ detail }: { detail: SightingDetailState }) {
+  const styles = useStyles();
+  const colors = useColors();
   const { confirm, setConfirm, submitReport, reporting, reportError, userLocation, locationLoading, cluster } = detail;
   const dist = userLocation && cluster
     ? distanceMetres(userLocation.lat, userLocation.lng, cluster.center_lat, cluster.center_lng)
@@ -527,7 +537,7 @@ function ConfirmReport({ detail }: { detail: SightingDetailState }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
   // header
   hdr: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 2, paddingBottom: 12 },
   hdrMain: { flex: 1, minWidth: 0 },
@@ -537,7 +547,7 @@ const styles = StyleSheet.create({
   hdrBtns: { alignSelf: 'flex-start', flexDirection: 'row', gap: 8 },
   tripOn: { backgroundColor: colors.accent },
   tripCheck: {
-    position: 'absolute', right: -4, top: -4, width: 17, height: 17, borderRadius: 9, backgroundColor: colors.text,
+    position: 'absolute', right: -4, top: -4, width: 17, height: 17, borderRadius: 9, backgroundColor: colors.inverse,
     color: '#fff', fontSize: 10, fontWeight: '900', textAlign: 'center', lineHeight: 16, overflow: 'hidden',
   },
   close: { alignSelf: 'flex-start', width: 40, height: 40, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
@@ -563,23 +573,23 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 13, fontWeight: '700' },
   pillDirections: { backgroundColor: colors.accentSoft },
   pillDirectionsText: { color: colors.accent },
-  pillNotes: { backgroundColor: '#e8effd' },
-  pillNotesText: { color: '#1d4ed8' },
-  pillEbird: { backgroundColor: '#e3eff4' },
-  pillEbirdText: { color: colors.heroFrom },
+  pillNotes: { backgroundColor: colors.linkSoft },
+  pillNotesText: { color: colors.link },
+  pillEbird: { backgroundColor: colors.tealSoft },
+  pillEbirdText: { color: colors.teal },
 
   // at sea
-  seaCard: { marginTop: 12, backgroundColor: '#e3eff4', borderLeftWidth: 3, borderLeftColor: colors.heroFrom, borderRadius: 8, padding: 12 },
-  seaTitle: { fontSize: 13, fontWeight: '800', color: colors.heroFrom, marginBottom: 2 },
+  seaCard: { marginTop: 12, backgroundColor: colors.tealSoft, borderLeftWidth: 3, borderLeftColor: colors.heroFrom, borderRadius: 8, padding: 12 },
+  seaTitle: { fontSize: 13, fontWeight: '800', color: colors.teal, marginBottom: 2 },
   seaText: { fontSize: 13, color: colors.text, lineHeight: 18 },
 
   // BirdWeather corroboration
-  bwCard: { marginTop: 12, backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12, gap: 4 },
+  bwCard: { marginTop: 12, backgroundColor: colors.noteSoft, borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12, gap: 4 },
   bwTitle: { fontSize: 13, fontWeight: '800', color: colors.accent, marginBottom: 2 },
-  bwLink: { fontSize: 13, fontWeight: '700', color: '#1d4ed8' },
+  bwLink: { fontSize: 13, fontWeight: '700', color: colors.link },
   bwMeta: { fontSize: 12, color: colors.muted },
   bwCredit: { fontSize: 11, color: colors.muted, marginTop: 6, lineHeight: 15 },
-  bwCreditLink: { color: '#1d4ed8', textDecorationLine: 'underline' },
+  bwCreditLink: { color: colors.link, textDecorationLine: 'underline' },
 
   // reports
   section: { fontSize: 12, fontWeight: '700', color: colors.muted, marginTop: 14, marginBottom: 8 },
@@ -589,14 +599,14 @@ const styles = StyleSheet.create({
   chipSub: { fontSize: 11, color: colors.muted, marginTop: 1 },
   chipTextOn: { color: '#fff' },
   mapsRow: { marginTop: 10 },
-  mapsText: { fontSize: 13, fontWeight: '600', color: '#1d4ed8' },
+  mapsText: { fontSize: 13, fontWeight: '600', color: colors.link },
   mapsTextApprox: { fontSize: 13, fontWeight: '600', color: colors.amber },
-  exactText: { color: '#c2410c' },
+  exactText: { color: colors.exact },
 
   // notes
   notesHint: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18 },
   hint: { fontSize: 13, color: colors.muted },
-  note: { marginTop: 16, backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12 },
+  note: { marginTop: 16, backgroundColor: colors.noteSoft, borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12 },
   noteLabel: { fontSize: 11, fontWeight: '800', color: colors.accent, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 },
   noteText: { fontSize: 14, color: colors.text, lineHeight: 20 },
   comment: { flexDirection: 'row', gap: 10, marginTop: 14 },
@@ -604,19 +614,19 @@ const styles = StyleSheet.create({
   commentAvaText: { fontSize: 13, fontWeight: '700', color: colors.accent },
   commentMeta: { fontSize: 11, color: colors.muted, marginBottom: 2 },
   commentAuthor: { fontSize: 13, fontWeight: '700', color: colors.text },
-  commentText: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  commentText: { fontSize: 14, color: colors.textSoft, lineHeight: 20 },
 
   // confirm dialog
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   confirm: { backgroundColor: colors.card, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, padding: 24, paddingBottom: 40 },
   confirmTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginBottom: 8 },
-  confirmBody: { fontSize: 15, color: '#374151', lineHeight: 22 },
+  confirmBody: { fontSize: 15, color: colors.textSoft, lineHeight: 22 },
   distRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
   distText: { fontSize: 13, color: colors.muted },
-  far: { fontSize: 13, color: '#b45309', marginTop: 8 },
+  far: { fontSize: 13, color: colors.warn, marginTop: 8 },
   confirmBtns: { flexDirection: 'row', gap: 10, marginTop: 20 },
   cancel: { flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.bg, alignItems: 'center' },
   cancelText: { fontWeight: '700', color: colors.text },
   ok: { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
   okText: { fontWeight: '800', color: '#fff' },
-});
+}));

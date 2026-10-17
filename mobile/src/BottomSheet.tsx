@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, PanResponder, StyleSheet, View } from 'react-native';
-import { colors, radius } from './theme';
+import { makeStyles, radius, useColors } from './theme';
 
 export interface BottomSheetHandle {
   snapTo(index: number): void;
@@ -27,6 +27,7 @@ const BottomSheet = forwardRef<BottomSheetHandle, Props>(function BottomSheet(
   { snapPoints, initialIndex, onIndexChange, header, children },
   ref,
 ) {
+  const styles = useStyles();
   const maxH = snapPoints[snapPoints.length - 1];
   const offsetFor = (i: number) => maxH - snapPoints[i];
 
@@ -102,7 +103,7 @@ const BottomSheet = forwardRef<BottomSheetHandle, Props>(function BottomSheet(
 
 export default BottomSheet;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
   sheet: {
     position: 'absolute',
     left: 0,
@@ -120,4 +121,4 @@ const styles = StyleSheet.create({
   grabZone: { paddingTop: 8, paddingBottom: 4, alignItems: 'center' },
   grab: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.grab },
   content: { flex: 1 },
-});
+}));

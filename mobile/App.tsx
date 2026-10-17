@@ -27,7 +27,7 @@ import CarIcon from './src/CarIcon';
 import { MAX_STOPS, openTripDirections, routable, routeOrder, useTrip } from './src/trip';
 import { atSea, byRarity, featurable, islandOf, rareToday, dipLevel, recentlyRefound, distanceTo, groupBirds, inPeriod, matchesQuery, type Bird, type Period } from './src/birds';
 import { usePrefs } from './src/prefs';
-import { colors } from './src/theme';
+import { makeStyles, useColors } from './src/theme';
 import { API_BASE, formatDate } from './src/util';
 import type { ClusterData, Sighting } from './src/types';
 
@@ -42,6 +42,8 @@ export default function App() {
 }
 
 function Main() {
+  const styles = useStyles();
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
@@ -342,7 +344,7 @@ function Main() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
 
       <View style={StyleSheet.absoluteFill}>
         <LeafletMap
@@ -367,6 +369,7 @@ function Main() {
             onFocus={() => sheetRef.current?.snapTo(1)}
             placeholder="Search species or places"
             placeholderTextColor={colors.muted}
+            keyboardAppearance={colors.scheme}
             style={styles.searchInput}
             returnKeyType="search"
             // no contacts/password AutoFill offers on a bird search
@@ -385,7 +388,7 @@ function Main() {
           onPress={openOrCloseTrip}
           accessibilityLabel={`Trip, ${trip.count} saved bird${trip.count === 1 ? '' : 's'}`}
         >
-          <CarIcon size={26} cut={period === 'trip' ? colors.accent : colors.text} />
+          <CarIcon size={26} cut={period === 'trip' ? colors.accent : colors.inverse} />
           {trip.count ? <Text style={styles.tripCount}>{trip.count}</Text> : null}
         </Pressable>
       </View>
@@ -478,11 +481,11 @@ function Main() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
   root: { flex: 1, backgroundColor: colors.bg },
   topBar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', gap: 8, alignItems: 'center' },
   logo: {
-    width: SEARCH_BAR_H, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: '#1a7392',
+    width: SEARCH_BAR_H, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: colors.brand,
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden', elevation: 6,
     shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
   },
@@ -496,7 +499,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, fontWeight: '500', color: colors.text, paddingVertical: 0 },
   clear: { fontSize: 15, color: colors.muted, paddingLeft: 8 },
   tripBtn: {
-    width: SEARCH_BAR_H, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: colors.text,
+    width: SEARCH_BAR_H, height: SEARCH_BAR_H, borderRadius: 14, backgroundColor: colors.inverse,
     alignItems: 'center', justifyContent: 'center', elevation: 6,
     shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
   },
@@ -504,11 +507,11 @@ const styles = StyleSheet.create({
   tripCount: {
     position: 'absolute', right: -5, top: -5, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5,
     backgroundColor: colors.accent, color: '#fff', fontSize: 11, fontWeight: '800', textAlign: 'center',
-    lineHeight: 17, borderWidth: 1.5, borderColor: '#fff', overflow: 'hidden',
+    lineHeight: 17, borderWidth: 1.5, borderColor: colors.ring, overflow: 'hidden',
   },
   toast: {
-    position: 'absolute', alignSelf: 'center', backgroundColor: colors.text, borderRadius: 12,
+    position: 'absolute', alignSelf: 'center', backgroundColor: colors.inverse, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 9, elevation: 8,
   },
   toastText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-});
+}));

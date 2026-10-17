@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_VERSION, openGuide } from './guide';
-import { colors, radius } from './theme';
+import { makeStyles, radius, useColors } from './theme';
 
 /** Tappable inline link. */
 function Link({ url, children }: { url: string; children: string }) {
+  const styles = useStyles();
   return (
     <Text style={styles.link} onPress={() => Linking.openURL(url)}>
       {children}
@@ -26,6 +27,7 @@ function Link({ url, children }: { url: string; children: string }) {
 
 /** Rounded pill link, like the Directions / Notes / eBird pills on a bird's page. */
 function Pill({ label, onPress, tint = 'blue' }: { label: string; onPress: () => void; tint?: 'blue' | 'green' | 'teal' }) {
+  const styles = useStyles();
   return (
     <Pressable style={({ pressed }) => [styles.pill, styles[`pill_${tint}`], pressed && styles.pressed]} onPress={onPress}>
       <Text style={[styles.pillText, styles[`pillText_${tint}`]]}>{label}</Text>
@@ -35,6 +37,7 @@ function Pill({ label, onPress, tint = 'blue' }: { label: string; onPress: () =>
 
 /** A white card: an emoji avatar, a name and a one-line role, then its body. */
 function Card({ icon, title, role, children }: { icon: string; title: string; role?: string; children: ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.card}>
       <View style={styles.cardHead}>
@@ -56,6 +59,7 @@ const open = (url: string) => () => Linking.openURL(url);
  * credit and photo-license terms here are what those sources require.
  */
 export default function AboutModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   // iOS shows this as a page sheet (swipe down to close), which sits below the status bar.
   // Android draws it full screen, under the status bar, so pad by its height.
@@ -187,13 +191,13 @@ export default function AboutModal({ visible, onClose }: { visible: boolean; onC
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
   root: { flex: 1, backgroundColor: colors.bg },
   grab: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: colors.grab, marginTop: 8, marginBottom: 4 },
 
   // Header, like the bird page's: icon, title, close
   hdr: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12 },
-  logo: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#1a7392', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  logo: { width: 48, height: 48, borderRadius: 14, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   // The app icon has wide padding around the pin; oversize it so the pin fills the tile
   logoImage: { width: 72, height: 72 },
   hdrMain: { flex: 1, minWidth: 0 },
@@ -227,19 +231,19 @@ const styles = StyleSheet.create({
   cardHeadText: { flex: 1, minWidth: 0 },
   cardTitle: { fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   cardRole: { fontSize: 12.5, color: colors.muted, fontWeight: '500', marginTop: 1 },
-  p: { fontSize: 14, lineHeight: 20, color: '#374151' },
-  credit: { backgroundColor: '#f0f7f2', borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12 },
+  p: { fontSize: 14, lineHeight: 20, color: colors.textSoft },
+  credit: { backgroundColor: colors.noteSoft, borderLeftWidth: 3, borderLeftColor: colors.accent, borderRadius: 8, padding: 12 },
   creditText: { fontSize: 13.5, fontWeight: '700', color: colors.text },
-  link: { color: '#1d4ed8', fontWeight: '600' },
+  link: { color: colors.link, fontWeight: '600' },
 
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
   pillText: { fontSize: 13, fontWeight: '700' },
-  pill_blue: { backgroundColor: '#e8effd' },
-  pillText_blue: { color: '#1d4ed8' },
+  pill_blue: { backgroundColor: colors.linkSoft },
+  pillText_blue: { color: colors.link },
   pill_green: { backgroundColor: colors.accentSoft },
   pillText_green: { color: colors.accent },
-  pill_teal: { backgroundColor: '#e3eff4' },
-  pillText_teal: { color: colors.heroFrom },
+  pill_teal: { backgroundColor: colors.tealSoft },
+  pillText_teal: { color: colors.teal },
   pressed: { opacity: 0.7 },
-});
+}));

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { openAllAboutBirds } from './util';
+import { makeStyles, useColors } from './theme';
 
 export const INAT_BASE = 'https://api.inaturalist.org/v1';
 
@@ -100,6 +101,7 @@ export default function BirdPhoto({
   scientificName: string | null;
   commonName: string;
 }) {
+  const styles = useStyles();
   const { url, attribution } = usePhoto(photoUrl, photoAttribution, scientificName);
 
   if (!url) {
@@ -140,7 +142,7 @@ export default function BirdPhoto({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
   photoWrapper: { width: 64, flexShrink: 0 },
   photo: { width: 64, height: 64, borderRadius: 8 },
   photoCredit: {
@@ -157,11 +159,11 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 8,
-    backgroundColor: '#ecf4ed',
+    backgroundColor: colors.noteSoft,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   photoPlaceholderIcon: { fontSize: 26 },
-  photoPlaceholderLink: { fontSize: 9, color: '#4a7c59', fontWeight: '600', marginTop: 2 },
-});
+  photoPlaceholderLink: { fontSize: 9, color: colors.accent, fontWeight: '600', marginTop: 2 },
+}));

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, FlatList, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import CarIcon from './CarIcon';
 import { BirdRow } from './RaritiesSheet';
-import { colors, radius } from './theme';
+import { makeStyles, radius, useColors } from './theme';
 import { MAX_STOPS, type TripBird } from './trip';
 import type { Bird } from './birds';
 
@@ -20,6 +20,8 @@ export function TripHeader({ count, stops, fromYou, onDirections, onClear, onClo
   onClear: () => void;
   onClose: () => void;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   // Clearing is a two-tap action so a stray tap doesn't lose the whole trip
   const [arming, setArming] = useState(false);
   useEffect(() => {
@@ -32,7 +34,7 @@ export function TripHeader({ count, stops, fromYou, onDirections, onClear, onClo
   return (
     <View>
       <View style={styles.hd}>
-        <View style={styles.badge}><CarIcon size={24} cut={colors.text} /></View>
+        <View style={styles.badge}><CarIcon size={24} cut={colors.inverse} /></View>
         <View style={styles.hdMain}>
           <Text style={styles.title}>Trip</Text>
           <Text style={styles.sub}>
@@ -81,6 +83,8 @@ export function TripList({ route, distanceOf, onSelect, onRemove, bottomPadding 
   onRemove: (key: string) => void;
   bottomPadding: number;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   if (!route.length) {
     return (
       <View style={styles.empty}>
@@ -146,9 +150,9 @@ function SwipeToRemove({ children, onRemove }: { children: ReactNode; onRemove: 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(colors => ({
   hd: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
-  badge: { width: 44, height: 44, borderRadius: 13, backgroundColor: colors.text, alignItems: 'center', justifyContent: 'center' },
+  badge: { width: 44, height: 44, borderRadius: 13, backgroundColor: colors.inverse, alignItems: 'center', justifyContent: 'center' },
   hdMain: { flex: 1, minWidth: 0 },
   title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.6 },
   sub: { fontSize: 13, color: colors.muted, fontWeight: '500', marginTop: 1 },
@@ -172,11 +176,11 @@ const styles = StyleSheet.create({
   emptyNote: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 4, fontWeight: '600' },
   over: {
     marginHorizontal: 20, marginTop: -4, marginBottom: 12, padding: 10, borderRadius: 10,
-    backgroundColor: '#fdf3e1', color: '#8a5a00', fontSize: 12.5, fontWeight: '600', lineHeight: 17,
+    backgroundColor: colors.warnSoft, color: colors.warnText, fontSize: 12.5, fontWeight: '600', lineHeight: 17,
   },
   cut: {
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 6, fontSize: 12, fontWeight: '800',
     letterSpacing: 0.8, textTransform: 'uppercase', color: colors.amber,
   },
   hint: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 14 },
-});
+}));

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { DIP_RED } from './theme';
+import { DIP_PIN, useScheme } from './theme';
 
 export interface MapPin {
   lat: number;
@@ -107,13 +107,14 @@ function buildHtml(
   clusterCircle: ClusterCircle | null | undefined,
   interactive: boolean,
   insets: MapInsets | undefined,
+  dark: boolean,
 ): string {
   const centerJson = center ? JSON.stringify(center) : 'null';
   const circleJson = clusterCircle ? JSON.stringify(clusterCircle) : 'null';
   const insetsJson = insets ? JSON.stringify(insets) : 'null';
 
   return `<!DOCTYPE html>
-<html>
+<html class="${dark ? 'dark' : ''}">
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -152,6 +153,18 @@ function buildHtml(
     .tag { position: absolute; left: 30px; top: -2px; background: #fff; border-radius: 9px;
            padding: 3px 8px; font: 700 11px system-ui, sans-serif; color: #101a15;
            white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,.14); }
+    /* Dark mode: OpenStreetMap has no dark tiles, so invert the light ones (the hue turn keeps
+       water blue and parks green). Only the tile layer is filtered; pins and circles keep their colours. */
+    html.dark, html.dark .leaflet-container { background: #0e1311; }
+    html.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6); }
+    html.dark .tag { background: #1a211d; color: #e8eee9; box-shadow: 0 3px 10px rgba(0,0,0,.5); }
+    html.dark .leaflet-popup-content-wrapper, html.dark .leaflet-popup-tip { background: #1a211d; color: #e8eee9; }
+    html.dark .leaflet-popup-content a { color: #7aa7ff; }
+    html.dark .leaflet-container a.leaflet-popup-close-button { color: #93a099; }
+    html.dark .leaflet-control-attribution { background: rgba(26,33,29,.8); color: #93a099; }
+    html.dark .leaflet-control-attribution a { color: #7aa7ff; }
+    html.dark .leaflet-bar a { background: #1a211d; color: #e8eee9; border-bottom-color: #2a332e; }
+    html.dark .me { border-color: #e8eee9; background: #34403a; }
   </style>
 </head>
 <body>
@@ -212,13 +225,14 @@ function buildHtml(
     html: '<div style="width:22px;height:22px;border-radius:50%;background:rgba(234,88,12,0.25);border:3px solid #ea580c;display:flex;align-items:center;justify-content:center;"><div style="width:6px;height:6px;border-radius:50%;background:#ea580c;"></div></div>',
     iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -11],
   });
-  var DIP_RED = ${JSON.stringify(Object.fromEntries(Object.entries(DIP_RED).map(([k, v]) => [k, v.pin])))};
+  var DIP_RED = ${JSON.stringify(DIP_PIN)};
   // A #rrggbb colour mixed most of the way towards pale grey: the fill of a dipped pin
   function pale(hex) {
     var n = parseInt(String(hex).slice(1), 16);
     if (isNaN(n)) return hex;
     var mix = function(c, g) { return Math.round(c + (g - c) * 0.65); };
-    return 'rgb(' + mix(n >> 16, 214) + ',' + mix((n >> 8) & 255, 219) + ',' + mix(n & 255, 215) + ')';
+    var g = document.documentElement.classList.contains('dark') ? [70, 78, 74] : [214, 219, 215];
+    return 'rgb(' + mix(n >> 16, g[0]) + ',' + mix((n >> 8) & 255, g[1]) + ',' + mix(n & 255, g[2]) + ')';
   }
   function teardrop(pin) {
     var faded = pin.dips > 0 && !pin.shine;
@@ -377,6 +391,10 @@ function buildHtml(
     if (fit) fitAll(pins);
   }
   window.__render = render;
+  window.__dark = function(on) {
+    document.documentElement.classList.toggle('dark', on);
+    render(lastPins, false); // dipped pins pale towards the new background
+  };
   render(${JSON.stringify(pins)}, true);
 </script>
 </body>
@@ -386,6 +404,8 @@ function buildHtml(
 export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPress, insets, fitKey, focus, me }: Props) {
   const webRef = useRef<WebView>(null);
   const loaded = useRef(false);
+  const dark = useScheme() === 'dark';
+  const sentDark = useRef(dark);
   const sent = useRef({ pins: '', fitKey });
   const pinsJson = JSON.stringify(pins);
 
@@ -397,7 +417,8 @@ export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPre
   const html = useMemo(() => {
     loaded.current = false;
     sent.current = { pins: pinsJson, fitKey };
-    return buildHtml(pins, center, zoom, clusterCircle, !!onPinPress, insets);
+    sentDark.current = dark;
+    return buildHtml(pins, center, zoom, clusterCircle, !!onPinPress, insets, dark);
     // Built once per mount; later pin changes go through pushPins()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [webViewKey]);
@@ -430,11 +451,19 @@ export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPre
   };
   useEffect(pushMe, [meJson]);
 
+  // The phone switched light/dark: restyle the live page rather than reloading the map
+  const pushDark = () => {
+    if (!loaded.current || !webRef.current || sentDark.current === dark) return;
+    sentDark.current = dark;
+    webRef.current.injectJavaScript(`window.__dark && window.__dark(${dark}); true;`);
+  };
+  useEffect(pushDark, [dark]);
+
   return (
     <WebView
       ref={webRef}
       key={webViewKey}
-      style={styles.map}
+      style={[styles.map, dark && { backgroundColor: '#0e1311' }]}
       source={{ html }}
       originWhitelist={['*']}
       javaScriptEnabled
@@ -445,6 +474,7 @@ export default function LeafletMap({ pins, center, zoom, clusterCircle, onPinPre
         pushFocus();
         sentMe.current = 'null';
         pushMe();
+        pushDark();
       }}
       onMessage={event => {
         if (!onPinPress) return;

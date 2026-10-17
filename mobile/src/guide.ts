@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
-import { colors } from './theme';
+import { LIGHT as colors } from './theme'; // the guide website is light only
 import { API_BASE } from './util';
 
 // ---------------------------------------------------------------------------
