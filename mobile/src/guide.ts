@@ -27,11 +27,11 @@ export const APP_VERSION: string = Constants.expoConfig?.version ?? '';
  * Releases without a matching entry here show no card.
  */
 export const WHATS_NEW = {
-  version: '1.6.0',
-  title: 'Closer, fresher, by bus or boat',
+  version: '1.7.0',
+  title: 'Day and night',
   highlights: [
-    { icon: '📍', text: 'Near me shows birds within 10, 25 or 50 km from the last 7 days, with the range drawn on the map.' },
-    { icon: '✨', text: 'Pins sparkle for a bird refound today or a rare one seen today, and fade after a dip. The top card goes to a bird seen in the last 3 days.' },
-    { icon: '🚌', text: 'Transit directions to a bird, and a ferry link for birds on Catalina and the Channel Islands.' },
+    { icon: '🌙', text: 'Dark mode: the app and the map follow your phone\'s light or dark setting.' },
+    { icon: '📶', text: 'No signal? The app opens on the last birds it loaded and says how old they are.' },
+    { icon: '😔', text: 'Dips add up: a deeper red the more people dipped since the last sighting. Sort the list by Rarest too.' },
   ],
 };

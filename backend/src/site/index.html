@@ -172,10 +172,10 @@
     <div>
       <span class="no">01</span>
       <h2>The map and the <em>Rarities</em> list</h2>
-      <p>Every pin is a rare bird reported in Los Angeles or Orange County. A pin's colour is how rare the bird is, and the rarest show their names.</p>
+      <p>Every pin is a rare bird reported in Los Angeles or Orange County. A pin's colour is how rare the bird is, and the rarest show their names, as many as fit without overlapping. Zoom in and more names appear.</p>
       <p>A pin <b>sparkles</b> when someone refound the bird in the app today, or when a Rare, Very Rare or Exceptional bird was seen today.
-        A pin <b>fades</b> when someone dipped the bird today and nobody has seen it since.</p>
-      <p>Under the map is the <b>Rarities</b> list. The large card at the top is the rarest bird seen in the last 3 days, and the rest follow newest first.
+        A pin turns <b>pale with a red outline</b> when someone dipped the bird and nobody has seen it since. The red gets deeper with more dips (1, 2 to 3, 4 or more), and a new sighting or Refound clears it. Dips older than 3 days stop counting.</p>
+      <p>Under the map is the <b>Rarities</b> list. The large card at the top is the rarest bird seen in the last 3 days, and the rest follow newest first, or rarest first if you switch <b>Newest</b> to <b>Rarest</b>.
         A bird last seen longer ago is still listed, just not featured, because it's less likely to still be there.
         Drag the list up to read more of it, or down to see more of the map.</p>
       <h3>How rare is rare?</h3>
@@ -244,7 +244,7 @@
       <p>Tap any pin or card. The map zooms to where it's been reported, and the dashed circle is the area the reports cover.</p>
       <ul>
         <li><b>The day strip</b> covers the last week. Green means it was reported that day, and red means people only dipped.</li>
-        <li><b>Refound</b> or <b>Dipped</b>: if you go, tell other birders whether you saw it. Reports are anonymous.</li>
+        <li><b>Refound</b> or <b>Dipped</b>: if you go, tell other birders whether you saw it. Reports are anonymous. When several people dipped since the last sighting, the status line says so, e.g. "✗ Dipped ×3".</li>
         <li><b>Directions</b>, <b>Transit</b> (bus and train directions; on iPhone, Apple Maps, or Google Maps when its app is installed), <b>Notes</b> (what observers wrote) and a link to the <b>eBird</b> report.</li>
         <li>The report chips: tap one to see its exact spot.</li>
       </ul>
@@ -338,6 +338,20 @@
 <!-- ============================================================= WHAT'S NEW -->
 <section class="page" id="p-whats-new">
   <div class="chapter">October 2026</div>
+
+  <article class="release">
+    <h2>1.7.0 <em>Day and night</em></h2>
+    <div class="meta"><span>October 17, 2026</span><span class="build">iPhone build 8</span><span class="build">Android 12</span></div>
+    <ul>
+      <li><b>Dark mode.</b> The app follows your phone's light or dark setting, map included, and switches as soon as you change it.</li>
+      <li><b>Works with no signal.</b> The app keeps the last birds it loaded, so at a trailhead or on Catalina it opens on them and says how old they are, instead of an error.</li>
+      <li><b>Dips that add up.</b> A dipped bird's pin turns pale with a red outline that gets deeper with more dips, and its page and list row say "Dipped ×3". A new sighting or Refound clears it.</li>
+      <li><b>Newest or Rarest.</b> Sort the list by rarity with the switch above it. Your choice is remembered.</li>
+      <li><b>The full 30 days.</b> "Last 30 days" was showing only about the last 9. Since October 17 that's fixed on the server, for every version of the app.</li>
+      <li><b>Tidier map names.</b> Names no longer pile on top of each other; zoom in and more appear.</li>
+      <li><b>VoiceOver and TalkBack</b> now read each bird as one sentence: name, rarity, when, where and status.</li>
+    </ul>
+  </article>
 
   <article class="release">
     <h2>1.6.0 <em>Closer and fresher</em></h2>
